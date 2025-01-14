@@ -1,18 +1,23 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Builder;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Jobs.StartupExtensions;
 
 var host = new HostBuilder()
+
     .ConfigureFunctionsWebApplication()
-    .ConfigureAppConfiguration(builder => builder.AddConfiguration())
+
     .ConfigureServices((context, services) =>
     {
-        services
-            .AddApplicationInsightsTelemetryWorkerService()
-            .ConfigureFunctionsApplicationInsights()
-            .AddServiceRegistrations(context.Configuration);
+        var connectionString = Environment.GetEnvironmentVariable("DefaultConnection");
+
+        services.AddDbContext<ApplicationDbContext>(options =>
+            options.UseSqlServer(connectionString));
+
+        services.AddScoped<IApplicationDbContext, ApplicationDbContext>();
     })
     .Build();
 
