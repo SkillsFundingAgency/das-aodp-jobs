@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "SFA.DAS.AODP.Jobs": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7000",
+      "launchBrowser": false
+    }
+  }
+}
