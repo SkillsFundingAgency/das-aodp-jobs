@@ -7,7 +7,6 @@
         "ConfigurationStorageConnectionString": "UseDevelopmentStorage=true;",
         "ConfigNames": "SFA.DAS.AODP.Jobs",
         "EnvironmentName": "LOCAL",
-        "AzureFunctionsJobHost:Logging:LogLevel:Host": "Information",
-        "OcpApimSubscriptionKey": "19930293b2d94c33b47f5ca5f8f35bd4"
+        "AzureFunctionsJobHost:Logging:LogLevel:Host": "Information"
     }
 }
