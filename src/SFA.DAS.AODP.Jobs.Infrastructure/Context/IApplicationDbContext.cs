@@ -5,9 +5,9 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 {
     public interface IApplicationDbContext
     {
-        DbSet<ApprovedQualificationsImport> ApprovedQualificationsImports { get; set; }
+        DbSet<ApprovedQualificationsImport> ApprovedQualificationsImport { get; set; }
         DbSet<ProcessedRegisteredQualification> ProcessedRegisteredQualifications { get; set; }
-        DbSet<RegisteredQualificationsImport> RegisteredQualificationsImports { get; set; }
+        DbSet<RegisteredQualificationsImport> RegisteredQualificationsImport { get; set; }
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
         Task BulkInsertAsync<T>(IEnumerable<T> entities, CancellationToken cancellationToken = default) where T : class;
 
