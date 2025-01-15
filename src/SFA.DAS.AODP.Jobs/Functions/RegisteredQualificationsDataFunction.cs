@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using RestEase;
-using SFA.DAS.AODP.Functions.Interfaces;
+using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Infrastructure.Context;
+using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Models.Qualification;
+using System.Diagnostics;
 
 namespace SFA.DAS.AODP.Functions.Functions
 {
@@ -14,11 +15,16 @@ namespace SFA.DAS.AODP.Functions.Functions
     {
         private readonly IApplicationDbContext _applicationDbContext;
         private readonly ILogger<RegisteredQualificationsDataFunction> _logger;
+        private readonly IQualificationsApiService _qualificationsApiService;
 
-        public RegisteredQualificationsDataFunction(ILogger<RegisteredQualificationsDataFunction> logger, IApplicationDbContext appDbContext)
+        public RegisteredQualificationsDataFunction(
+            ILogger<RegisteredQualificationsDataFunction> logger, 
+            IApplicationDbContext appDbContext, 
+            IQualificationsApiService qualificationsApiService)
         {
             _logger = logger;
             _applicationDbContext = appDbContext;
+            _qualificationsApiService = qualificationsApiService;
         }
 
         [Function("RegisteredQualificationsDataFunction")]
@@ -26,43 +32,22 @@ namespace SFA.DAS.AODP.Functions.Functions
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = "gov/RegisteredQualificationsImport")] HttpRequest req)
         {
             _logger.LogInformation($"Processing {nameof(RegisteredQualificationsDataFunction)} request...");
+
             try
             {
                 int page = 1;
-                int limit = 1000;
+                int limit = 5000;
                 int totalProcessed = 0;
-
-                var config = LoadConfiguration();
-                string subscriptionKey = config["OcpApimSubscriptionKey"];          
-                if(string.IsNullOrEmpty(subscriptionKey))
-                {
-                    _logger.LogError("Subscription key not found in configuration.");
-                    return new StatusCodeResult(500);
-                }
-
-                var api = InitializeApiClient(subscriptionKey);
 
                 var queryParameters = ParseQueryParameters(req.Query);
 
+                // debug
+                var stopwatch = new Stopwatch();
+                stopwatch.Start();
+
                 while (true)
                 {
-                    var paginatedResult = await api.SearchPrivateQualificationsAsync(
-                        queryParameters.Title,
-                        page,
-                        limit,
-                        queryParameters.AssessmentMethods,
-                        queryParameters.GradingTypes,
-                        queryParameters.AwardingOrganisations,
-                        queryParameters.Availability,
-                        queryParameters.QualificationTypes,
-                        queryParameters.QualificationLevels,
-                        queryParameters.NationalAvailability,
-                        queryParameters.SectorSubjectAreas,
-                        queryParameters.MinTotalQualificationTime,
-                        queryParameters.MaxTotalQualificationTime,
-                        queryParameters.MinGuidedLearningHours,
-                        queryParameters.MaxGuidedLearningHours
-                    );
+                    var paginatedResult = await _qualificationsApiService.SearchPrivateQualificationsAsync(queryParameters, page, limit);
 
                     if (paginatedResult.Results == null || !paginatedResult.Results.Any())
                     {
@@ -72,7 +57,7 @@ namespace SFA.DAS.AODP.Functions.Functions
 
                     _logger.LogInformation($"Processing page {page}. Retrieved {paginatedResult.Results.Count} qualifications.");
 
-                    var qualifications = paginatedResult.Results.Select(q => new SFA.DAS.AODP.Data.Entities.RegisteredQualificationsImport
+                    var qualifications = paginatedResult.Results.Select(q => new RegisteredQualificationsImport
                     {
                         QualificationNumber = q.QualificationNumber,
                         QualificationNumberNoObliques = q.QualificationNumberNoObliques,
@@ -133,14 +118,10 @@ namespace SFA.DAS.AODP.Functions.Functions
                         ImportStatus = "New"
                     }).ToList();
 
-                    // Save to batch of qualifications to the database
+                    // Save qualifications to the database using bulk insert
                     await _applicationDbContext.BulkInsertAsync(qualifications);
 
-                    // import process takes 4.04 mins to fetch and store 50,346 qualifcation record using standard EF SaveChangesAsync
-                    // import process takes 4.04 mins to fetch and store 50,346 qualifcation record using Z.EntityFrameworkExtensionCore BulkSaveAsync 
-
                     totalProcessed += qualifications.Count;
-                    _logger.LogInformation($"Saved {qualifications.Count} qualifications to the database.");
 
                     if (paginatedResult.Results.Count < limit)
                     {
@@ -150,6 +131,10 @@ namespace SFA.DAS.AODP.Functions.Functions
 
                     page++;
                 }
+
+                // debug
+                stopwatch.Stop();
+                _logger.LogInformation($"Total Time Taken: {stopwatch.ElapsedMilliseconds} ms");
 
                 _logger.LogInformation($"Total qualifications processed: {totalProcessed}");
                 return new OkObjectResult($"Successfully processed {totalProcessed} qualifications.");
@@ -164,23 +149,6 @@ namespace SFA.DAS.AODP.Functions.Functions
                 _logger.LogError($"");
                 return new StatusCodeResult(500);
             }
-        }
-
-        private IConfiguration LoadConfiguration()
-        {
-            return new ConfigurationBuilder()
-                .SetBasePath(AppContext.BaseDirectory)
-                .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
-                .AddEnvironmentVariables()
-                .Build();
-        }
-
-        private IOfqualRegisterApi InitializeApiClient(string subscriptionKey)
-        {
-            const string baseUrl = "https://register-api.ofqual.gov.uk";
-            var api = RestClient.For<IOfqualRegisterApi>(baseUrl);
-            api.SubscriptionKey = subscriptionKey;
-            return api;
         }
 
         private RegisteredQualificationQueryParameters ParseQueryParameters(IQueryCollection query)

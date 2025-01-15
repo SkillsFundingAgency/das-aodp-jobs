@@ -1,10 +1,14 @@
-using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Builder;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using RestEase;
+using SFA.DAS.AODP.Functions.Interfaces;
+using SFA.DAS.AODP.Jobs.Services;
+using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Infrastructure.Context;
-using SFA.DAS.AODP.Jobs.StartupExtensions;
+
 
 var host = new HostBuilder()
 
@@ -18,6 +22,16 @@ var host = new HostBuilder()
             options.UseSqlServer(connectionString));
 
         services.AddScoped<IApplicationDbContext, ApplicationDbContext>();
+        services.AddScoped<IQualificationsApiService, QualificationsApiService>();
+        services.AddScoped<IOfqualRegisterApi>(provider =>
+        {
+            const string baseUrl = "https://register-api.ofqual.gov.uk";
+            var config = provider.GetRequiredService<IConfiguration>();
+            var api = RestClient.For<IOfqualRegisterApi>(baseUrl);
+            api.SubscriptionKey = config["OcpApimSubscriptionKey"];
+            return api;
+        });
+
     })
     .Build();
 
