@@ -7,7 +7,6 @@ using RestEase;
 using SFA.DAS.AODP.Functions.Interfaces;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Models.Qualification;
-using System.Diagnostics;
 
 namespace SFA.DAS.AODP.Functions.Functions
 {
@@ -44,9 +43,6 @@ namespace SFA.DAS.AODP.Functions.Functions
                 var api = InitializeApiClient(subscriptionKey);
 
                 var queryParameters = ParseQueryParameters(req.Query);
-
-                //var stopwatch = new Stopwatch();
-                //stopwatch.Start();
 
                 while (true)
                 {
@@ -138,10 +134,10 @@ namespace SFA.DAS.AODP.Functions.Functions
                     }).ToList();
 
                     // Save to batch of qualifications to the database
-                    //_applicationDbContext.RegisteredQualificationsImports.AddRange(qualifications);
-                    //await _applicationDbContext.SaveChangesAsync(); // import process takes 4.04 mins to fetch and store 50,346 qualifcation records
+                    await _applicationDbContext.BulkInsertAsync(qualifications);
 
-                    _applicationDbContext.BulkInsertAsync(qualifications);
+                    // import process takes 4.04 mins to fetch and store 50,346 qualifcation record using standard EF SaveChangesAsync
+                    // import process takes 4.04 mins to fetch and store 50,346 qualifcation record using Z.EntityFrameworkExtensionCore BulkSaveAsync 
 
                     totalProcessed += qualifications.Count;
                     _logger.LogInformation($"Saved {qualifications.Count} qualifications to the database.");
@@ -154,9 +150,6 @@ namespace SFA.DAS.AODP.Functions.Functions
 
                     page++;
                 }
-
-                //stopwatch.Stop();
-                //_logger.LogInformation($"Total Time Taken: {stopwatch.ElapsedMilliseconds} ms");
 
                 _logger.LogInformation($"Total qualifications processed: {totalProcessed}");
                 return new OkObjectResult($"Successfully processed {totalProcessed} qualifications.");
