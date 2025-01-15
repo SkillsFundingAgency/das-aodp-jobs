@@ -24,7 +24,7 @@ namespace SFA.DAS.AODP.Functions.Functions
 
         [Function("RegisteredQualificationsDataFunction")]
         public async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Function, "get", Route = "qualifications")] HttpRequest req)
+            [HttpTrigger(AuthorizationLevel.Function, "get", Route = "gov/RegisteredQualificationsImport")] HttpRequest req)
         {
             _logger.LogInformation($"Processing {nameof(RegisteredQualificationsDataFunction)} request...");
             try
