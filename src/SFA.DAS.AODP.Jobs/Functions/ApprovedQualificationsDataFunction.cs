@@ -6,7 +6,7 @@ using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Infrastructure.Context;
-using SFA.DAS.AODP.Models.Qualification;
+using SFA.DAS.AODP.Jobs.Data.CSV;
 
 namespace SFA.DAS.AODP.Functions
 {
@@ -23,22 +23,21 @@ namespace SFA.DAS.AODP.Functions
 
             string filePath = Path.Combine(Directory.GetCurrentDirectory(), "Data", "approved.csv");
 
+            var approvedQualifications = new List<ApprovedQualificationsImport>();
+
             if (File.Exists(filePath))
             {
                 using var reader = new StreamReader(filePath);
                 using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
-                csv.Context.RegisterClassMap<ModelClassMap>();
+                csv.Context.RegisterClassMap<ApprovedQualificationsImportClassMap>();
 
-                var approvedQualifications = csv.GetRecords<ApprovedQualificationsImport>().ToList();
+                approvedQualifications = csv.GetRecords<ApprovedQualificationsImport>().ToList();
                 Console.WriteLine($"Total Records Read: {approvedQualifications.Count}");
 
                 var stopwatch = new Stopwatch();
                 stopwatch.Start();
-                // Add records to DB
-                _applicationDbContext.ApprovedQualificationsImports.AddRange(approvedQualifications);
-                await _applicationDbContext.SaveChangesAsync();
-
-                //_applicationDbContext.BulkInsertAsync(approvedQualifications);
+                
+                await _applicationDbContext.BulkInsertAsync(approvedQualifications);
                 stopwatch.Stop();
                 Console.WriteLine($"Total Time Taken: {stopwatch.ElapsedMilliseconds} ms");
             }
@@ -51,7 +50,7 @@ namespace SFA.DAS.AODP.Functions
             }
 
             var successResponse = req.CreateResponse(System.Net.HttpStatusCode.OK);
-            await successResponse.WriteStringAsync("Data imported successfully");
+            await successResponse.WriteStringAsync($"{approvedQualifications.Count} imported successfully");
             return successResponse;
         }
     }
