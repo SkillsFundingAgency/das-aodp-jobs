@@ -17,7 +17,7 @@ namespace SFA.DAS.AODP.Functions
 
         [Function("ApprovedQualificationsDataFunction")]
         public async Task<HttpResponseData> Run(
-            [HttpTrigger(AuthorizationLevel.Function, "get","post", Route = null)] HttpRequestData req)
+            [HttpTrigger(AuthorizationLevel.Function, "get","post", Route = "api/approvedQualificationsImport")] HttpRequestData req)
         {
             _logger.LogInformation("Searching for CSV file for processing");
 
