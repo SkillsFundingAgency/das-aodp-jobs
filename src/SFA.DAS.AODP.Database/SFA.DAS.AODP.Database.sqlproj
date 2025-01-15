@@ -63,4 +63,7 @@
     <Build Include="Tables\ProcessedRegisteredQualifications.sql" />
     <Build Include="Tables\RegisteredQualificationsImport.sql" />
   </ItemGroup>
+  <ItemGroup>
+    <RefactorLog Include="SFA.DAS.AODP.Database.refactorlog" />
+  </ItemGroup>
 </Project>
