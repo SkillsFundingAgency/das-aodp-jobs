@@ -26,16 +26,18 @@ namespace SFA.DAS.AODP.Functions
         public async Task<HttpResponseData> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "api/approvedQualificationsImport")] HttpRequestData req)
         {
-            string? urlFilePath = Environment.GetEnvironmentVariable("ApprovedQualificationsImportUrl");
+            string? approvedUrlFilePath = Environment.GetEnvironmentVariable("ApprovedQualificationsImportUrl");
+            string? archivedUrlFilePath = Environment.GetEnvironmentVariable("ArchivedApprovedQualifcationsImportUrl");
 
-            if (string.IsNullOrEmpty(urlFilePath))
+
+            if (string.IsNullOrEmpty(approvedUrlFilePath) || string.IsNullOrEmpty(archivedUrlFilePath))
             {
                 _logger.LogInformation("Environment variable 'ApprovedQualificationsImportUrl' is not set or empty.");
                 var notFoundResponse = req.CreateResponse(System.Net.HttpStatusCode.NotFound);
                 return notFoundResponse;
             }
 
-            var approvedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<ApprovedQualificationsImport, ApprovedQualificationsImportClassMap>(urlFilePath);
+            var approvedQualifications = await _csvReaderService.ReadApprovedAndArchivedFromUrlAsync<ApprovedQualificationsImport, ApprovedQualificationsImportClassMap>(approvedUrlFilePath, archivedUrlFilePath);
 
             if (approvedQualifications.Any())
             {
@@ -43,7 +45,7 @@ namespace SFA.DAS.AODP.Functions
             }
             else
             {
-                _logger.LogInformation("No CSV file found at this location {FilePath}", urlFilePath);
+                _logger.LogInformation("No CSV file found at this location {FilePath}");
                 var notFoundResponse = req.CreateResponse(System.Net.HttpStatusCode.NotFound);
                 return notFoundResponse;
             }

@@ -39,6 +39,57 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
             return records;
         }
 
+        public async Task<List<T>> ReadApprovedAndArchivedFromUrlAsync<T, TMap>(string approvedUrlFilePath, string archivedUrlFilePath) where TMap : ClassMap<T>
+        {
+            _logger.LogInformation("Downloading CSV file from url: {ApprovedUrlFilePath} {ArchivedUrlFilePath}", approvedUrlFilePath, archivedUrlFilePath);
+
+            var ApprovedRecords = new List<T>();
+            var ArchivedRecords = new List<T>();
+            var TotalRecords = new List<T>();
+
+            try
+            {
+                var ApprovedClient = _httpClient.CreateClient();
+
+                var ApprovedResponse = await ApprovedClient.GetAsync(approvedUrlFilePath);
+                ApprovedResponse.EnsureSuccessStatusCode();
+
+                using var stream = await ApprovedResponse.Content.ReadAsStreamAsync();
+                using var reader = new StreamReader(stream);
+                using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+                csv.Context.RegisterClassMap<TMap>();
+                ApprovedRecords = csv.GetRecords<T>().ToList();
+                _logger.LogInformation("Total Records Read: {Records}", ApprovedRecords.Count);
+
+                var ArchivedClient = _httpClient.CreateClient();
+
+                var ArchivedResponse = await ArchivedClient.GetAsync(archivedUrlFilePath);
+                ArchivedResponse.EnsureSuccessStatusCode();
+
+                using var stream2 = await ArchivedResponse.Content.ReadAsStreamAsync();
+                using var reader2 = new StreamReader(stream2);
+                using var csv2 = new CsvReader(reader2, CultureInfo.InvariantCulture);
+                csv2.Context.RegisterClassMap<TMap>();
+                ArchivedRecords = csv2.GetRecords<T>().ToList();
+                _logger.LogInformation("Total Records Read: {Records}", ArchivedRecords.Count);
+
+
+                TotalRecords.AddRange(ArchivedRecords);
+                TotalRecords.AddRange(ApprovedRecords);
+
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "HTTP request error downloading CSV file from url: {UrlFilePath}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error downloading CSV file from url: {UrlFilePath}");
+            }
+
+            return TotalRecords;
+        }
+
         public async Task<List<T>> ReadCsvFileFromUrlAsync<T, TMap>(string urlFilePath) where TMap : ClassMap<T>
         {
             _logger.LogInformation("Downloading CSV file from url: {UrlFilePath}", urlFilePath);
