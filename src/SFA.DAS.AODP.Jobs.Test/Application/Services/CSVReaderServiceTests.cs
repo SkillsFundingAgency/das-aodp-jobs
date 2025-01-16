@@ -143,17 +143,19 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
         private class TestRecord
         {
-            public int Id { get; set; }
-            public string Name { get; set; }
+            public int? Id { get; set; } = null;
+            public string? Name { get; set; } = null;
         }
 
         private sealed class TestRecordMap : ClassMap<TestRecord>
         {
+#pragma warning disable S1144 // Unused private types or members should be removed
             public TestRecordMap()
             {
                 Map(m => m.Id).Name("Id");
                 Map(m => m.Name).Name("Name");
             }
+#pragma warning restore S1144 // Unused private types or members should be removed
         }
     }
 }
