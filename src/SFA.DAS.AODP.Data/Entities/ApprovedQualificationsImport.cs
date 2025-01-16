@@ -5,6 +5,7 @@ namespace SFA.DAS.AODP.Data.Entities
 {
     public partial class ApprovedQualificationsImport
     {
+        [Key]
         public int QualificationId { get; set; }
         public DateTime? DateOfOfqualDataSnapshot { get; set; }
         public string? QualificationName { get; set; }

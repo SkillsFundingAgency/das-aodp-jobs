@@ -8,6 +8,7 @@ using SFA.DAS.AODP.Functions.Interfaces;
 using SFA.DAS.AODP.Jobs.Services;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Infrastructure.Context;
+using SFA.DAS.AODP.Jobs.Services.CSV;
 
 
 var host = new HostBuilder()
@@ -21,8 +22,10 @@ var host = new HostBuilder()
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlServer(connectionString));
 
+        services.AddHttpClient();
         services.AddScoped<IApplicationDbContext, ApplicationDbContext>();
         services.AddScoped<IQualificationsApiService, QualificationsApiService>();
+        services.AddScoped<ICsvReaderService, CsvReaderService>();
         services.AddScoped<IOfqualRegisterApi>(provider =>
         {
             const string baseUrl = "https://register-api.ofqual.gov.uk";
