@@ -1,7 +1,7 @@
 ﻿using CsvHelper.Configuration;
 using SFA.DAS.AODP.Data.Entities;
 
-namespace SFA.DAS.AODP.Jobs.Data.CSV
+namespace SFA.DAS.AODP.Jobs.Services.CSV
 {
     public class ApprovedQualificationsImportClassMap : ClassMap<ApprovedQualificationsImport>
     {
