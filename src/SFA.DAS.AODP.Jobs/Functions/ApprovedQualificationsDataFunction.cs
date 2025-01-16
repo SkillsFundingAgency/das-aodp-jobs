@@ -1,57 +1,59 @@
 using System.Diagnostics;
-using System.Globalization;
-using CsvHelper;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Infrastructure.Context;
-using SFA.DAS.AODP.Jobs.Data.CSV;
+using SFA.DAS.AODP.Jobs.Interfaces;
+using SFA.DAS.AODP.Jobs.Services.CSV;
 
 namespace SFA.DAS.AODP.Functions
 {
-    public class ApprovedQualificationsDataFunction(ILoggerFactory loggerFactory, IApplicationDbContext applicationDbContext)
+    public class ApprovedQualificationsDataFunction
     {
-        private readonly ILogger _logger = loggerFactory.CreateLogger<ApprovedQualificationsDataFunction>();
-        private readonly IApplicationDbContext _applicationDbContext = applicationDbContext;
+        private readonly ILogger<ApprovedQualificationsDataFunction> _logger;
+        private readonly IApplicationDbContext _applicationDbContext;
+        private readonly ICsvReaderService _csvReaderService;
+
+        public ApprovedQualificationsDataFunction(ILogger<ApprovedQualificationsDataFunction> logger, IApplicationDbContext applicationDbContext, ICsvReaderService csvReaderService)
+        {
+            _logger = logger;
+            _applicationDbContext = applicationDbContext;
+            _csvReaderService = csvReaderService;
+        }
 
         [Function("ApprovedQualificationsDataFunction")]
         public async Task<HttpResponseData> Run(
-            [HttpTrigger(AuthorizationLevel.Function, "get","post", Route = "api/approvedQualificationsImport")] HttpRequestData req)
+            [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "api/approvedQualificationsImport")] HttpRequestData req)
         {
-            _logger.LogInformation("Searching for CSV file for processing");
+            string? urlFilePath = Environment.GetEnvironmentVariable("ApprovedQualificationsImportUrl");
 
-            string filePath = Path.Combine(Directory.GetCurrentDirectory(), "Data", "approved.csv");
-
-            var approvedQualifications = new List<ApprovedQualificationsImport>();
-
-            if (File.Exists(filePath))
+            if (string.IsNullOrEmpty(urlFilePath))
             {
-                using var reader = new StreamReader(filePath);
-                using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
-                csv.Context.RegisterClassMap<ApprovedQualificationsImportClassMap>();
+                _logger.LogInformation("Environment variable 'ApprovedQualificationsImportUrl' is not set or empty.");
+                var notFoundResponse = req.CreateResponse(System.Net.HttpStatusCode.NotFound);
+                return notFoundResponse;
+            }
 
-                approvedQualifications = csv.GetRecords<ApprovedQualificationsImport>().ToList();
-                Console.WriteLine($"Total Records Read: {approvedQualifications.Count}");
+            var approvedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<ApprovedQualificationsImport, ApprovedQualificationsImportClassMap>(urlFilePath);
 
-                var stopwatch = new Stopwatch();
-                stopwatch.Start();
-                
+            if (approvedQualifications.Any())
+            {
                 await _applicationDbContext.BulkInsertAsync(approvedQualifications);
-                stopwatch.Stop();
-                Console.WriteLine($"Total Time Taken: {stopwatch.ElapsedMilliseconds} ms");
             }
             else
             {
-                _logger.LogError("File not found: {FilePath}", filePath);
+                _logger.LogInformation("No CSV file found at this location {FilePath}", urlFilePath);
                 var notFoundResponse = req.CreateResponse(System.Net.HttpStatusCode.NotFound);
-                await notFoundResponse.WriteStringAsync("CSV file not found");
                 return notFoundResponse;
             }
 
             var successResponse = req.CreateResponse(System.Net.HttpStatusCode.OK);
-            await successResponse.WriteStringAsync($"{approvedQualifications.Count} imported successfully");
+            _logger.LogInformation("{Count} records imported successfully", approvedQualifications.Count);
+            await successResponse.WriteStringAsync($"{approvedQualifications.Count} records imported successfully");
             return successResponse;
         }
     }
 }
+
+
