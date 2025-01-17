@@ -44,4 +44,4 @@ jobs:
           parameters:
             ServiceConnection: ${{ parameters.ServiceConnection }}
             FunctionAppName: $(FunctionAppName)
-            DeploymentPackagePath: $(Pipeline.Workspace)/${{ parameters.SolutionBaseName }}.Jobs/${{ parameters.SolutionBaseName }}.Jobs.zip
+            DeploymentPackagePath: $(Pipeline.Workspace)/${{ parameters.SolutionBaseName }}/${{ parameters.SolutionBaseName }}.Jobs.zip
