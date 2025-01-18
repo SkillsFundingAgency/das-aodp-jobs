@@ -26,10 +26,8 @@ namespace SFA.DAS.AODP.Functions
         public async Task<HttpResponseData> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "api/approvedQualificationsImport")] HttpRequestData req)
         {
-            
             string? approvedUrlFilePath = Environment.GetEnvironmentVariable("FundedQualificationsImportUrl");
             string? archivedUrlFilePath = Environment.GetEnvironmentVariable("ArchivedFundedQualifcationsImportUrl");
-
 
             if (string.IsNullOrEmpty(approvedUrlFilePath) || string.IsNullOrEmpty(archivedUrlFilePath))
             {

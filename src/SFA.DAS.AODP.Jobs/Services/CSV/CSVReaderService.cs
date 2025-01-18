@@ -110,9 +110,9 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
             return response;
         }
 
-        private List<T> ReadCsv<T, TMap>(dynamic stream) where TMap : ClassMap<T>
+        private List<T> ReadCsv<T, TMap>(dynamic data) where TMap : ClassMap<T>
         {
-            using var streamReader = new StreamReader(stream);
+            using var streamReader = new StreamReader(data);
             using var csvReader = new CsvReader(streamReader, CultureInfo.InvariantCulture);
             csvReader.Context.RegisterClassMap<TMap>();
             return csvReader.GetRecords<T>().ToList();
