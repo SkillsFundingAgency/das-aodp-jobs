@@ -1,6 +1,6 @@
 ﻿CREATE TABLE [dbo].[ApprovedQualificationsImport]
 (
-	[QualificationId] INT IDENTITY(1,1) NOT NULL,
+	[Id] INT IDENTITY(1,1) NOT NULL,
 	[DateOfOfqualDataSnapshot] DATETIME NULL,
 	[QualificationName] NVARCHAR(255) NULL,
 	[AwardingOrganisation] NVARCHAR(255) NULL,
@@ -47,5 +47,11 @@
 	[L3FreeCoursesForJobsFundingApprovalStartDate] DATETIME NULL,
 	[L3FreeCoursesForJobsFundingApprovalEndDate] DATETIME NULL,
 	[L3FreeCoursesForJobsNotes] NVARCHAR(255) NULL,
-	[QualificationNumberVarchar] VARCHAR(100) NULL
-)
+	[QualificationNumberVarchar] VARCHAR(100) NULL,
+		
+	CONSTRAINT [PK_ApprovedQualification] PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+

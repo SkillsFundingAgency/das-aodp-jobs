@@ -1,6 +1,4 @@
 ﻿using System.Globalization;
-using System.Net;
-using System.Net.Http.Headers;
 using CsvHelper;
 using CsvHelper.Configuration;
 using Microsoft.Extensions.Logging;
@@ -11,12 +9,12 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
     public class CsvReaderService : ICsvReaderService
     {
         private readonly ILogger<CsvReaderService> _logger;
-        private readonly IHttpClientFactory _httpClient;
+        private readonly HttpClient _httpClient;
 
-        public CsvReaderService(ILogger<CsvReaderService> logger, IHttpClientFactory httpClient)
+        public CsvReaderService(ILogger<CsvReaderService> logger, IHttpClientFactory httpClientFactory)
         {
             _logger = logger;
-            _httpClient = httpClient;
+            _httpClient = httpClientFactory.CreateClient();
         }
 
         public List<T> ReadCSVFromFilePath<T, TMap>(string filePath) where TMap : ClassMap<T>
@@ -26,10 +24,8 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
             var records = new List<T>();
             if (File.Exists(filePath))
             {
-                using var reader = new StreamReader(filePath);
-                using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
-                csv.Context.RegisterClassMap<TMap>();
-                records = csv.GetRecords<T>().ToList();
+                var approvedCsvData
+                       = ReadCsv<T, TMap>(filePath);
                 Console.WriteLine($"Total Records Read: {records.Count}");
             }
             else
@@ -39,44 +35,33 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
             return records;
         }
 
-        public async Task<List<T>> ReadApprovedAndArchivedFromUrlAsync<T, TMap>(string approvedUrlFilePath, string archivedUrlFilePath) where TMap : ClassMap<T>
+        public async Task<List<T>> ReadApprovedAndArchivedFromUrlAsync<T, TMap>(string approvedUrl, string archivedUrl) where TMap : ClassMap<T>
         {
-            _logger.LogInformation("Downloading CSV file from url: {ApprovedUrlFilePath} {ArchivedUrlFilePath}", approvedUrlFilePath, archivedUrlFilePath);
+            _logger.LogInformation("Downloading CSV file from url: {ApprovedUrlFilePath} {ArchivedUrlFilePath}", approvedUrl, archivedUrl);
 
-            var ApprovedRecords = new List<T>();
-            var ArchivedRecords = new List<T>();
-            var TotalRecords = new List<T>();
+            var totalRecords = new List<T>();
 
             try
             {
-                var ApprovedClient = _httpClient.CreateClient();
+                HttpResponseMessage response;
+                response = await GetDataFromUrl(approvedUrl);
 
-                var ApprovedResponse = await ApprovedClient.GetAsync(approvedUrlFilePath);
-                ApprovedResponse.EnsureSuccessStatusCode();
+                using var approvedResponseStream = await response.Content.ReadAsStreamAsync();
 
-                using var stream = await ApprovedResponse.Content.ReadAsStreamAsync();
-                using var reader = new StreamReader(stream);
-                using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
-                csv.Context.RegisterClassMap<TMap>();
-                ApprovedRecords = csv.GetRecords<T>().ToList();
-                _logger.LogInformation("Total Records Read: {Records}", ApprovedRecords.Count);
+                var approvedCsvData
+                    = ReadCsv<T, TMap>(approvedResponseStream);
 
-                var ArchivedClient = _httpClient.CreateClient();
+                _logger.LogInformation("Total approved Records Read: {Records}", approvedCsvData.Count);
 
-                var ArchivedResponse = await ArchivedClient.GetAsync(archivedUrlFilePath);
-                ArchivedResponse.EnsureSuccessStatusCode();
+                response = await GetDataFromUrl(archivedUrl);
+                using var archivedResponseStream = await response.Content.ReadAsStreamAsync();
 
-                using var stream2 = await ArchivedResponse.Content.ReadAsStreamAsync();
-                using var reader2 = new StreamReader(stream2);
-                using var csv2 = new CsvReader(reader2, CultureInfo.InvariantCulture);
-                csv2.Context.RegisterClassMap<TMap>();
-                ArchivedRecords = csv2.GetRecords<T>().ToList();
-                _logger.LogInformation("Total Records Read: {Records}", ArchivedRecords.Count);
+                var archivedCsvData = ReadCsv<T, TMap>(archivedResponseStream);
 
+                _logger.LogInformation("Total archived Records Read: {Records}", archivedCsvData.Count);
 
-                TotalRecords.AddRange(ArchivedRecords);
-                TotalRecords.AddRange(ApprovedRecords);
-
+                totalRecords.AddRange(approvedCsvData);
+                totalRecords.AddRange(archivedCsvData);
             }
             catch (HttpRequestException ex)
             {
@@ -87,7 +72,7 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
                 _logger.LogError(ex, "Error downloading CSV file from url: {UrlFilePath}");
             }
 
-            return TotalRecords;
+            return totalRecords;
         }
 
         public async Task<List<T>> ReadCsvFileFromUrlAsync<T, TMap>(string urlFilePath) where TMap : ClassMap<T>
@@ -98,16 +83,13 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
 
             try
             {
-                var client = _httpClient.CreateClient();
+                var response = await GetDataFromUrl(urlFilePath);
 
-                var response = await client.GetAsync(urlFilePath);
-                response.EnsureSuccessStatusCode();
+                using var approvedResponseStream = await response.Content.ReadAsStreamAsync();
 
-                using var stream = await response.Content.ReadAsStreamAsync();
-                using var reader = new StreamReader(stream);
-                using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
-                csv.Context.RegisterClassMap<TMap>();
-                records = csv.GetRecords<T>().ToList();
+                var approvedCsvData
+                    = ReadCsv<T, TMap>(approvedResponseStream);
+
                 _logger.LogInformation("Total Records Read: {Records}", records.Count);
             }
             catch (HttpRequestException ex)
@@ -118,8 +100,22 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
             {
                 _logger.LogError(ex, "Error downloading CSV file from url: {UrlFilePath}", urlFilePath);
             }
-
             return records;
+        }
+
+        private async Task<HttpResponseMessage> GetDataFromUrl(string approvedUrlFilePath)
+        {
+            var response = await _httpClient.GetAsync(approvedUrlFilePath);
+            response.EnsureSuccessStatusCode();
+            return response;
+        }
+
+        private List<T> ReadCsv<T, TMap>(dynamic stream) where TMap : ClassMap<T>
+        {
+            using var streamReader = new StreamReader(stream);
+            using var csvReader = new CsvReader(streamReader, CultureInfo.InvariantCulture);
+            csvReader.Context.RegisterClassMap<TMap>();
+            return csvReader.GetRecords<T>().ToList();
         }
     }
 }

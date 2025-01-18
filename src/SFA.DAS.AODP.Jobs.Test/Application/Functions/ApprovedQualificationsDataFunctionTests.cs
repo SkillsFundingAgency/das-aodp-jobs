@@ -38,7 +38,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
             // Arrange
             var approvedQualifications = new List<ApprovedQualificationsImport>
             {
-                new ApprovedQualificationsImport { QualificationId = 1, QualificationName = "Test Qualification" }
+                new ApprovedQualificationsImport { Id = 1, QualificationName = "Test Qualification" }
             };
             _csvReaderServiceMock
                 .Setup(service => service.ReadCsvFileFromUrlAsync<ApprovedQualificationsImport, ApprovedQualificationsImportClassMap>(It.IsAny<string>()))
