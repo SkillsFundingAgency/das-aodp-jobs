@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[ApprovedQualificationsImport]
+﻿CREATE TABLE [dbo].[FundedQualificationsImport]
 (
 	[Id] INT IDENTITY(1,1) NOT NULL,
 	[DateOfOfqualDataSnapshot] DATETIME NULL,
@@ -49,7 +49,7 @@
 	[L3FreeCoursesForJobsNotes] NVARCHAR(255) NULL,
 	[QualificationNumberVarchar] VARCHAR(100) NULL,
 		
-	CONSTRAINT [PK_ApprovedQualification] PRIMARY KEY CLUSTERED 
+	CONSTRAINT [PK_FundedQualification] PRIMARY KEY NONCLUSTERED 
 (
 	[id] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]

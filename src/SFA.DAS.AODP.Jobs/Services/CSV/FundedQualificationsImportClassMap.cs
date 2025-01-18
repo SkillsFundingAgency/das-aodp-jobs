@@ -3,9 +3,9 @@ using SFA.DAS.AODP.Data.Entities;
 
 namespace SFA.DAS.AODP.Jobs.Services.CSV
 {
-    public class ApprovedQualificationsImportClassMap : ClassMap<ApprovedQualificationsImport>
+    public class FundedQualificationsImportClassMap : ClassMap<FundedQualificationsImport>
     {
-        public ApprovedQualificationsImportClassMap()
+        public FundedQualificationsImportClassMap()
         {
             Map(m => m.DateOfOfqualDataSnapshot)
                 .Name("DateOfOfqualDataSnapshot")

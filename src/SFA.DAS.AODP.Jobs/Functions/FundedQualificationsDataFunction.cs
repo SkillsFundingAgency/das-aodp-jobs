@@ -9,13 +9,13 @@ using SFA.DAS.AODP.Jobs.Services.CSV;
 
 namespace SFA.DAS.AODP.Functions
 {
-    public class ApprovedQualificationsDataFunction
+    public class FundedQualificationsDataFunction
     {
-        private readonly ILogger<ApprovedQualificationsDataFunction> _logger;
+        private readonly ILogger<FundedQualificationsDataFunction> _logger;
         private readonly IApplicationDbContext _applicationDbContext;
         private readonly ICsvReaderService _csvReaderService;
 
-        public ApprovedQualificationsDataFunction(ILogger<ApprovedQualificationsDataFunction> logger, IApplicationDbContext applicationDbContext, ICsvReaderService csvReaderService)
+        public FundedQualificationsDataFunction(ILogger<FundedQualificationsDataFunction> logger, IApplicationDbContext applicationDbContext, ICsvReaderService csvReaderService)
         {
             _logger = logger;
             _applicationDbContext = applicationDbContext;
@@ -26,8 +26,9 @@ namespace SFA.DAS.AODP.Functions
         public async Task<HttpResponseData> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "api/approvedQualificationsImport")] HttpRequestData req)
         {
-            string? approvedUrlFilePath = Environment.GetEnvironmentVariable("ApprovedQualificationsImportUrl");
-            string? archivedUrlFilePath = Environment.GetEnvironmentVariable("ArchivedApprovedQualifcationsImportUrl");
+            
+            string? approvedUrlFilePath = Environment.GetEnvironmentVariable("FundedQualificationsImportUrl");
+            string? archivedUrlFilePath = Environment.GetEnvironmentVariable("ArchivedFundedQualifcationsImportUrl");
 
 
             if (string.IsNullOrEmpty(approvedUrlFilePath) || string.IsNullOrEmpty(archivedUrlFilePath))
@@ -37,11 +38,15 @@ namespace SFA.DAS.AODP.Functions
                 return notFoundResponse;
             }
 
-            var approvedQualifications = await _csvReaderService.ReadApprovedAndArchivedFromUrlAsync<ApprovedQualificationsImport, ApprovedQualificationsImportClassMap>(approvedUrlFilePath, archivedUrlFilePath);
-
+            var approvedQualifications = await _csvReaderService.ReadApprovedAndArchivedFromUrlAsync<FundedQualificationsImport, FundedQualificationsImportClassMap>(approvedUrlFilePath, archivedUrlFilePath);
+            var stopWatch = new Stopwatch();
+            
             if (approvedQualifications.Any())
             {
+                await _applicationDbContext.TruncateTable("FundedQualificationsImport");
+                stopWatch.Start();
                 await _applicationDbContext.BulkInsertAsync(approvedQualifications);
+                stopWatch.Stop();
             }
             else
             {
@@ -49,6 +54,7 @@ namespace SFA.DAS.AODP.Functions
                 var notFoundResponse = req.CreateResponse(System.Net.HttpStatusCode.NotFound);
                 return notFoundResponse;
             }
+            _logger.LogInformation($"{approvedQualifications.Count} records imported in {stopWatch.ElapsedMilliseconds/1000}");
 
             var successResponse = req.CreateResponse(System.Net.HttpStatusCode.OK);
             _logger.LogInformation("{Count} records imported successfully", approvedQualifications.Count);

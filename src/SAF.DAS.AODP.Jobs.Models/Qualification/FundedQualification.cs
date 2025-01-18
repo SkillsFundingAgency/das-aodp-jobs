@@ -2,7 +2,7 @@
 using CsvHelper.Configuration;
 
 namespace SFA.DAS.AODP.Models.Qualification;
-public class ApprovedQualification
+public class FundedQualification
 {
     [Key]
     public int QualificationId { get; set; }
@@ -54,7 +54,7 @@ public class ApprovedQualification
     public string L3FreeCoursesForJobs_Notes { get; set; }
 }
 
-public class ModelClassMap : ClassMap<ApprovedQualification>
+public class ModelClassMap : ClassMap<FundedQualification>
 {
     public ModelClassMap()
     {

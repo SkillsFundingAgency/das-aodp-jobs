@@ -3,7 +3,7 @@ using CsvHelper.Configuration;
 
 namespace SFA.DAS.AODP.Data.Entities
 {
-    public partial class ApprovedQualificationsImport
+    public partial class FundedQualificationsImport
     {
         public int Id { get; set; }
         public DateTime? DateOfOfqualDataSnapshot { get; set; }

@@ -8,10 +8,7 @@
 		<UserSecretsId>f1c8a8c3-1de3-497d-999c-dabdd7e0f9da</UserSecretsId>
 	</PropertyGroup>
 	<ItemGroup>
-	  <None Remove="Data\approved.csv" />
-	</ItemGroup>
-	<ItemGroup>
-	  <Content Include="Data\approved.csv">
+	  <Content Include="Data\funded.csv">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </Content>
 	  <Content Include="local.settings.json" />
