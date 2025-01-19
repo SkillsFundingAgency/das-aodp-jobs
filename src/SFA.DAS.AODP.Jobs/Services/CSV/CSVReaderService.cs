@@ -9,30 +9,31 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
     public class CsvReaderService : ICsvReaderService
     {
         private readonly ILogger<CsvReaderService> _logger;
-        private readonly HttpClient _httpClient;
+        private readonly IHttpClientFactory _httpClientFactory;
 
         public CsvReaderService(ILogger<CsvReaderService> logger, IHttpClientFactory httpClientFactory)
         {
             _logger = logger;
-            _httpClient = httpClientFactory.CreateClient();
+            _httpClientFactory = httpClientFactory;
+          
         }
 
         public List<T> ReadCSVFromFilePath<T, TMap>(string filePath) where TMap : ClassMap<T>
         {
             _logger.LogInformation("Searching for CSV file for processing");
 
-            var records = new List<T>();
+            var fundedCsvRecords = new List<T>();
             if (File.Exists(filePath))
             {
-                var approvedCsvData
+                fundedCsvRecords
                        = ReadCsv<T, TMap>(filePath);
-                Console.WriteLine($"Total Records Read: {records.Count}");
+                Console.WriteLine($"Total Records Read: {fundedCsvRecords.Count}");
             }
             else
             {
                 _logger.LogError("File not found: {FilePath}", filePath);
             }
-            return records;
+            return fundedCsvRecords;
         }
 
         public async Task<List<T>> ReadApprovedAndArchivedFromUrlAsync<T, TMap>(string approvedUrl, string archivedUrl) where TMap : ClassMap<T>
@@ -79,7 +80,7 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
         {
             _logger.LogInformation("Downloading CSV file from url: {UrlFilePath}", urlFilePath);
 
-            var records = new List<T>();
+            var fundedCsvRecords = new List<T>();
 
             try
             {
@@ -87,10 +88,10 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
 
                 using var approvedResponseStream = await response.Content.ReadAsStreamAsync();
 
-                var approvedCsvData
+                 fundedCsvRecords
                     = ReadCsv<T, TMap>(approvedResponseStream);
 
-                _logger.LogInformation("Total Records Read: {Records}", records.Count);
+                _logger.LogInformation("Total Records Read: {fundedCsvRecords}", fundedCsvRecords.Count);
             }
             catch (HttpRequestException ex)
             {
@@ -100,11 +101,12 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
             {
                 _logger.LogError(ex, "Error downloading CSV file from url: {UrlFilePath}", urlFilePath);
             }
-            return records;
+            return fundedCsvRecords;
         }
 
         private async Task<HttpResponseMessage> GetDataFromUrl(string approvedUrlFilePath)
         {
+            var _httpClient = _httpClientFactory.CreateClient();
             var response = await _httpClient.GetAsync(approvedUrlFilePath);
             response.EnsureSuccessStatusCode();
             return response;
