@@ -41,12 +41,12 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
                 new FundedQualificationsImport { Id = 1, QualificationName = "Test Qualification" }
             };
             _csvReaderServiceMock
-                .Setup(service => service.ReadCsvFileFromUrlAsync<FundedQualificationsImport, FundedQualificationsImportClassMap>(It.IsAny<string>()))
+                .Setup(service => service.ReadApprovedAndArchivedFromUrlAsync<FundedQualificationsImport, FundedQualificationsImportClassMap>(It.IsAny<string>(),It.IsAny<string>()))
                 .ReturnsAsync(approvedQualifications);
 
             var httpRequestData = new MockHttpRequestData(_functionContext);
             Environment.SetEnvironmentVariable("FundedQualificationsImportUrl", "https://example.com/approved.csv");
-
+            Environment.SetEnvironmentVariable("ArchivedFundedQualificationsImportUrl", "https://example.com/archived.csv");
             // Act
             var response = await _function.Run(httpRequestData);
 
@@ -60,7 +60,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
         {
             // Arrange
             _csvReaderServiceMock
-                .Setup(service => service.ReadCsvFileFromUrlAsync<FundedQualificationsImport, FundedQualificationsImportClassMap>(It.IsAny<string>()))
+                .Setup(service => service.ReadApprovedAndArchivedFromUrlAsync<FundedQualificationsImport, FundedQualificationsImportClassMap>(It.IsAny<string>(),It.IsAny<string>()))
                 .ReturnsAsync(new List<FundedQualificationsImport>());
 
             var httpRequestData = new MockHttpRequestData(_functionContext);
