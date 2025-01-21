@@ -1,10 +1,8 @@
 ﻿namespace SFA.DAS.AODP.Models.Qualification;
 
-public class RegisteredQualificationQueryParameters
+public class RegulatedQualificationQueryParameters
 {
     public string Title { get; set; }
-    public int PageNumber { get; set; }
-    public int PageSize { get; set; }
     public string AssessmentMethods { get; set; }
     public string GradingTypes { get; set; }
     public string AwardingOrganisations { get; set; }

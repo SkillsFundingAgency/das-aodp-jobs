@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[RegisteredQualificationsImport]
+﻿CREATE TABLE [dbo].[RegulatedQualificationsImport]
 (
 	[Id]                                    INT IDENTITY (1, 1)            NOT NULL,
 	[QualificationNumber]                   VARCHAR(10)                    NOT NULL,
@@ -58,5 +58,5 @@
 	[ImportStatus]							VARCHAR(50)                    DEFAULT 'New',
 	[ChangedFields]							VARCHAR(MAX),				
 	
-	CONSTRAINT [PK_RegisteredQualification] PRIMARY KEY CLUSTERED ([Id] ASC),
+	CONSTRAINT [PK_RegulatedQualification] PRIMARY KEY CLUSTERED ([Id] ASC),
 )

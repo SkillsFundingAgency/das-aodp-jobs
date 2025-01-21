@@ -14,7 +14,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             _apiClient = apiClient;
         }
 
-        public async Task<PaginatedResult<RegisteredQualification>> SearchPrivateQualificationsAsync(RegisteredQualificationQueryParameters parameters, int page, int limit)
+        public async Task<PaginatedResult<RegulatedQualification>> SearchPrivateQualificationsAsync(RegulatedQualificationQueryParameters parameters, int page, int limit)
         {
             return await _apiClient.SearchPrivateQualificationsAsync(
                 parameters.Title,

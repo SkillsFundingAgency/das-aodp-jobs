@@ -7,18 +7,17 @@ using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Models.Qualification;
-using System.Diagnostics;
 
 namespace SFA.DAS.AODP.Functions.Functions
 {
-    public class RegisteredQualificationsDataFunction
+    public class RegulatedQualificationsDataFunction
     {
         private readonly IApplicationDbContext _applicationDbContext;
-        private readonly ILogger<RegisteredQualificationsDataFunction> _logger;
+        private readonly ILogger<RegulatedQualificationsDataFunction> _logger;
         private readonly IQualificationsApiService _qualificationsApiService;
 
-        public RegisteredQualificationsDataFunction(
-            ILogger<RegisteredQualificationsDataFunction> logger, 
+        public RegulatedQualificationsDataFunction(
+            ILogger<RegulatedQualificationsDataFunction> logger, 
             IApplicationDbContext appDbContext, 
             IQualificationsApiService qualificationsApiService)
         {
@@ -27,11 +26,11 @@ namespace SFA.DAS.AODP.Functions.Functions
             _qualificationsApiService = qualificationsApiService;
         }
 
-        [Function("RegisteredQualificationsDataFunction")]
+        [Function("RegulatedQualificationsDataFunction")]
         public async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Function, "get", Route = "gov/RegisteredQualificationsImport")] HttpRequest req)
+            [HttpTrigger(AuthorizationLevel.Function, "get", Route = "gov/regulatedQualificationsImport")] HttpRequest req)
         {
-            _logger.LogInformation($"Processing {nameof(RegisteredQualificationsDataFunction)} request...");
+            _logger.LogInformation($"Processing {nameof(RegulatedQualificationsDataFunction)} request...");
 
             try
             {
@@ -40,10 +39,6 @@ namespace SFA.DAS.AODP.Functions.Functions
                 int totalProcessed = 0;
 
                 var queryParameters = ParseQueryParameters(req.Query);
-
-                // debug
-                var stopwatch = new Stopwatch();
-                stopwatch.Start();
 
                 while (true)
                 {
@@ -57,7 +52,7 @@ namespace SFA.DAS.AODP.Functions.Functions
 
                     _logger.LogInformation($"Processing page {page}. Retrieved {paginatedResult.Results.Count} qualifications.");
 
-                    var qualifications = paginatedResult.Results.Select(q => new RegisteredQualificationsImport
+                    var qualifications = paginatedResult.Results.Select(q => new RegulatedQualificationsImport
                     {
                         QualificationNumber = q.QualificationNumber,
                         QualificationNumberNoObliques = q.QualificationNumberNoObliques,
@@ -119,8 +114,10 @@ namespace SFA.DAS.AODP.Functions.Functions
                     }).ToList();
 
                     // Save qualifications to the database using bulk insert
-                    await _applicationDbContext.BulkInsertAsync(qualifications);
-
+                    await _applicationDbContext.BulkInsertAsync(qualifications);               
+                    //_applicationDbContext.RegisteredQualificationsImport.AddRange(qualifications);
+                    //await _applicationDbContext.SaveChangesAsync();
+                    
                     totalProcessed += qualifications.Count;
 
                     if (paginatedResult.Results.Count < limit)
@@ -141,23 +138,27 @@ namespace SFA.DAS.AODP.Functions.Functions
             }
             catch (ApiException ex)
             {
-                _logger.LogError($"");
+                _logger.LogError($"Unexpected api exception occurred: {ex.Message}");
                 return new StatusCodeResult((int)ex.StatusCode);
             }
             catch (SystemException ex)
             {
-                _logger.LogError($"");
+                _logger.LogError($"Unexpected system exception occurred: {ex.Message}");
                 return new StatusCodeResult(500);
             }
         }
 
-        private RegisteredQualificationQueryParameters ParseQueryParameters(IQueryCollection query)
+        private RegulatedQualificationQueryParameters ParseQueryParameters(IQueryCollection query)
         {
-            return new RegisteredQualificationQueryParameters
+            if (query == null || !query.Any())
+            {
+                _logger.LogWarning("Query parameters are empty.");
+                return new RegulatedQualificationQueryParameters();
+            }
+
+            return new RegulatedQualificationQueryParameters
             {
                 Title = query["title"],
-                PageNumber = ParseInt(query["page"], 1),
-                PageSize = ParseInt(query["limit"], 10),
                 AssessmentMethods = query["assessmentMethods"],
                 GradingTypes = query["gradingTypes"],
                 AwardingOrganisations = query["awardingOrganisations"],

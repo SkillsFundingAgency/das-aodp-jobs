@@ -11,10 +11,9 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public virtual DbSet<FundedQualificationsImport> FundedQualificationsImport { get; set; }
 
-        public virtual DbSet<ProcessedRegisteredQualification> ProcessedRegisteredQualifications { get; set; }
+        public virtual DbSet<ProcessedRegulatedQualification> ProcessedRegulatedQualifications { get; set; }
 
-        public virtual DbSet<RegisteredQualificationsImport> RegisteredQualificationsImport { get; set; }
-
+        public virtual DbSet<RegulatedQualificationsImport> RegulatedQualificationsImport { get; set; }
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {

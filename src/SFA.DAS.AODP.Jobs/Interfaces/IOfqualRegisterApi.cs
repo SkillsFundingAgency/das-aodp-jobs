@@ -10,10 +10,10 @@ namespace SFA.DAS.AODP.Functions.Interfaces
         string SubscriptionKey { get; set; }
 
         //[Get("gov/Qualification/{qualificationsNumber}")]
-        //Task<RegisteredQualification> GetPrivateQualificationsAsync([Path] string qualificationNumber);
+        //Task<RegulatedQualification> GetPrivateQualificationsAsync([Path] string qualificationNumber);
 
         [Get("gov/Qualifications")]
-        Task<PaginatedResult<RegisteredQualification>> SearchPrivateQualificationsAsync(
+        Task<PaginatedResult<RegulatedQualification>> SearchPrivateQualificationsAsync(
             [Query("title")] string title,
             [Query("page")] int pageNumber,
             [Query("limit")] int pageSize,

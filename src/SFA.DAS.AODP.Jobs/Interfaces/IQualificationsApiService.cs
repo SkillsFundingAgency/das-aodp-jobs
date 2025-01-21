@@ -5,7 +5,7 @@ namespace SFA.DAS.AODP.Jobs.Interfaces
 {
     public interface IQualificationsApiService
     {
-        Task<PaginatedResult<RegisteredQualification>> SearchPrivateQualificationsAsync(RegisteredQualificationQueryParameters parameters, int page, int limit);
+        Task<PaginatedResult<RegulatedQualification>> SearchPrivateQualificationsAsync(RegulatedQualificationQueryParameters parameters, int page, int limit);
 
     }
 }

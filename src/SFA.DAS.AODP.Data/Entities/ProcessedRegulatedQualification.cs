@@ -1,12 +1,12 @@
-﻿namespace SFA.DAS.AODP.Models.Qualification;
+﻿namespace SFA.DAS.AODP.Data.Entities;
 
-public partial class RegisteredQualification
+public partial class ProcessedRegulatedQualification
 {
     public int Id { get; set; }
 
     public string QualificationNumber { get; set; } = null!;
 
-    public string? QualificationNumberNoObliques { get; set; }
+    public string QualificationNumberNoObliques { get; set; } = null!;
 
     public string Title { get; set; } = null!;
 
@@ -26,7 +26,7 @@ public partial class RegisteredQualification
 
     public string SubLevel { get; set; } = null!;
 
-    public string EqfLevel { get; set; }
+    public string EqfLevel { get; set; } = null!;
 
     public string? GradingType { get; set; }
 
@@ -62,7 +62,7 @@ public partial class RegisteredQualification
 
     public string? Pathways { get; set; }
 
-    public Object? AssessmentMethods { get; set; }
+    public string? AssessmentMethods { get; set; }
 
     public string? ApprovedForDelfundedProgramme { get; set; }
 
@@ -111,8 +111,4 @@ public partial class RegisteredQualification
     public bool? EighteenPlus { get; set; }
 
     public bool? NineteenPlus { get; set; }
-
-    public string? ImportStatus { get; set; }
-
-    //public string? ChangedFields { get; set; }
 }
