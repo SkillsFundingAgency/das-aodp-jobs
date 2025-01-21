@@ -129,10 +129,6 @@ namespace SFA.DAS.AODP.Functions.Functions
                     page++;
                 }
 
-                // debug
-                stopwatch.Stop();
-                _logger.LogInformation($"Total Time Taken: {stopwatch.ElapsedMilliseconds} ms");
-
                 _logger.LogInformation($"Total qualifications processed: {totalProcessed}");
                 return new OkObjectResult($"Successfully processed {totalProcessed} qualifications.");
             }
