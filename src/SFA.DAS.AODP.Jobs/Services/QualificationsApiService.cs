@@ -16,6 +16,11 @@ namespace SFA.DAS.AODP.Jobs.Services
 
         public async Task<PaginatedResult<RegulatedQualification>> SearchPrivateQualificationsAsync(RegulatedQualificationQueryParameters parameters, int page, int limit)
         {
+            if (parameters == null)
+            {
+                throw new ArgumentNullException(nameof(parameters), "Parameters cannot be null.");
+            }
+
             return await _apiClient.SearchPrivateQualificationsAsync(
                 parameters.Title,
                 page,
