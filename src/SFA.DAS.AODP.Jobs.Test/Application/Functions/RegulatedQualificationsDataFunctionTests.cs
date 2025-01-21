@@ -1,8 +1,6 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Primitives;
 using Moq;
 using RestEase;
 using SFA.DAS.AODP.Data;
@@ -10,6 +8,7 @@ using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Functions.Functions;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Jobs.Interfaces;
+using SFA.DAS.AODP.Jobs.Test.Mocks;
 using SFA.DAS.AODP.Models.Qualification;
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Functions;
@@ -39,6 +38,8 @@ public class RegulatedQualificationsDataFunctionTests
     {
         // Arrange
         var qualifications = new List<RegulatedQualificationsImport>();
+        var httpRequestData = new MockHttpRequestData(_functionContext);
+
         _applicationDbContextMock.Setup(db => db.BulkInsertAsync(It.IsAny<IEnumerable<RegulatedQualificationsImport>>(), It.IsAny<CancellationToken>()))
             .Callback<IEnumerable<RegulatedQualificationsImport>, CancellationToken>((qualificationsList, cancellationToken) =>
             {
@@ -63,12 +64,8 @@ public class RegulatedQualificationsDataFunctionTests
                 }
             });
 
-        var httpRequestMock = new Mock<Microsoft.AspNetCore.Http.HttpRequest>();
-        httpRequestMock.Setup(req => req.Query)
-            .Returns(new QueryCollection());
-
         // Act
-        var result = await _function.Run(httpRequestMock.Object);
+        var result = await _function.Run(httpRequestData);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -83,6 +80,8 @@ public class RegulatedQualificationsDataFunctionTests
     public async Task Run_ShouldLogAndReturnWhenApiReturnsNoResults()
     {
         // Arrange
+        var httpRequestData = new MockHttpRequestData(_functionContext);
+        
         _qualificationsApiServiceMock.Setup(x => x.SearchPrivateQualificationsAsync(
                 It.IsAny<RegulatedQualificationQueryParameters>(), 
                 It.IsAny<int>(), 
@@ -92,16 +91,13 @@ public class RegulatedQualificationsDataFunctionTests
                 Results = null
             });
 
-        var httpRequestMock = new Mock<Microsoft.AspNetCore.Http.HttpRequest>();
-        httpRequestMock.Setup(req => req.Query)
-            .Returns(new QueryCollection());
-
         // Act
-        var result = await _function.Run(httpRequestMock.Object);
+        var result = await _function.Run(httpRequestData);
 
         // Assert
         Assert.IsType<OkObjectResult>(result);
         var okResult = result as OkObjectResult;
+        Assert.NotNull(okResult);
         Assert.Equal("Successfully processed 0 qualifications.", okResult.Value);
 
         _loggerMock.Verify(x => x.Log(
@@ -121,6 +117,8 @@ public class RegulatedQualificationsDataFunctionTests
     public async Task Run_ShouldBulkInsertQualificationsWhenApiReturnsResults()
     {
         // Arrange
+        var httpRequestData = new MockHttpRequestData(_functionContext);
+
         _qualificationsApiServiceMock.Setup(api => api.SearchPrivateQualificationsAsync(
                 It.IsAny<RegulatedQualificationQueryParameters>(),
                 It.IsAny<int>(),
@@ -135,16 +133,13 @@ public class RegulatedQualificationsDataFunctionTests
                 }
             });
 
-        var httpRequestMock = new Mock<Microsoft.AspNetCore.Http.HttpRequest>();
-        httpRequestMock.Setup(req => req.Query)
-            .Returns(new QueryCollection());
-
         // Act
-        var result = await _function.Run(httpRequestMock.Object);
+        var result = await _function.Run(httpRequestData);
 
         // Assert
         Assert.IsType<OkObjectResult>(result);
         var okResult = result as OkObjectResult;
+        Assert.NotNull(okResult);
         Assert.Contains("Successfully processed", okResult.Value.ToString());
 
         _applicationDbContextMock.Verify(
@@ -173,8 +168,7 @@ public class RegulatedQualificationsDataFunctionTests
     public async Task Run_ShouldReturnInternalServerError_OnSystemException()
     {
         // Arrange
-        var httpRequestMock = new Mock<HttpRequest>();
-        httpRequestMock.Setup(req => req.Query).Returns(new QueryCollection());
+        var httpRequestData = new MockHttpRequestData(_functionContext);
 
         _qualificationsApiServiceMock
             .Setup(service => service.SearchPrivateQualificationsAsync(
@@ -184,7 +178,7 @@ public class RegulatedQualificationsDataFunctionTests
             .ThrowsAsync(new SystemException("Unexpected error occurred"));
 
         // Act
-        var result = await _function.Run(httpRequestMock.Object);
+        var result = await _function.Run(httpRequestData);
 
         // Assert
         var statusCodeResult = Assert.IsType<StatusCodeResult>(result);
@@ -202,9 +196,7 @@ public class RegulatedQualificationsDataFunctionTests
     public async Task Run_ShouldReturnStatusCode_OnApiException()
     {
         // Arrange
-        var httpRequestMock = new Mock<HttpRequest>();
-        httpRequestMock.Setup(req => req.Query).Returns(new QueryCollection());
-
+        var httpRequestData = new MockHttpRequestData(_functionContext);
         var requestMessage = new HttpRequestMessage(HttpMethod.Get, "https://test.com");
         var responseMessage = new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest)
         {
@@ -220,7 +212,7 @@ public class RegulatedQualificationsDataFunctionTests
             .ThrowsAsync(apiException);
 
         // Act
-        var result = await _function.Run(httpRequestMock.Object);
+        var result = await _function.Run(httpRequestData);
 
         // Assert
         var statusCodeResult = Assert.IsType<StatusCodeResult>(result);

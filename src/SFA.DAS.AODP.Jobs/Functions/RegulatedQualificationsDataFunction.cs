@@ -1,6 +1,7 @@
-using Microsoft.AspNetCore.Http;
+using System.Collections.Specialized;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using RestEase;
 using SFA.DAS.AODP.Data.Entities;
@@ -28,7 +29,7 @@ namespace SFA.DAS.AODP.Functions.Functions
 
         [Function("RegulatedQualificationsDataFunction")]
         public async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Function, "get", Route = "gov/regulatedQualificationsImport")] HttpRequest req)
+            [HttpTrigger(AuthorizationLevel.Function, "get", Route = "gov/regulatedQualificationsImport")] HttpRequestData req)
         {
             _logger.LogInformation($"Processing {nameof(RegulatedQualificationsDataFunction)} request...");
 
@@ -55,7 +56,7 @@ namespace SFA.DAS.AODP.Functions.Functions
                     var qualifications = paginatedResult.Results.Select(q => new RegulatedQualificationsImport
                     {
                         QualificationNumber = q.QualificationNumber,
-                        QualificationNumberNoObliques = q.QualificationNumberNoObliques,
+                        QualificationNumberNoObliques = q.QualificationNumberNoObliques ?? "",
                         Title = q.Title,
                         Status = q.Status,
                         OrganisationName = q.OrganisationName,
@@ -113,10 +114,10 @@ namespace SFA.DAS.AODP.Functions.Functions
                         ImportStatus = "New"
                     }).ToList();
 
-                    // Save qualifications to the database using bulk insert
-                    await _applicationDbContext.BulkInsertAsync(qualifications);               
-                    //_applicationDbContext.RegisteredQualificationsImport.AddRange(qualifications);
+                    // Save qualifications to the database using bulk insert             
+                    //_applicationDbContext.RegulatedQualificationsImport.AddRange(qualifications);
                     //await _applicationDbContext.SaveChangesAsync();
+                    await _applicationDbContext.BulkInsertAsync(qualifications);  
                     
                     totalProcessed += qualifications.Count;
 
@@ -144,9 +145,9 @@ namespace SFA.DAS.AODP.Functions.Functions
             }
         }
 
-        private RegulatedQualificationQueryParameters ParseQueryParameters(IQueryCollection query)
+        private RegulatedQualificationQueryParameters ParseQueryParameters(NameValueCollection query)
         {
-            if (query == null || !query.Any())
+            if (query == null || query.Count == 0)
             {
                 _logger.LogWarning("Query parameters are empty.");
                 return new RegulatedQualificationQueryParameters();
@@ -163,10 +164,10 @@ namespace SFA.DAS.AODP.Functions.Functions
                 QualificationLevels = query["qualificationLevels"],
                 NationalAvailability = query["nationalAvailability"],
                 SectorSubjectAreas = query["sectorSubjectAreas"],
-                MinTotalQualificationTime = ParseNullableInt(query["minTotalQualificationTime"]),
-                MaxTotalQualificationTime = ParseNullableInt(query["maxTotalQualificationTime"]),
-                MinGuidedLearningHours = ParseNullableInt(query["minGuidedLearninghours"]),
-                MaxGuidedLearningHours = ParseNullableInt(query["maxGuidedLearninghours"])
+                MinTotalQualificationTime = ParseNullableInt(query["minTotalQualificationTime"] ?? ""),
+                MaxTotalQualificationTime = ParseNullableInt(query["maxTotalQualificationTime"] ?? ""),
+                MinGuidedLearningHours = ParseNullableInt(query["minGuidedLearninghours"] ?? ""),
+                MaxGuidedLearningHours = ParseNullableInt(query["maxGuidedLearninghours"] ?? "")
             };
         }
 
