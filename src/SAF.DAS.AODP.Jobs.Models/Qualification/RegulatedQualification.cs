@@ -114,5 +114,5 @@ public partial class RegulatedQualification
 
     public string? ImportStatus { get; set; }
 
-    //public string? ChangedFields { get; set; }
+    public string? ChangedFields { get; set; }
 }

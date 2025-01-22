@@ -24,7 +24,7 @@ var host = new HostBuilder()
 
         services.AddHttpClient();
         services.AddScoped<IApplicationDbContext, ApplicationDbContext>();
-        services.AddScoped<IQualificationsApiService, QualificationsApiService>();
+        services.AddScoped<IRegulatedQualificationsService, RegulatedQualificationsService>();
         services.AddScoped<ICsvReaderService, CsvReaderService>();
         services.AddScoped<IOfqualRegisterApi>(provider =>
         {
@@ -34,6 +34,8 @@ var host = new HostBuilder()
             api.SubscriptionKey = config["OcpApimSubscriptionKey"];
             return api;
         });
+
+        services.AddAutoMapper(typeof(MapperProfile));
 
     })
     .Build();

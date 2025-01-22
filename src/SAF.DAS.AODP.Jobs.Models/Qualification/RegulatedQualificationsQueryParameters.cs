@@ -1,6 +1,6 @@
 ﻿namespace SFA.DAS.AODP.Models.Qualification;
 
-public class RegulatedQualificationQueryParameters
+public class RegulatedQualificationsQueryParameters
 {
     public string? Title { get; set; }
     public string? AssessmentMethods { get; set; }

@@ -11,19 +11,19 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
     public class QualificationsApiServiceTests
     {
         private readonly Mock<IOfqualRegisterApi> _mockApiClient;
-        private readonly QualificationsApiService _service;
+        private readonly RegulatedQualificationsService _service;
 
         public QualificationsApiServiceTests()
         {
             _mockApiClient = new Mock<IOfqualRegisterApi>();
-            _service = new QualificationsApiService(_mockApiClient.Object);
+            _service = new RegulatedQualificationsService(_mockApiClient.Object);
         }
 
         [Fact]
         public async Task SearchPrivateQualificationsAsync_CallsApiClient_WithCorrectParameters()
         {
             // Arrange
-            var parameters = new RegulatedQualificationQueryParameters
+            var parameters = new RegulatedQualificationsQueryParameters
             {
                 Title = "Test Title",
                 AssessmentMethods = "Test Method",
@@ -42,7 +42,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             int page = 1;
             int limit = 10;
 
-            var expectedResult = new PaginatedResult<RegulatedQualification>
+            var expectedResult = new RegulatedQualificationsPaginatedResult<RegulatedQualification>
             {
                 Results = new List<RegulatedQualification>(),
                 Count = 0
@@ -96,8 +96,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         public async Task SearchPrivateQualificationsAsync_ReturnsCorrectResult()
         {
             // Arrange
-            var parameters = new RegulatedQualificationQueryParameters { Title = "Test Title" };
-            var expectedResult = new PaginatedResult<RegulatedQualification>
+            var parameters = new RegulatedQualificationsQueryParameters { Title = "Test Title" };
+            var expectedResult = new RegulatedQualificationsPaginatedResult<RegulatedQualification>
             {
                 Results = new List<RegulatedQualification> { new RegulatedQualification { Title = "Test Qualification" } },
                 Count = 1
@@ -133,7 +133,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         public async Task SearchPrivateQualificationsAsync_ThrowsArgumentNullException_WhenParametersAreNull()
         {
             // Arrange
-            RegulatedQualificationQueryParameters parameters = null;
+            RegulatedQualificationsQueryParameters parameters = null;
             int page = 1;
             int limit = 10;
 
@@ -148,11 +148,11 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         public async Task SearchPrivateQualificationsAsync_ReturnsEmptyResults_WhenApiReturnsNoData()
         {
             // Arrange
-            var parameters = new RegulatedQualificationQueryParameters { Title = "Test Title" };
+            var parameters = new RegulatedQualificationsQueryParameters { Title = "Test Title" };
             int page = 1;
             int limit = 10;
 
-            var expectedResult = new PaginatedResult<RegulatedQualification>
+            var expectedResult = new RegulatedQualificationsPaginatedResult<RegulatedQualification>
             {
                 Results = new List<RegulatedQualification>(),
                 Count = 0
@@ -189,7 +189,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         public async Task SearchPrivateQualificationsAsync_ThrowsException_WhenApiClientFails()
         {
             // Arrange
-            var parameters = new RegulatedQualificationQueryParameters { Title = "Test Title" };
+            var parameters = new RegulatedQualificationsQueryParameters { Title = "Test Title" };
             int page = 1;
             int limit = 10;
 
@@ -221,7 +221,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         public async Task SearchPrivateQualificationsAsync_ReturnsLargeResultSet_WhenApiReturnsManyResults()
         {
             // Arrange
-            var parameters = new RegulatedQualificationQueryParameters { Title = "Test Title" };
+            var parameters = new RegulatedQualificationsQueryParameters { Title = "Test Title" };
             int page = 1;
             int limit = 100;
 
@@ -231,7 +231,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 largeResults.Add(new RegulatedQualification { Title = $"Qualification {i}" });
             }
 
-            var expectedResult = new PaginatedResult<RegulatedQualification>
+            var expectedResult = new RegulatedQualificationsPaginatedResult<RegulatedQualification>
             {
                 Results = largeResults,
                 Count = 1000

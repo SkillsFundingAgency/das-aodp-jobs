@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -17,20 +18,23 @@ public class RegulatedQualificationsDataFunctionTests
 {
     private readonly Mock<ILogger<RegulatedQualificationsDataFunction>> _loggerMock;
     private readonly Mock<IApplicationDbContext> _applicationDbContextMock;
-    private readonly Mock<IQualificationsApiService> _qualificationsApiServiceMock;
+    private readonly Mock<IRegulatedQualificationsService> _qualificationsApiServiceMock;
     private readonly FunctionContext _functionContext;
     private readonly RegulatedQualificationsDataFunction _function;
+    private readonly Mock<IMapper> _mapper;
 
     public RegulatedQualificationsDataFunctionTests()
     {
         _loggerMock = new Mock<ILogger<RegulatedQualificationsDataFunction>>();
         _applicationDbContextMock = new Mock<IApplicationDbContext>();
-        _qualificationsApiServiceMock = new Mock<IQualificationsApiService>();
+        _qualificationsApiServiceMock = new Mock<IRegulatedQualificationsService>();
         _functionContext = new Mock<FunctionContext>().Object;
+        _mapper = new Mock<IMapper>();
         _function = new RegulatedQualificationsDataFunction(
             _loggerMock.Object,
             _applicationDbContextMock.Object,
-            _qualificationsApiServiceMock.Object);
+            _qualificationsApiServiceMock.Object,
+            _mapper.Object);
     }
 
     [Fact]
@@ -48,11 +52,11 @@ public class RegulatedQualificationsDataFunctionTests
             .Returns(Task.CompletedTask);
 
         _qualificationsApiServiceMock.Setup(api => api.SearchPrivateQualificationsAsync(
-                It.IsAny<RegulatedQualificationQueryParameters>(),
+                It.IsAny<RegulatedQualificationsQueryParameters>(),
                 It.IsAny<int>(),
                 It.IsAny<int>())
             )
-            .ReturnsAsync(new PaginatedResult<RegulatedQualification>
+            .ReturnsAsync(new RegulatedQualificationsPaginatedResult<RegulatedQualification>
             {
                 Results = new List<RegulatedQualification>
                 {
@@ -83,10 +87,10 @@ public class RegulatedQualificationsDataFunctionTests
         var httpRequestData = new MockHttpRequestData(_functionContext);
         
         _qualificationsApiServiceMock.Setup(x => x.SearchPrivateQualificationsAsync(
-                It.IsAny<RegulatedQualificationQueryParameters>(), 
+                It.IsAny<RegulatedQualificationsQueryParameters>(), 
                 It.IsAny<int>(), 
                 It.IsAny<int>()))
-            .ReturnsAsync(new PaginatedResult<RegulatedQualification>
+            .ReturnsAsync(new RegulatedQualificationsPaginatedResult<RegulatedQualification>
             {
                 Results = null
             });
@@ -120,11 +124,11 @@ public class RegulatedQualificationsDataFunctionTests
         var httpRequestData = new MockHttpRequestData(_functionContext);
 
         _qualificationsApiServiceMock.Setup(api => api.SearchPrivateQualificationsAsync(
-                It.IsAny<RegulatedQualificationQueryParameters>(),
+                It.IsAny<RegulatedQualificationsQueryParameters>(),
                 It.IsAny<int>(),
                 It.IsAny<int>())
             )
-            .ReturnsAsync(new PaginatedResult<RegulatedQualification>
+            .ReturnsAsync(new RegulatedQualificationsPaginatedResult<RegulatedQualification>
             {
                 Results = new List<RegulatedQualification>
                 {
@@ -172,7 +176,7 @@ public class RegulatedQualificationsDataFunctionTests
 
         _qualificationsApiServiceMock
             .Setup(service => service.SearchPrivateQualificationsAsync(
-                It.IsAny<RegulatedQualificationQueryParameters>(), 
+                It.IsAny<RegulatedQualificationsQueryParameters>(), 
                 It.IsAny<int>(), 
                 It.IsAny<int>()))
             .ThrowsAsync(new SystemException("Unexpected error occurred"));
@@ -206,7 +210,7 @@ public class RegulatedQualificationsDataFunctionTests
 
         _qualificationsApiServiceMock
             .Setup(service => service.SearchPrivateQualificationsAsync(
-                It.IsAny<RegulatedQualificationQueryParameters>(),
+                It.IsAny<RegulatedQualificationsQueryParameters>(),
                 It.IsAny<int>(),
                 It.IsAny<int>()))
             .ThrowsAsync(apiException);

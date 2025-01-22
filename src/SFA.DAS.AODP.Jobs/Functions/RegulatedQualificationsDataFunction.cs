@@ -1,7 +1,9 @@
 using System.Collections.Specialized;
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RestEase;
 using SFA.DAS.AODP.Data.Entities;
@@ -15,16 +17,19 @@ namespace SFA.DAS.AODP.Functions.Functions
     {
         private readonly IApplicationDbContext _applicationDbContext;
         private readonly ILogger<RegulatedQualificationsDataFunction> _logger;
-        private readonly IQualificationsApiService _qualificationsApiService;
+        private readonly IRegulatedQualificationsService _regulatedQualificationsService;
+        private readonly IMapper _mapper;
 
         public RegulatedQualificationsDataFunction(
             ILogger<RegulatedQualificationsDataFunction> logger, 
             IApplicationDbContext appDbContext, 
-            IQualificationsApiService qualificationsApiService)
+            IRegulatedQualificationsService regulatedQualificationsService,
+            IMapper mapper)
         {
             _logger = logger;
+            _mapper = mapper;
             _applicationDbContext = appDbContext;
-            _qualificationsApiService = qualificationsApiService;
+            _regulatedQualificationsService = regulatedQualificationsService;
         }
 
         [Function("RegulatedQualificationsDataFunction")]
@@ -36,14 +41,16 @@ namespace SFA.DAS.AODP.Functions.Functions
             try
             {
                 int page = 1;
-                int limit = 5000;
+                int limit = 1000;
                 int totalProcessed = 0;
-
                 var queryParameters = ParseQueryParameters(req.Query);
+
+                var processedQualificationsEntities = await _applicationDbContext.ProcessedRegulatedQualifications.ToListAsync();
+                var processedQualifications = _mapper.Map<List<RegulatedQualification>>(processedQualificationsEntities);
 
                 while (true)
                 {
-                    var paginatedResult = await _qualificationsApiService.SearchPrivateQualificationsAsync(queryParameters, page, limit);
+                    var paginatedResult = await _regulatedQualificationsService.SearchPrivateQualificationsAsync(queryParameters, page, limit);
 
                     if (paginatedResult.Results == null || !paginatedResult.Results.Any())
                     {
@@ -53,7 +60,7 @@ namespace SFA.DAS.AODP.Functions.Functions
 
                     _logger.LogInformation($"Processing page {page}. Retrieved {paginatedResult.Results.Count} qualifications.");
 
-                    var qualifications = paginatedResult.Results.Select(q => new RegulatedQualificationsImport
+                    var importedQualifications = paginatedResult.Results.Select(q => new RegulatedQualification
                     {
                         QualificationNumber = q.QualificationNumber,
                         QualificationNumberNoObliques = q.QualificationNumberNoObliques ?? "",
@@ -114,12 +121,17 @@ namespace SFA.DAS.AODP.Functions.Functions
                         ImportStatus = "New"
                     }).ToList();
 
-                    // Save qualifications to the database using bulk insert             
-                    //_applicationDbContext.RegulatedQualificationsImport.AddRange(qualifications);
-                    //await _applicationDbContext.SaveChangesAsync();
-                    await _applicationDbContext.BulkInsertAsync(qualifications);  
+                    // check for qualification changes
+                    await _regulatedQualificationsService.CompareAndUpdateQualificationsAsync(importedQualifications, processedQualifications);
+
+                    // Save qualifications to the database using bulk insert
+                    var qualificationsEntities = _mapper.Map<List<RegulatedQualificationsImport>>(importedQualifications);
+                    _applicationDbContext.RegulatedQualificationsImport.AddRange(qualificationsEntities);
+                    await _applicationDbContext.SaveChangesAsync();
                     
-                    totalProcessed += qualifications.Count;
+                    //await _applicationDbContext.BulkInsertAsync(qualifications);
+                    
+                    totalProcessed += importedQualifications.Count;
 
                     if (paginatedResult.Results.Count < limit)
                     {
@@ -145,15 +157,15 @@ namespace SFA.DAS.AODP.Functions.Functions
             }
         }
 
-        private RegulatedQualificationQueryParameters ParseQueryParameters(NameValueCollection query)
+        private RegulatedQualificationsQueryParameters ParseQueryParameters(NameValueCollection query)
         {
             if (query == null || query.Count == 0)
             {
                 _logger.LogWarning("Query parameters are empty.");
-                return new RegulatedQualificationQueryParameters();
+                return new RegulatedQualificationsQueryParameters();
             }
 
-            return new RegulatedQualificationQueryParameters
+            return new RegulatedQualificationsQueryParameters
             {
                 Title = query["title"],
                 AssessmentMethods = query["assessmentMethods"],
