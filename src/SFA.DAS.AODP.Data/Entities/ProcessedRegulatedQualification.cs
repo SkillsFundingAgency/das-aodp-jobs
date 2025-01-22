@@ -1,6 +1,6 @@
 ﻿namespace SFA.DAS.AODP.Data.Entities;
 
-public partial class RegisteredQualificationsImport
+public partial class ProcessedRegulatedQualification
 {
     public int Id { get; set; }
 
@@ -111,8 +111,4 @@ public partial class RegisteredQualificationsImport
     public bool? EighteenPlus { get; set; }
 
     public bool? NineteenPlus { get; set; }
-
-    public string? ImportStatus { get; set; }
-
-    public string? ChangedFields { get; set; }
 }

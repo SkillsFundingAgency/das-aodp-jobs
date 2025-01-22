@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[ProcessedRegisteredQualifications]
+﻿CREATE TABLE [dbo].[ProcessedRegulatedQualifications]
 (
 	[Id]                                    INT IDENTITY (1, 1)            NOT NULL,
 	[QualificationNumber]                   VARCHAR(10)                    NOT NULL,
@@ -56,5 +56,5 @@
     [EighteenPlus]							BIT,
     [NineteenPlus]							BIT,
 
-	CONSTRAINT [PK_ProcessedRegisteredQualification] PRIMARY KEY CLUSTERED ([Id] ASC),
+	CONSTRAINT [PK_ProcessedRegulatedQualification] PRIMARY KEY CLUSTERED ([Id] ASC),
 )
