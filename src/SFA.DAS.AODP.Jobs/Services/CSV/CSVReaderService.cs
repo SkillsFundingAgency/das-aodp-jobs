@@ -1,8 +1,13 @@
-﻿using System.Globalization;
+﻿using System.Data;
+using System.Globalization;
+using System.Text;
 using CsvHelper;
 using CsvHelper.Configuration;
 using Microsoft.Extensions.Logging;
+using SAF.DAS.AODP.Models.Qualification;
 using SFA.DAS.AODP.Jobs.Interfaces;
+using static System.Net.Mime.MediaTypeNames;
+using FundedQualification = SAF.DAS.AODP.Models.Qualification.FundedQualification;
 
 namespace SFA.DAS.AODP.Jobs.Services.CSV
 {
@@ -15,110 +20,104 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
         {
             _logger = logger;
             _httpClientFactory = httpClientFactory;
-          
+
         }
-
-        public List<T> ReadCSVFromFilePath<T, TMap>(string filePath) where TMap : ClassMap<T>
+        public async Task<List<FundedQualification>> ReadQualifications(string url)
         {
-            _logger.LogInformation("Searching for CSV file for processing");
+            _logger.LogInformation($"Downloading CSV file from url: {url}");
 
-            var fundedCsvRecords = new List<T>();
-            if (File.Exists(filePath))
-            {
-                fundedCsvRecords
-                       = ReadCsv<T, TMap>(filePath);
-                Console.WriteLine($"Total Records Read: {fundedCsvRecords.Count}");
-            }
-            else
-            {
-                _logger.LogError("File not found: {FilePath}", filePath);
-            }
-            return fundedCsvRecords;
-        }
-
-        public async Task<List<T>> ReadApprovedAndArchivedFromUrlAsync<T, TMap>(string approvedUrl, string archivedUrl) where TMap : ClassMap<T>
-        {
-            _logger.LogInformation("Downloading CSV file from url: {ApprovedUrlFilePath} {ArchivedUrlFilePath}", approvedUrl, archivedUrl);
-
-            var totalRecords = new List<T>();
+            var totalRecords = new List<FundedQualification>();
 
             try
             {
                 HttpResponseMessage response;
-                response = await GetDataFromUrl(approvedUrl);
+                response = await GetDataFromUrl(url);
 
-                using var approvedResponseStream = await response.Content.ReadAsStreamAsync();
+                using var qualificationsStream = await response.Content.ReadAsStreamAsync();
 
-                var approvedCsvData
-                    = ReadCsv<T, TMap>(approvedResponseStream);
+                var qualificationRecords
+                    = await ReadCsv(qualificationsStream);
 
-                _logger.LogInformation("Total approved Records Read: {Records}", approvedCsvData.Count);
+                _logger.LogInformation("Total  Recrds Read: {Records}", qualificationRecords.Count());
 
-                response = await GetDataFromUrl(archivedUrl);
-                using var archivedResponseStream = await response.Content.ReadAsStreamAsync();
-
-                var archivedCsvData = ReadCsv<T, TMap>(archivedResponseStream);
-
-                _logger.LogInformation("Total archived Records Read: {Records}", archivedCsvData.Count);
-
-                totalRecords.AddRange(approvedCsvData);
-                totalRecords.AddRange(archivedCsvData);
+                totalRecords.AddRange(qualificationRecords);
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogError(ex, "HTTP request error downloading CSV file from url: {UrlFilePath}");
+                _logger.LogError(ex, $"HTTP request error downloading CSV file from url: {url}");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error downloading CSV file from url: {UrlFilePath}");
+                _logger.LogError(ex, $"Error downloading CSV file from url: {url}");
             }
 
             return totalRecords;
         }
 
-        public async Task<List<T>> ReadCsvFileFromUrlAsync<T, TMap>(string urlFilePath) where TMap : ClassMap<T>
-        {
-            _logger.LogInformation("Downloading CSV file from url: {UrlFilePath}", urlFilePath);
-
-            var fundedCsvRecords = new List<T>();
-
-            try
-            {
-                var response = await GetDataFromUrl(urlFilePath);
-
-                using var approvedResponseStream = await response.Content.ReadAsStreamAsync();
-
-                 fundedCsvRecords
-                    = ReadCsv<T, TMap>(approvedResponseStream);
-
-                _logger.LogInformation("Total Records Read: {fundedCsvRecords}", fundedCsvRecords.Count);
-            }
-            catch (HttpRequestException ex)
-            {
-                _logger.LogError(ex, "HTTP request error downloading CSV file from url: {UrlFilePath}", urlFilePath);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error downloading CSV file from url: {UrlFilePath}", urlFilePath);
-            }
-            return fundedCsvRecords;
-        }
-
-        private async Task<HttpResponseMessage> GetDataFromUrl(string approvedUrlFilePath)
+        private async Task<HttpResponseMessage> GetDataFromUrl(string url)
         {
             var _httpClient = _httpClientFactory.CreateClient();
-            var response = await _httpClient.GetAsync(approvedUrlFilePath);
+            var response = await _httpClient.GetAsync(url);
             response.EnsureSuccessStatusCode();
             return response;
         }
 
-        private List<T> ReadCsv<T, TMap>(dynamic data) where TMap : ClassMap<T>
+        private async Task<List<FundedQualification>> ReadCsv(dynamic data)
         {
             using var streamReader = new StreamReader(data);
             using var csvReader = new CsvReader(streamReader, CultureInfo.InvariantCulture);
-            csvReader.Context.RegisterClassMap<TMap>();
-            return csvReader.GetRecords<T>().ToList();
+
+            using var csv = new CsvReader(streamReader, CultureInfo.InvariantCulture);
+            using var dataReader = new CsvDataReader(csv);
+            var dataTable = new DataTable();
+            dataTable.Load(dataReader);
+
+            var identifiedOfferColumns = (from DataColumn x
+            in dataTable.Columns.Cast<DataColumn>()
+                                          select x.ColumnName).Where(t => t.Contains("_FundingAvailable")).ToList();
+
+            return BuildFundedQualificationRecord(dataTable, identifiedOfferColumns);
+        }
+
+        private static List<FundedQualification> BuildFundedQualificationRecord(DataTable dataTable, List<string> identifiedOffersColumnNames)
+        {
+            var fundedQualifications = new List<FundedQualification>();
+            foreach (DataRow row in dataTable.Rows)
+            {
+                List<FundedQualificationOffer> offerRecords = GetOfferRecords(identifiedOffersColumnNames, row);
+                fundedQualifications.Add(new FundedQualification
+                {
+                    AwardingOrganisation = row["DateOfOfqualDataSnapshot"].ToString(),
+                    QualificationName = row["QualificationName"].ToString(),
+                    DateOfOfqualDataSnapshot = DateTime.Parse(row["DateOfOfqualDataSnapshot"].ToString()),
+                    AwardingOrganisationURL = row["AwardingOrganisationURL"].ToString(),
+                    Level = row["level"].ToString(),
+                    QualificationNumber = row["QualificationNumber"].ToString(),
+                    Offers = offerRecords
+                });
+            }
+            return fundedQualifications;
+        }
+
+        private static List<FundedQualificationOffer> GetOfferRecords(List<string> identifiedOffersColumnNames, DataRow row)
+        {
+            List<FundedQualificationOffer> offerRecords = new List<FundedQualificationOffer>();
+            foreach (var offer in identifiedOffersColumnNames)
+            {
+                var offerName = offer.Split("_")[0];
+                var offerRecord = new FundedQualificationOffer
+                {
+                    FundingAvailable = row[row.Table.Columns[offerName + "_" + "FundingAvailable"].Ordinal].ToString(),
+                    Name = offerName,
+                    Notes = row[row.Table.Columns[offerName + "_" + "Notes"].Ordinal].ToString(),
+                    FundingApprovalEndDate = DateTime.TryParse(row[row.Table.Columns[offerName + "_" + "FundingApprovalEndDate"].Ordinal].ToString(), out DateTime end) ? end : (DateTime?)null,
+                    FundingApprovalStartDate = DateTime.TryParse(row[row.Table.Columns[offerName + "_" + "FundingApprovalEndDate"].Ordinal].ToString(), out DateTime start) ? start : (DateTime?)null
+                };
+                offerRecords.Add(offerRecord);
+            }
+            return offerRecords;
         }
     }
+
 }
 

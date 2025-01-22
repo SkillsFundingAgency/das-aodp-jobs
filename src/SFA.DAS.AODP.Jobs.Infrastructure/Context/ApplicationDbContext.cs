@@ -1,20 +1,22 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SFA.DAS.AODP.Data.Entities;
-using Z.BulkOperations;
 
 namespace SFA.DAS.AODP.Infrastructure.Context
 {
     public class ApplicationDbContext : DbContext, IApplicationDbContext
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-            : base(options) { }
+            : base(options) {
+            Database.SetCommandTimeout(TimeSpan.FromMinutes(20));
+        }
+        
+        public virtual DbSet<FundedQualification> FundedQualifications { get; set; }
 
-        public virtual DbSet<FundedQualificationsImport> FundedQualificationsImport { get; set; }
+        public virtual DbSet<FundedQualificationOffer> FundedQualificationOffers { get; set; }
 
         public virtual DbSet<ProcessedRegisteredQualification> ProcessedRegisteredQualifications { get; set; }
 
         public virtual DbSet<RegisteredQualificationsImport> RegisteredQualificationsImport { get; set; }
-
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
@@ -23,12 +25,13 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public async Task BulkInsertAsync<T>(IEnumerable<T> entities, CancellationToken cancellationToken = default) where T : class
         {
-            await this.BulkInsertAsync(entities.ToList(), options => { options.BatchSize = 1000; options.InsertIfNotExists = false;options.AutoMapOutputDirection = false; }, cancellationToken: cancellationToken);
+            if (entities.Any())
+            await this.BulkInsertAsync(entities.Take(100), options => { options.IncludeGraph = true;options.BatchSize = 1000;options.InsertIfNotExists = false; }, cancellationToken: cancellationToken);
         }
 
-        public async Task TruncateTable(string tableName)
+        public async Task DeleteFromTable(string tableName)
         {
-            await this.Database.ExecuteSqlRawAsync($"truncate table [{tableName}]");
+            await this.Database.ExecuteSqlRawAsync($"delete from [{tableName}]");
         }
     }
 }
