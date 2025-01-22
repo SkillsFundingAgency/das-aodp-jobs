@@ -1,9 +1,10 @@
-﻿using SFA.DAS.AODP.Data.Entities;
+﻿using SAF.DAS.AODP.Models.Qualification;
+using SFA.DAS.AODP.Data.Entities;
 
 namespace SFA.DAS.AODP.Jobs.Interfaces
 {
     public interface ICsvReaderService
     {
-        Task<List<FundedQualification>> ReadQualifications(string url);
+        Task<IEnumerable<FundedQualificationDTO>> ReadQualifications(string url);
     }
 }

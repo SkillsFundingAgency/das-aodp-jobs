@@ -53,8 +53,8 @@ namespace SFA.DAS.AODP.Functions
             _logger.LogInformation($"{archivedQualificationsUrl.Count()} records imported in {stopWatch.ElapsedMilliseconds / 1000}");
 
             var successResponse = req.CreateResponse(System.Net.HttpStatusCode.OK);
-            _logger.LogInformation("{Count} records imported successfully", approvedQualifications.Count);
-            await successResponse.WriteStringAsync($"{approvedQualifications.Count} records imported successfully");
+            _logger.LogInformation("{Count} records imported successfully", approvedQualifications.Count());
+            await successResponse.WriteStringAsync($"{approvedQualifications.Count()} records imported successfully");
             return successResponse;
         }
     }

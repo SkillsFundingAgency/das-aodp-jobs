@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using SAF.DAS.AODP.Models.Qualification;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using static System.Net.Mime.MediaTypeNames;
-using FundedQualification = SAF.DAS.AODP.Models.Qualification.FundedQualification;
 
 namespace SFA.DAS.AODP.Jobs.Services.CSV
 {
@@ -22,11 +21,12 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
             _httpClientFactory = httpClientFactory;
 
         }
-        public async Task<List<FundedQualification>> ReadQualifications(string url)
+
+        public async Task<IEnumerable<FundedQualificationDTO>> ReadQualifications(string url)
         {
             _logger.LogInformation($"Downloading CSV file from url: {url}");
 
-            var totalRecords = new List<FundedQualification>();
+            var totalRecords = new List<FundedQualificationDTO>();
 
             try
             {
@@ -62,7 +62,7 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
             return response;
         }
 
-        private async Task<List<FundedQualification>> ReadCsv(dynamic data)
+        private async Task<List<FundedQualificationDTO>> ReadCsv(dynamic data)
         {
             using var streamReader = new StreamReader(data);
             using var csvReader = new CsvReader(streamReader, CultureInfo.InvariantCulture);
@@ -79,13 +79,13 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
             return BuildFundedQualificationRecord(dataTable, identifiedOfferColumns);
         }
 
-        private static List<FundedQualification> BuildFundedQualificationRecord(DataTable dataTable, List<string> identifiedOffersColumnNames)
+        private static List<FundedQualificationDTO> BuildFundedQualificationRecord(DataTable dataTable, List<string> identifiedOffersColumnNames)
         {
-            var fundedQualifications = new List<FundedQualification>();
+            var fundedQualifications = new List<FundedQualificationDTO>();
             foreach (DataRow row in dataTable.Rows)
             {
-                List<FundedQualificationOffer> offerRecords = GetOfferRecords(identifiedOffersColumnNames, row);
-                fundedQualifications.Add(new FundedQualification
+                List<FundedQualificationOfferDTO> offerRecords = GetOfferRecords(identifiedOffersColumnNames, row);
+                fundedQualifications.Add(new FundedQualificationDTO
                 {
                     AwardingOrganisation = row["DateOfOfqualDataSnapshot"].ToString(),
                     QualificationName = row["QualificationName"].ToString(),
@@ -99,13 +99,13 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
             return fundedQualifications;
         }
 
-        private static List<FundedQualificationOffer> GetOfferRecords(List<string> identifiedOffersColumnNames, DataRow row)
+        private static List<FundedQualificationOfferDTO> GetOfferRecords(List<string> identifiedOffersColumnNames, DataRow row)
         {
-            List<FundedQualificationOffer> offerRecords = new List<FundedQualificationOffer>();
+            List<FundedQualificationOfferDTO> offerRecords = new List<FundedQualificationOfferDTO>();
             foreach (var offer in identifiedOffersColumnNames)
             {
                 var offerName = offer.Split("_")[0];
-                var offerRecord = new FundedQualificationOffer
+                var offerRecord = new FundedQualificationOfferDTO
                 {
                     FundingAvailable = row[row.Table.Columns[offerName + "_" + "FundingAvailable"].Ordinal].ToString(),
                     Name = offerName,
@@ -117,6 +117,7 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
             }
             return offerRecords;
         }
+
     }
 
 }
