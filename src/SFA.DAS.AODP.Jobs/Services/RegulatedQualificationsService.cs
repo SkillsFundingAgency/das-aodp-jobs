@@ -54,6 +54,8 @@ namespace SFA.DAS.AODP.Jobs.Services
 
         public async Task CompareAndUpdateQualificationsAsync(List<RegulatedQualification> importedQualifications, List<RegulatedQualification> processedQualifications)
         {
+            var processedQualificationsDict = processedQualifications.ToDictionary(p => p.Id);
+
             var columnsToCompare = new Dictionary<string, Func<RegulatedQualification, object>>()
             {
                 { "OrganisationName", x => x.OrganisationName },
@@ -80,9 +82,7 @@ namespace SFA.DAS.AODP.Jobs.Services
 
             foreach (var importRow in importedQualifications)
             {
-                var processedRow = processedQualifications.FirstOrDefault(p => p.Id == importRow.Id);
-
-                if (processedRow != null)
+                if (processedQualificationsDict.TryGetValue(importRow.Id, out var processedRow))
                 {
                     var changedFields = new List<string>();
 
@@ -105,7 +105,11 @@ namespace SFA.DAS.AODP.Jobs.Services
                 }
             }
 
-            await _applicationDbContext.SaveChangesAsync();
+            // only save updated records
+            if (importedQualifications.Any(q => q.ImportStatus == "Updated"))
+            {
+                await _applicationDbContext.SaveChangesAsync();
+            }
         }
 
     }

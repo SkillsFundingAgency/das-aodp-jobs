@@ -122,7 +122,10 @@ namespace SFA.DAS.AODP.Functions.Functions
                     }).ToList();
 
                     // check for qualification changes
-                    await _regulatedQualificationsService.CompareAndUpdateQualificationsAsync(importedQualifications, processedQualifications);
+                    await _regulatedQualificationsService.CompareAndUpdateQualificationsAsync(
+                        TrimQualificationsList(importedQualifications),
+                        TrimQualificationsList(processedQualifications)
+                        );
 
                     // Save qualifications to the database using bulk insert
                     var qualificationsEntities = _mapper.Map<List<RegulatedQualificationsImport>>(importedQualifications);
@@ -155,6 +158,33 @@ namespace SFA.DAS.AODP.Functions.Functions
                 _logger.LogError($"Unexpected system exception occurred: {ex.Message}");
                 return new StatusCodeResult(500);
             }
+        }
+
+        private List<RegulatedQualification> TrimQualificationsList(List<RegulatedQualification> qualifications)
+        {
+            return qualifications.Select(x => new RegulatedQualification
+            {
+                Id = x.Id,
+                OrganisationName = x.OrganisationName,
+                Title = x.Title,
+                Level = x.Level,
+                Type = x.Type,
+                TotalCredits = x.TotalCredits,
+                Ssa = x.Ssa,
+                GradingType = x.GradingType,
+                OfferedInEngland = x.OfferedInEngland,
+                PreSixteen = x.PreSixteen,
+                SixteenToEighteen = x.SixteenToEighteen,
+                EighteenPlus = x.EighteenPlus,
+                NineteenPlus = x.NineteenPlus,
+                Glh = x.Glh,
+                MinimumGlh = x.MinimumGlh,
+                Tqt = x.Tqt,
+                OperationalEndDate = x.OperationalEndDate,
+                LastUpdatedDate = x.LastUpdatedDate,
+                Version = x.Version,
+                OfferedInternationally = x.OfferedInternationally
+            }).ToList();
         }
 
         private RegulatedQualificationsQueryParameters ParseQueryParameters(NameValueCollection query)
