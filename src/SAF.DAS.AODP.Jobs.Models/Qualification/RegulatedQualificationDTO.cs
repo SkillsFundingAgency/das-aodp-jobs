@@ -1,6 +1,6 @@
 ﻿namespace SFA.DAS.AODP.Models.Qualification;
 
-public partial class RegulatedQualification
+public partial class RegulatedQualificationDTO
 {
     public int Id { get; set; }
 

@@ -56,15 +56,15 @@ public class RegulatedQualificationsDataFunctionTests
                 It.IsAny<int>(),
                 It.IsAny<int>())
             )
-            .ReturnsAsync(new RegulatedQualificationsPaginatedResult<RegulatedQualification>
+            .ReturnsAsync(new RegulatedQualificationsPaginatedResult<RegulatedQualificationDTO>
             {
-                Results = new List<RegulatedQualification>
+                Results = new List<RegulatedQualificationDTO>
                 {
-                    new RegulatedQualification { QualificationNumber = "1111", Title = "Test Qualification1" },
-                    new RegulatedQualification { QualificationNumber = "2222", Title = "Test Qualification2" },
-                    new RegulatedQualification { QualificationNumber = "3333", Title = "Test Qualification3" },
-                    new RegulatedQualification { QualificationNumber = "4444", Title = "Test Qualification4" },
-                    new RegulatedQualification { QualificationNumber = "5555", Title = "Test Qualification5" }
+                    new RegulatedQualificationDTO { QualificationNumber = "1111", Title = "Test Qualification1" },
+                    new RegulatedQualificationDTO { QualificationNumber = "2222", Title = "Test Qualification2" },
+                    new RegulatedQualificationDTO { QualificationNumber = "3333", Title = "Test Qualification3" },
+                    new RegulatedQualificationDTO { QualificationNumber = "4444", Title = "Test Qualification4" },
+                    new RegulatedQualificationDTO { QualificationNumber = "5555", Title = "Test Qualification5" }
                 }
             });
 
@@ -90,7 +90,7 @@ public class RegulatedQualificationsDataFunctionTests
                 It.IsAny<RegulatedQualificationsQueryParameters>(), 
                 It.IsAny<int>(), 
                 It.IsAny<int>()))
-            .ReturnsAsync(new RegulatedQualificationsPaginatedResult<RegulatedQualification>
+            .ReturnsAsync(new RegulatedQualificationsPaginatedResult<RegulatedQualificationDTO>
             {
                 Results = null
             });
@@ -128,12 +128,12 @@ public class RegulatedQualificationsDataFunctionTests
                 It.IsAny<int>(),
                 It.IsAny<int>())
             )
-            .ReturnsAsync(new RegulatedQualificationsPaginatedResult<RegulatedQualification>
+            .ReturnsAsync(new RegulatedQualificationsPaginatedResult<RegulatedQualificationDTO>
             {
-                Results = new List<RegulatedQualification>
+                Results = new List<RegulatedQualificationDTO>
                 {
-                    new RegulatedQualification { QualificationNumber = "1111", Title = "Test Qualification1" },
-                    new RegulatedQualification { QualificationNumber = "2222", Title = "Test Qualification2" }
+                    new RegulatedQualificationDTO { QualificationNumber = "1111", Title = "Test Qualification1" },
+                    new RegulatedQualificationDTO { QualificationNumber = "2222", Title = "Test Qualification2" }
                 }
             });
 

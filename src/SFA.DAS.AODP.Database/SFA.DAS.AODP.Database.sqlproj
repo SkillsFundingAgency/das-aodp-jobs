@@ -60,9 +60,10 @@
     <Folder Include="Tables" />
   </ItemGroup>
   <ItemGroup>
-    <Build Include="Tables\FundedQualificationsImport.sql" />
+   <Build Include="Tables\FundedQualifications.sql" />
     <Build Include="Tables\ProcessedRegulatedQualifications.sql" />
     <Build Include="Tables\RegulatedQualificationsImport.sql" />
+     <Build Include="Tables\FundedQualificationOffer.sql" />
   </ItemGroup>
   <ItemGroup>
     <RefactorLog Include="SFA.DAS.AODP.Database.refactorlog" />

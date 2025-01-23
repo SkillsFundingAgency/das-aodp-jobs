@@ -42,9 +42,9 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             int page = 1;
             int limit = 10;
 
-            var expectedResult = new RegulatedQualificationsPaginatedResult<RegulatedQualification>
+            var expectedResult = new RegulatedQualificationsPaginatedResult<RegulatedQualificationDTO>
             {
-                Results = new List<RegulatedQualification>(),
+                Results = new List<RegulatedQualificationDTO>(),
                 Count = 0
             };
 
@@ -97,9 +97,9 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         {
             // Arrange
             var parameters = new RegulatedQualificationsQueryParameters { Title = "Test Title" };
-            var expectedResult = new RegulatedQualificationsPaginatedResult<RegulatedQualification>
+            var expectedResult = new RegulatedQualificationsPaginatedResult<RegulatedQualificationDTO>
             {
-                Results = new List<RegulatedQualification> { new RegulatedQualification { Title = "Test Qualification" } },
+                Results = new List<RegulatedQualificationDTO> { new RegulatedQualificationDTO { Title = "Test Qualification" } },
                 Count = 1
             };
 
@@ -152,9 +152,9 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             int page = 1;
             int limit = 10;
 
-            var expectedResult = new RegulatedQualificationsPaginatedResult<RegulatedQualification>
+            var expectedResult = new RegulatedQualificationsPaginatedResult<RegulatedQualificationDTO>
             {
-                Results = new List<RegulatedQualification>(),
+                Results = new List<RegulatedQualificationDTO>(),
                 Count = 0
             };
 
@@ -225,13 +225,13 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             int page = 1;
             int limit = 100;
 
-            var largeResults = new List<RegulatedQualification>();
+            var largeResults = new List<RegulatedQualificationDTO>();
             for (int i = 0; i < 1000; i++)
             {
-                largeResults.Add(new RegulatedQualification { Title = $"Qualification {i}" });
+                largeResults.Add(new RegulatedQualificationDTO { Title = $"Qualification {i}" });
             }
 
-            var expectedResult = new RegulatedQualificationsPaginatedResult<RegulatedQualification>
+            var expectedResult = new RegulatedQualificationsPaginatedResult<RegulatedQualificationDTO>
             {
                 Results = largeResults,
                 Count = 1000

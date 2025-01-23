@@ -6,11 +6,12 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 {
     public interface IApplicationDbContext
     {
-        DbSet<FundedQualificationsImport> FundedQualificationsImport { get; set; }
+        DbSet<FundedQualification> FundedQualifications { get; set; }
         DbSet<ProcessedRegulatedQualification> ProcessedRegulatedQualifications { get; set; }
         DbSet<RegulatedQualificationsImport> RegulatedQualificationsImport { get; set; }
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
         Task BulkInsertAsync<T>(IEnumerable<T> entities, CancellationToken cancellationToken = default) where T : class;
-        Task TruncateTable(string tableName);
+
+        Task DeleteFromTable(string tableName);
     }
 }

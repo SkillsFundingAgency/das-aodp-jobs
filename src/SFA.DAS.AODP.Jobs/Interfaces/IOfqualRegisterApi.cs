@@ -13,7 +13,7 @@ namespace SFA.DAS.AODP.Functions.Interfaces
         //Task<RegulatedQualification> GetPrivateQualificationsAsync([Path] string qualificationNumber);
 
         [Get("gov/Qualifications")]
-        Task<RegulatedQualificationsPaginatedResult<RegulatedQualification>> SearchPrivateQualificationsAsync(
+        Task<RegulatedQualificationsPaginatedResult<RegulatedQualificationDTO>> SearchPrivateQualificationsAsync(
             [Query("title")] string title,
             [Query("page")] int pageNumber,
             [Query("limit")] int pageSize,

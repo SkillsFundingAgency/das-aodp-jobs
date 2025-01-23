@@ -1,6 +1,6 @@
 ﻿namespace SAF.DAS.AODP.Models.Qualification
 {
-    public class ProcessedRegulatedQualification
+    public class ProcessedRegulatedQualificationDTO
     {
         public int Id { get; set; }
 

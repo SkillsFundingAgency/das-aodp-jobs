@@ -1,4 +1,3 @@
-using System.Collections.Specialized;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
@@ -6,7 +5,6 @@ using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RestEase;
-using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Models.Qualification;
@@ -18,18 +16,21 @@ namespace SFA.DAS.AODP.Functions.Functions
         private readonly IApplicationDbContext _applicationDbContext;
         private readonly ILogger<RegulatedQualificationsDataFunction> _logger;
         private readonly IRegulatedQualificationsService _regulatedQualificationsService;
+        private readonly IOfqualRegisterService _ofqualRegisterService;
         private readonly IMapper _mapper;
 
         public RegulatedQualificationsDataFunction(
             ILogger<RegulatedQualificationsDataFunction> logger, 
             IApplicationDbContext appDbContext, 
             IRegulatedQualificationsService regulatedQualificationsService,
+            IOfqualRegisterService ofqualRegisterService,
             IMapper mapper)
         {
             _logger = logger;
             _mapper = mapper;
             _applicationDbContext = appDbContext;
             _regulatedQualificationsService = regulatedQualificationsService;
+            _ofqualRegisterService = ofqualRegisterService;
         }
 
         [Function("RegulatedQualificationsDataFunction")]
@@ -41,99 +42,32 @@ namespace SFA.DAS.AODP.Functions.Functions
             try
             {
                 int page = 1;
-                int limit = 1000;
+                int limit = 100;
                 int totalProcessed = 0;
-                var queryParameters = ParseQueryParameters(req.Query);
 
                 var processedQualificationsEntities = await _applicationDbContext.ProcessedRegulatedQualifications.ToListAsync();
-                var processedQualifications = _mapper.Map<List<RegulatedQualification>>(processedQualificationsEntities);
+                var processedQualifications = _mapper.Map<List<RegulatedQualificationDTO>>(processedQualificationsEntities);
+
+                var parameters = _ofqualRegisterService.ParseQueryParameters(req.Query);
 
                 while (true)
                 {
-                    var paginatedResult = await _regulatedQualificationsService.SearchPrivateQualificationsAsync(queryParameters, page, limit);
+                    var paginatedResult = await _ofqualRegisterService.SearchPrivateQualificationsAsync(parameters, page, limit);
 
-                    if (paginatedResult.Results == null || !paginatedResult.Results.Any())
-                    {
-                        _logger.LogInformation("No more qualifications to process.");
-                        break;
-                    }
+                if (paginatedResult.Results == null || !paginatedResult.Results.Any())
+                {
+                    _logger.LogInformation("No more qualifications to process.");
+                    break;
+                }
 
-                    _logger.LogInformation($"Processing page {page}. Retrieved {paginatedResult.Results.Count} qualifications.");
+                _logger.LogInformation($"Processing page {page}. Retrieved {paginatedResult.Results.Count} qualifications.");
 
-                    var importedQualifications = paginatedResult.Results.Select(q => new RegulatedQualification
-                    {
-                        QualificationNumber = q.QualificationNumber,
-                        QualificationNumberNoObliques = q.QualificationNumberNoObliques ?? "",
-                        Title = q.Title,
-                        Status = q.Status,
-                        OrganisationName = q.OrganisationName,
-                        OrganisationAcronym = q.OrganisationAcronym,
-                        OrganisationRecognitionNumber = q.OrganisationRecognitionNumber,
-                        Type = q.Type,
-                        Ssa = q.Ssa,
-                        Level = q.Level,
-                        SubLevel = q.SubLevel,
-                        EqfLevel = q.EqfLevel,
-                        GradingType = q.GradingType,
-                        GradingScale = q.GradingScale,
-                        TotalCredits = q.TotalCredits,
-                        Tqt = q.Tqt,
-                        Glh = q.Glh,
-                        MinimumGlh = q.MinimumGlh,
-                        MaximumGlh = q.MaximumGlh,
-                        RegulationStartDate = q.RegulationStartDate,
-                        OperationalStartDate = q.OperationalStartDate,
-                        OperationalEndDate = q.OperationalEndDate,
-                        CertificationEndDate = q.CertificationEndDate,
-                        ReviewDate = q.ReviewDate,
-                        OfferedInEngland = q.OfferedInEngland,
-                        OfferedInNorthernIreland = q.OfferedInNorthernIreland,
-                        OfferedInternationally = q.OfferedInternationally,
-                        Specialism = q.Specialism,
-                        Pathways = q.Pathways,
-                        AssessmentMethods = q.AssessmentMethods != null
-                             ? string.Join(",", q.AssessmentMethods)
-                             : null,
-                        ApprovedForDelfundedProgramme = q.ApprovedForDelfundedProgramme,
-                        LinkToSpecification = q.LinkToSpecification,
-                        ApprenticeshipStandardReferenceNumber = q.ApprenticeshipStandardReferenceNumber,
-                        ApprenticeshipStandardTitle = q.ApprenticeshipStandardTitle,
-                        RegulatedByNorthernIreland = q.RegulatedByNorthernIreland,
-                        NiDiscountCode = q.NiDiscountCode,
-                        GceSizeEquivalence = q.GceSizeEquivalence,
-                        GcseSizeEquivalence = q.GcseSizeEquivalence,
-                        EntitlementFrameworkDesignation = q.EntitlementFrameworkDesignation,
-                        LastUpdatedDate = q.LastUpdatedDate,
-                        UiLastUpdatedDate = q.UiLastUpdatedDate,
-                        InsertedDate= q.InsertedDate,
-                        Version = q.Version,
-                        AppearsOnPublicRegister = q.AppearsOnPublicRegister,
-                        OrganisationId = q.OrganisationId,
-                        LevelId = q.LevelId,
-                        TypeId = q.TypeId,
-                        SsaId = q.SsaId,
-                        GradingTypeId = q.GradingTypeId,
-                        GradingScaleId = q.GradingScaleId,
-                        PreSixteen = q.PreSixteen,
-                        SixteenToEighteen = q.SixteenToEighteen,
-                        EighteenPlus = q.EighteenPlus,
-                        NineteenPlus = q.NineteenPlus,
-                        ImportStatus = "New"
-                    }).ToList();
+                    List<RegulatedQualificationDTO> importedQualifications = _ofqualRegisterService.ExtractQualificationsList(paginatedResult);
 
-                    // check for qualification changes
-                    await _regulatedQualificationsService.CompareAndUpdateQualificationsAsync(
-                        TrimQualificationsList(importedQualifications),
-                        TrimQualificationsList(processedQualifications)
-                        );
+                    await _regulatedQualificationsService.CompareAndUpdateQualificationsAsync(importedQualifications, processedQualifications);
 
-                    // Save qualifications to the database using bulk insert
-                    var qualificationsEntities = _mapper.Map<List<RegulatedQualificationsImport>>(importedQualifications);
-                    _applicationDbContext.RegulatedQualificationsImport.AddRange(qualificationsEntities);
-                    await _applicationDbContext.SaveChangesAsync();
-                    
-                    //await _applicationDbContext.BulkInsertAsync(qualifications);
-                    
+                    await _regulatedQualificationsService.SaveRegulatedQualificationsAsync(importedQualifications);
+
                     totalProcessed += importedQualifications.Count;
 
                     if (paginatedResult.Results.Count < limit)
@@ -159,65 +93,6 @@ namespace SFA.DAS.AODP.Functions.Functions
                 return new StatusCodeResult(500);
             }
         }
-
-        private List<RegulatedQualification> TrimQualificationsList(List<RegulatedQualification> qualifications)
-        {
-            return qualifications.Select(x => new RegulatedQualification
-            {
-                Id = x.Id,
-                OrganisationName = x.OrganisationName,
-                Title = x.Title,
-                Level = x.Level,
-                Type = x.Type,
-                TotalCredits = x.TotalCredits,
-                Ssa = x.Ssa,
-                GradingType = x.GradingType,
-                OfferedInEngland = x.OfferedInEngland,
-                PreSixteen = x.PreSixteen,
-                SixteenToEighteen = x.SixteenToEighteen,
-                EighteenPlus = x.EighteenPlus,
-                NineteenPlus = x.NineteenPlus,
-                Glh = x.Glh,
-                MinimumGlh = x.MinimumGlh,
-                Tqt = x.Tqt,
-                OperationalEndDate = x.OperationalEndDate,
-                LastUpdatedDate = x.LastUpdatedDate,
-                Version = x.Version,
-                OfferedInternationally = x.OfferedInternationally
-            }).ToList();
-        }
-
-        private RegulatedQualificationsQueryParameters ParseQueryParameters(NameValueCollection query)
-        {
-            if (query == null || query.Count == 0)
-            {
-                _logger.LogWarning("Query parameters are empty.");
-                return new RegulatedQualificationsQueryParameters();
-            }
-
-            return new RegulatedQualificationsQueryParameters
-            {
-                Title = query["title"],
-                AssessmentMethods = query["assessmentMethods"],
-                GradingTypes = query["gradingTypes"],
-                AwardingOrganisations = query["awardingOrganisations"],
-                Availability = query["availability"],
-                QualificationTypes = query["qualificationTypes"],
-                QualificationLevels = query["qualificationLevels"],
-                NationalAvailability = query["nationalAvailability"],
-                SectorSubjectAreas = query["sectorSubjectAreas"],
-                MinTotalQualificationTime = ParseNullableInt(query["minTotalQualificationTime"] ?? ""),
-                MaxTotalQualificationTime = ParseNullableInt(query["maxTotalQualificationTime"] ?? ""),
-                MinGuidedLearningHours = ParseNullableInt(query["minGuidedLearninghours"] ?? ""),
-                MaxGuidedLearningHours = ParseNullableInt(query["maxGuidedLearninghours"] ?? "")
-            };
-        }
-
-        private int ParseInt(string value, int defaultValue) =>
-            int.TryParse(value, out var result) ? result : defaultValue;
-
-        private int? ParseNullableInt(string value) =>
-            int.TryParse(value, out var result) ? (int?)result : null;
 
     }
 }
