@@ -28,7 +28,7 @@ namespace SFA.DAS.AODP.Functions
         public async Task<HttpResponseData> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "api/approvedQualificationsImport")] HttpRequestData req)
         {
-            var stopWatch = new Stopwatch();
+            var insertTimer = new Stopwatch();
             string? approvedQualificationsUrl = Environment.GetEnvironmentVariable("FundedQualificationsImportUrl");
             string? archivedQualificationsUrl = Environment.GetEnvironmentVariable("ArchivedFundedQualificationsImportUrl");
 
@@ -43,21 +43,20 @@ namespace SFA.DAS.AODP.Functions
 
             var approvedQualifications = await _csvReaderService.ReadQualifications(approvedQualificationsUrl);
 
-            stopWatch.Start();
+            insertTimer.Start();
             await _applicationDbContext.BulkInsertAsync<FundedQualification>(_autoMapper.Map<List<FundedQualification>>(approvedQualifications));
-            stopWatch.Stop();
-            _logger.LogInformation($"{approvedQualificationsUrl.Count()} records imported in {stopWatch.ElapsedMilliseconds / 1000}");
+            _logger.LogInformation($"{approvedQualifications.Count()} Total imported in {insertTimer.Elapsed.Seconds} seconds", approvedQualifications.Count());
 
             var archivedQualifications = await _csvReaderService.ReadQualifications(archivedQualificationsUrl);
 
-            stopWatch.Restart();
             await _applicationDbContext.BulkInsertAsync<FundedQualification>(_autoMapper.Map<List<FundedQualification>>(archivedQualifications));
-            stopWatch.Stop();
-            _logger.LogInformation($"{archivedQualificationsUrl.Count()} records imported in {stopWatch.ElapsedMilliseconds / 1000}");
+            _logger.LogInformation($"{archivedQualifications.Count()} Total imported in {insertTimer.Elapsed.Seconds} seconds", archivedQualifications.Count());
+            
 
             var successResponse = req.CreateResponse(System.Net.HttpStatusCode.OK);
-            _logger.LogInformation("{Count} records imported successfully", approvedQualifications.Count());
-            await successResponse.WriteStringAsync($"{approvedQualifications.Count()} records imported successfully");
+            _logger.LogInformation($"{approvedQualifications.Count()+archivedQualifications.Count()} Total imported in {insertTimer.Elapsed.TotalSeconds} seconds", approvedQualifications.Count());
+            await successResponse.WriteStringAsync($"Inserted {approvedQualifications.Count()+archivedQualifications.Count()} records. Time Taken {insertTimer.Elapsed.TotalSeconds} seconds");
+            insertTimer.Stop();
             return successResponse;
         }
     }
