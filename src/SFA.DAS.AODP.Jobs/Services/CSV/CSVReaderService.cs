@@ -111,11 +111,11 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
                 var offerName = offer.Split("_")[0];
                 var offerRecord = new FundedQualificationOfferDTO
                 {
-                    FundingAvailable = row[row.Table.Columns[offerName + "_" + "FundingAvailable"].Ordinal].ToString(),
+                    FundingAvailable = row[row.Table.Columns[$"{offerName}_FundingAvailable"].Ordinal].ToString(),
                     Name = offerName,
-                    Notes = row[row.Table.Columns[offerName + "_" + "Notes"].Ordinal].ToString(),
-                    FundingApprovalEndDate = DateTime.TryParse(row[row.Table.Columns[offerName + "_" + "FundingApprovalEndDate"].Ordinal].ToString(), out DateTime end) ? end : (DateTime?)null,
-                    FundingApprovalStartDate = DateTime.TryParse(row[row.Table.Columns[offerName + "_" + "FundingApprovalEndDate"].Ordinal].ToString(), out DateTime start) ? start : (DateTime?)null
+                    Notes = row[row.Table.Columns[$"{offerName}_Notes"].Ordinal].ToString(),
+                    FundingApprovalEndDate = DateTime.TryParse(row[row.Table.Columns[$"{offerName}_FundingApprovalEndDate"].Ordinal].ToString(), out DateTime end) ? end : (DateTime?)null,
+                    FundingApprovalStartDate = DateTime.TryParse(row[row.Table.Columns[$"{offerName }_FundingApprovalEndDate"].Ordinal].ToString(), out DateTime start) ? start : (DateTime?)null
                 };
                 offerRecords.Add(offerRecord);
             }
