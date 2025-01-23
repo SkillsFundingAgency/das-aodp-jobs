@@ -11,7 +11,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
     public class QualificationsApiServiceTests
     {
         private readonly Mock<IOfqualRegisterApi> _mockApiClient;
-        private readonly RegulatedQualificationsService _service;
+        private readonly QualificationsService _service;
 
         public QualificationsApiServiceTests()
         {
@@ -42,9 +42,9 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             int page = 1;
             int limit = 10;
 
-            var expectedResult = new RegulatedQualificationsPaginatedResult<RegulatedQualificationDTO>
+            var expectedResult = new RegulatedQualificationsPaginatedResult<QualificationDTO>
             {
-                Results = new List<RegulatedQualificationDTO>(),
+                Results = new List<QualificationDTO>(),
                 Count = 0
             };
 
@@ -97,9 +97,9 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         {
             // Arrange
             var parameters = new RegulatedQualificationsQueryParameters { Title = "Test Title" };
-            var expectedResult = new RegulatedQualificationsPaginatedResult<RegulatedQualificationDTO>
+            var expectedResult = new RegulatedQualificationsPaginatedResult<QualificationDTO>
             {
-                Results = new List<RegulatedQualificationDTO> { new RegulatedQualificationDTO { Title = "Test Qualification" } },
+                Results = new List<QualificationDTO> { new QualificationDTO { Title = "Test Qualification" } },
                 Count = 1
             };
 
@@ -152,9 +152,9 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             int page = 1;
             int limit = 10;
 
-            var expectedResult = new RegulatedQualificationsPaginatedResult<RegulatedQualificationDTO>
+            var expectedResult = new RegulatedQualificationsPaginatedResult<QualificationDTO>
             {
-                Results = new List<RegulatedQualificationDTO>(),
+                Results = new List<QualificationDTO>(),
                 Count = 0
             };
 
@@ -225,13 +225,13 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             int page = 1;
             int limit = 100;
 
-            var largeResults = new List<RegulatedQualificationDTO>();
+            var largeResults = new List<QualificationDTO>();
             for (int i = 0; i < 1000; i++)
             {
-                largeResults.Add(new RegulatedQualificationDTO { Title = $"Qualification {i}" });
+                largeResults.Add(new QualificationDTO { Title = $"Qualification {i}" });
             }
 
-            var expectedResult = new RegulatedQualificationsPaginatedResult<RegulatedQualificationDTO>
+            var expectedResult = new RegulatedQualificationsPaginatedResult<QualificationDTO>
             {
                 Results = largeResults,
                 Count = 1000

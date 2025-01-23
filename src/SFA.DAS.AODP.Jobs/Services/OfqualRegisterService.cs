@@ -10,17 +10,17 @@ namespace SFA.DAS.AODP.Jobs.Services
 {
     public class OfqualRegisterService : IOfqualRegisterService
     {
-        private readonly ILogger<RegulatedQualificationsService> _logger;
+        private readonly ILogger<QualificationsService> _logger;
         private readonly IOfqualRegisterApi _apiClient;
 
-        public OfqualRegisterService(ILogger<RegulatedQualificationsService> logger, IOfqualRegisterApi apiClient,
+        public OfqualRegisterService(ILogger<QualificationsService> logger, IOfqualRegisterApi apiClient,
             IApplicationDbContext appDbContext)
         {
             _logger = logger;
             _apiClient = apiClient;
         }
 
-        public async Task<RegulatedQualificationsPaginatedResult<RegulatedQualificationDTO>> SearchPrivateQualificationsAsync(RegulatedQualificationsQueryParameters parameters, int page, int limit)
+        public async Task<RegulatedQualificationsPaginatedResult<QualificationDTO>> SearchPrivateQualificationsAsync(RegulatedQualificationsQueryParameters parameters, int page, int limit)
         {
             if (parameters == null)
             {
@@ -46,9 +46,9 @@ namespace SFA.DAS.AODP.Jobs.Services
             );
         }
 
-        public List<RegulatedQualificationDTO> ExtractQualificationsList(RegulatedQualificationsPaginatedResult<RegulatedQualificationDTO> paginatedResult)
+        public List<QualificationDTO> ExtractQualificationsList(RegulatedQualificationsPaginatedResult<QualificationDTO> paginatedResult)
         {
-            return paginatedResult.Results.Select(q => new RegulatedQualificationDTO
+            return paginatedResult.Results.Select(q => new QualificationDTO
             {
                 QualificationNumber = q.QualificationNumber,
                 QualificationNumberNoObliques = q.QualificationNumberNoObliques ?? "",

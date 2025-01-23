@@ -1,13 +1,12 @@
+using System.Diagnostics;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RestEase;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Models.Qualification;
 
 namespace SFA.DAS.AODP.Functions.Functions
 {
@@ -15,21 +14,19 @@ namespace SFA.DAS.AODP.Functions.Functions
     {
         private readonly IApplicationDbContext _applicationDbContext;
         private readonly ILogger<RegulatedQualificationsDataFunction> _logger;
-        private readonly IRegulatedQualificationsService _regulatedQualificationsService;
+        private readonly IQualificationsService _qualificationsService;
         private readonly IOfqualRegisterService _ofqualRegisterService;
-        private readonly IMapper _mapper;
 
         public RegulatedQualificationsDataFunction(
             ILogger<RegulatedQualificationsDataFunction> logger, 
             IApplicationDbContext appDbContext, 
-            IRegulatedQualificationsService regulatedQualificationsService,
+            IQualificationsService qualificationsService,
             IOfqualRegisterService ofqualRegisterService,
             IMapper mapper)
         {
             _logger = logger;
-            _mapper = mapper;
             _applicationDbContext = appDbContext;
-            _regulatedQualificationsService = regulatedQualificationsService;
+            _qualificationsService = qualificationsService;
             _ofqualRegisterService = ofqualRegisterService;
         }
 
@@ -41,12 +38,18 @@ namespace SFA.DAS.AODP.Functions.Functions
 
             try
             {
+                var stopWatch = new Stopwatch();
+                stopWatch.Start();
+
                 int page = 1;
-                int limit = 1000;
+                int limit = 500;
                 int totalProcessed = 0;
 
-                var processedQualificationsEntities = await _applicationDbContext.ProcessedRegulatedQualifications.ToListAsync();
-                var processedQualifications = _mapper.Map<List<RegulatedQualificationDTO>>(processedQualificationsEntities);
+                var processedQualifications = await _qualificationsService.GetAllProcessedRegulatedQualificationsAsync();
+
+                _logger.LogInformation($"Clearing down RegulatedQualificationsImport table...");
+
+                await _applicationDbContext.DeleteFromTable("RegulatedQualificationsImport");
 
                 var parameters = _ofqualRegisterService.ParseQueryParameters(req.Query);
 
@@ -54,30 +57,34 @@ namespace SFA.DAS.AODP.Functions.Functions
                 {
                     var paginatedResult = await _ofqualRegisterService.SearchPrivateQualificationsAsync(parameters, page, limit);
 
-                if (paginatedResult.Results == null || !paginatedResult.Results.Any())
-                {
-                    _logger.LogInformation("No more qualifications to process.");
-                    break;
-                }
+                    if (paginatedResult.Results == null || !paginatedResult.Results.Any())
+                    {
+                        _logger.LogInformation("No more qualifications to process.");
+                        break;
+                    }
 
-                _logger.LogInformation($"Processing page {page}. Retrieved {paginatedResult.Results.Count} qualifications.");
+                    _logger.LogInformation($"Processing page {page}. Retrieved {paginatedResult.Results?.Count} qualifications.");
 
                     var importedQualifications = _ofqualRegisterService.ExtractQualificationsList(paginatedResult);
 
-                    await _regulatedQualificationsService.CompareAndUpdateQualificationsAsync(importedQualifications, processedQualifications);
+                    await _qualificationsService.CompareAndUpdateQualificationsAsync(importedQualifications, processedQualifications);
 
-                    await _regulatedQualificationsService.SaveRegulatedQualificationsAsync(importedQualifications);
+                    await _qualificationsService.SaveRegulatedQualificationsAsync(importedQualifications);
 
                     totalProcessed += importedQualifications.Count;
 
-                    if (paginatedResult.Results.Count < limit)
+                    if (paginatedResult.Results?.Count < limit)
                     {
                         _logger.LogInformation("Reached the end of the results set.");
                         break;
                     }
 
                     page++;
+
+                    _logger.LogInformation($"{importedQualifications.Count()} records imported in {stopWatch.ElapsedMilliseconds / 1000}");
                 }
+
+                stopWatch.Stop();
 
                 _logger.LogInformation($"Total qualifications processed: {totalProcessed}");
                 return new OkObjectResult($"Successfully processed {totalProcessed} qualifications.");

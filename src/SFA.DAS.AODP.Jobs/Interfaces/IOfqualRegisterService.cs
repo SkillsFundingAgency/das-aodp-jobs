@@ -6,9 +6,9 @@ namespace SFA.DAS.AODP.Jobs.Interfaces
 {
     public interface IOfqualRegisterService
     {
-        Task<RegulatedQualificationsPaginatedResult<RegulatedQualificationDTO>> SearchPrivateQualificationsAsync(RegulatedQualificationsQueryParameters parameters, int page, int limit);
+        Task<RegulatedQualificationsPaginatedResult<QualificationDTO>> SearchPrivateQualificationsAsync(RegulatedQualificationsQueryParameters parameters, int page, int limit);
 
-        List<RegulatedQualificationDTO> ExtractQualificationsList(RegulatedQualificationsPaginatedResult<RegulatedQualificationDTO> paginatedResult);
+        List<QualificationDTO> ExtractQualificationsList(RegulatedQualificationsPaginatedResult<QualificationDTO> paginatedResult);
 
         RegulatedQualificationsQueryParameters ParseQueryParameters(NameValueCollection query);
     }

@@ -8,13 +8,13 @@ using SFA.DAS.AODP.Models.Qualification;
 
 namespace SFA.DAS.AODP.Jobs.Services
 {
-    public class RegulatedQualificationsService : IRegulatedQualificationsService
+    public class QualificationsService : IQualificationsService
     {
-        private readonly ILogger<RegulatedQualificationsService> _logger;
+        private readonly ILogger<QualificationsService> _logger;
         private readonly IApplicationDbContext _applicationDbContext;
         private readonly IMapper _mapper;
 
-        public RegulatedQualificationsService(ILogger<RegulatedQualificationsService> logger, IApplicationDbContext applicationDbContext, IMapper mapper, 
+        public QualificationsService(ILogger<QualificationsService> logger, IApplicationDbContext applicationDbContext, IMapper mapper, 
             IApplicationDbContext appDbContext)
         {
             _logger = logger;
@@ -22,9 +22,9 @@ namespace SFA.DAS.AODP.Jobs.Services
             _applicationDbContext = appDbContext;
         }
 
-        public async Task CompareAndUpdateQualificationsAsync(List<RegulatedQualificationDTO> importedQualifications, List<RegulatedQualificationDTO> processedQualifications)
+        public async Task CompareAndUpdateQualificationsAsync(List<QualificationDTO> importedQualifications, List<QualificationDTO> processedQualifications)
         {
-            var columnsToCompare = new Dictionary<string, Func<RegulatedQualificationDTO, object>>()
+            var columnsToCompare = new Dictionary<string, Func<QualificationDTO, object>>()
             {
                 { "OrganisationName", x => x.OrganisationName },
                 { "Title", x => x.Title },
@@ -50,7 +50,7 @@ namespace SFA.DAS.AODP.Jobs.Services
 
             foreach (var importRow in importedQualifications)
             {
-                var processedRow = processedQualifications.FirstOrDefault(p => p.Id == importRow.Id);
+                var processedRow = processedQualifications.FirstOrDefault(p => p.QualificationNumberNoObliques == importRow.QualificationNumberNoObliques);
 
                 if (processedRow != null)
                 {
@@ -82,7 +82,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             }
         }
 
-        public async Task SaveRegulatedQualificationsAsync(List<RegulatedQualificationDTO> qualifications)
+        public async Task SaveRegulatedQualificationsAsync(List<QualificationDTO> qualifications)
         {
             try
             {
@@ -90,9 +90,9 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                 var qualificationsEntities = _mapper.Map<List<RegulatedQualificationsImport>>(qualifications);
 
-                await _applicationDbContext.BulkInsertAsync(qualificationsEntities);
-                //_applicationDbContext.RegulatedQualificationsImport.AddRange(qualificationsEntities);
-                //await _applicationDbContext.SaveChangesAsync();
+                //await _applicationDbContext.BulkInsertAsync(qualificationsEntities);
+                _applicationDbContext.RegulatedQualificationsImport.AddRange(qualificationsEntities);
+                await _applicationDbContext.SaveChangesAsync();
 
                 _logger.LogInformation("Successfully saved regulated qualification records.");
             }
@@ -101,6 +101,15 @@ namespace SFA.DAS.AODP.Jobs.Services
                 _logger.LogError(ex, "An error occurred while saving regulated qualification records.");
                 throw; // Rethrow the exception to let the caller handle it
             }
+        }
+
+        public async Task<List<QualificationDTO>> GetAllProcessedRegulatedQualificationsAsync()
+        {
+            _logger.LogInformation("Retreiving all processed regulated qualification records...");
+
+            var processedQualificationsEntities = await _applicationDbContext.ProcessedRegulatedQualifications.ToListAsync();
+
+            return _mapper.Map<List<QualificationDTO>>(processedQualificationsEntities);
         }
 
     }

@@ -24,7 +24,7 @@ var host = new HostBuilder()
 
         services.AddHttpClient();
         services.AddScoped<IApplicationDbContext, ApplicationDbContext>();
-        services.AddScoped<IRegulatedQualificationsService, RegulatedQualificationsService>();
+        services.AddScoped<IQualificationsService, QualificationsService>();
         services.AddTransient<IOfqualRegisterService, OfqualRegisterService>();
         services.AddScoped<ICsvReaderService, CsvReaderService>();
         services.AddScoped<IOfqualRegisterApi>(provider =>

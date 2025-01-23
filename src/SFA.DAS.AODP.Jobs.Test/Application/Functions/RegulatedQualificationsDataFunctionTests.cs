@@ -18,7 +18,7 @@ public class RegulatedQualificationsDataFunctionTests
 {
     private readonly Mock<ILogger<RegulatedQualificationsDataFunction>> _loggerMock;
     private readonly Mock<IApplicationDbContext> _applicationDbContextMock;
-    private readonly Mock<IRegulatedQualificationsService> _qualificationsApiServiceMock;
+    private readonly Mock<IQualificationsService> _qualificationsApiServiceMock;
     private readonly FunctionContext _functionContext;
     private readonly RegulatedQualificationsDataFunction _function;
     private readonly Mock<IMapper> _mapper;
@@ -27,7 +27,7 @@ public class RegulatedQualificationsDataFunctionTests
     {
         _loggerMock = new Mock<ILogger<RegulatedQualificationsDataFunction>>();
         _applicationDbContextMock = new Mock<IApplicationDbContext>();
-        _qualificationsApiServiceMock = new Mock<IRegulatedQualificationsService>();
+        _qualificationsApiServiceMock = new Mock<IQualificationsService>();
         _functionContext = new Mock<FunctionContext>().Object;
         _mapper = new Mock<IMapper>();
         _function = new RegulatedQualificationsDataFunction(
@@ -56,15 +56,15 @@ public class RegulatedQualificationsDataFunctionTests
                 It.IsAny<int>(),
                 It.IsAny<int>())
             )
-            .ReturnsAsync(new RegulatedQualificationsPaginatedResult<RegulatedQualificationDTO>
+            .ReturnsAsync(new RegulatedQualificationsPaginatedResult<QualificationDTO>
             {
-                Results = new List<RegulatedQualificationDTO>
+                Results = new List<QualificationDTO>
                 {
-                    new RegulatedQualificationDTO { QualificationNumber = "1111", Title = "Test Qualification1" },
-                    new RegulatedQualificationDTO { QualificationNumber = "2222", Title = "Test Qualification2" },
-                    new RegulatedQualificationDTO { QualificationNumber = "3333", Title = "Test Qualification3" },
-                    new RegulatedQualificationDTO { QualificationNumber = "4444", Title = "Test Qualification4" },
-                    new RegulatedQualificationDTO { QualificationNumber = "5555", Title = "Test Qualification5" }
+                    new QualificationDTO { QualificationNumber = "1111", Title = "Test Qualification1" },
+                    new QualificationDTO { QualificationNumber = "2222", Title = "Test Qualification2" },
+                    new QualificationDTO { QualificationNumber = "3333", Title = "Test Qualification3" },
+                    new QualificationDTO { QualificationNumber = "4444", Title = "Test Qualification4" },
+                    new QualificationDTO { QualificationNumber = "5555", Title = "Test Qualification5" }
                 }
             });
 
@@ -90,7 +90,7 @@ public class RegulatedQualificationsDataFunctionTests
                 It.IsAny<RegulatedQualificationsQueryParameters>(), 
                 It.IsAny<int>(), 
                 It.IsAny<int>()))
-            .ReturnsAsync(new RegulatedQualificationsPaginatedResult<RegulatedQualificationDTO>
+            .ReturnsAsync(new RegulatedQualificationsPaginatedResult<QualificationDTO>
             {
                 Results = null
             });
@@ -128,12 +128,12 @@ public class RegulatedQualificationsDataFunctionTests
                 It.IsAny<int>(),
                 It.IsAny<int>())
             )
-            .ReturnsAsync(new RegulatedQualificationsPaginatedResult<RegulatedQualificationDTO>
+            .ReturnsAsync(new RegulatedQualificationsPaginatedResult<QualificationDTO>
             {
-                Results = new List<RegulatedQualificationDTO>
+                Results = new List<QualificationDTO>
                 {
-                    new RegulatedQualificationDTO { QualificationNumber = "1111", Title = "Test Qualification1" },
-                    new RegulatedQualificationDTO { QualificationNumber = "2222", Title = "Test Qualification2" }
+                    new QualificationDTO { QualificationNumber = "1111", Title = "Test Qualification1" },
+                    new QualificationDTO { QualificationNumber = "2222", Title = "Test Qualification2" }
                 }
             });
 
