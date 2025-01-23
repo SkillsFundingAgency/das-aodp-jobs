@@ -24,8 +24,6 @@ namespace SFA.DAS.AODP.Jobs.Services
 
         public async Task CompareAndUpdateQualificationsAsync(List<RegulatedQualificationDTO> importedQualifications, List<RegulatedQualificationDTO> processedQualifications)
         {
-            var processedQualificationsDict = processedQualifications.ToDictionary(p => p.Id);
-
             var columnsToCompare = new Dictionary<string, Func<RegulatedQualificationDTO, object>>()
             {
                 { "OrganisationName", x => x.OrganisationName },
@@ -52,7 +50,9 @@ namespace SFA.DAS.AODP.Jobs.Services
 
             foreach (var importRow in importedQualifications)
             {
-                if (processedQualificationsDict.TryGetValue(importRow.Id, out var processedRow))
+                var processedRow = processedQualifications.FirstOrDefault(p => p.Id == importRow.Id);
+
+                if (processedRow != null)
                 {
                     var changedFields = new List<string>();
 

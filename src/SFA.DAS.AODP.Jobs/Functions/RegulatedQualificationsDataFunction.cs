@@ -42,7 +42,7 @@ namespace SFA.DAS.AODP.Functions.Functions
             try
             {
                 int page = 1;
-                int limit = 100;
+                int limit = 1000;
                 int totalProcessed = 0;
 
                 var processedQualificationsEntities = await _applicationDbContext.ProcessedRegulatedQualifications.ToListAsync();
@@ -62,7 +62,7 @@ namespace SFA.DAS.AODP.Functions.Functions
 
                 _logger.LogInformation($"Processing page {page}. Retrieved {paginatedResult.Results.Count} qualifications.");
 
-                    List<RegulatedQualificationDTO> importedQualifications = _ofqualRegisterService.ExtractQualificationsList(paginatedResult);
+                    var importedQualifications = _ofqualRegisterService.ExtractQualificationsList(paginatedResult);
 
                     await _regulatedQualificationsService.CompareAndUpdateQualificationsAsync(importedQualifications, processedQualifications);
 
@@ -93,6 +93,5 @@ namespace SFA.DAS.AODP.Functions.Functions
                 return new StatusCodeResult(500);
             }
         }
-
     }
 }
