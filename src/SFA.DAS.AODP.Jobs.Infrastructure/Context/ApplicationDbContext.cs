@@ -26,7 +26,7 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         public async Task BulkInsertAsync<T>(IEnumerable<T> entities, CancellationToken cancellationToken = default) where T : class
         {
             if (entities.Any())
-            await this.BulkInsertAsync(entities.Take(100), options => { options.IncludeGraph = true;options.BatchSize = 1000;options.InsertIfNotExists = false; }, cancellationToken: cancellationToken);
+            await this.BulkInsertAsync(entities, options => { options.IncludeGraph = true;options.BatchSize = 1000;options.InsertIfNotExists = false; }, cancellationToken: cancellationToken);
         }
 
         public async Task DeleteFromTable(string tableName)

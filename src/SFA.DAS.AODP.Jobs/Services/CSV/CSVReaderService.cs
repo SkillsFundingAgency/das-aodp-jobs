@@ -92,6 +92,10 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
                     DateOfOfqualDataSnapshot = DateTime.Parse(row["DateOfOfqualDataSnapshot"].ToString()),
                     AwardingOrganisationURL = row["AwardingOrganisationURL"].ToString(),
                     Level = row["level"].ToString(),
+                    QualificationType = row["QualificationType"].ToString(),
+                    SectorSubjectArea = row["SectorSubjectArea"].ToString(),
+                    Status = row["Status"].ToString(),
+                    Subcategory = row["Subcategory"].ToString(),
                     QualificationNumber = row["QualificationNumber"].ToString(),
                     Offers = offerRecords
                 });
