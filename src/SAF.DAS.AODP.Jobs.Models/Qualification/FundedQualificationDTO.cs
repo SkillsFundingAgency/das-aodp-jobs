@@ -1,7 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using CsvHelper.Configuration;
-
-namespace SAF.DAS.AODP.Models.Qualification
+﻿namespace SAF.DAS.AODP.Models.Qualification
 {
     public partial class FundedQualificationDTO
     {

@@ -15,7 +15,7 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
         {
             _logger = logger;
             _httpClientFactory = httpClientFactory;
-          
+
         }
 
         public List<T> ReadCSVFromFilePath<T, TMap>(string filePath) where TMap : ClassMap<T>
@@ -48,8 +48,8 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
 
                 using var approvedResponseStream = await response.Content.ReadAsStreamAsync();
 
-                 records
-                    = ReadCsv<T, TMap>(approvedResponseStream);
+                records
+                   = ReadCsv<T, TMap>(approvedResponseStream);
 
                 _logger.LogInformation("Total Records Read: {fundedCsvRecords}", records.Count);
             }
@@ -72,13 +72,13 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
             return response;
         }
 
-        private List<T> ReadCsv<T, TMap>(dynamic data) where TMap :ClassMap<T>
+        private List<T> ReadCsv<T, TMap>(dynamic data) where TMap : ClassMap<T>
         {
             using var streamReader = new StreamReader(data);
             using var csvReader = new CsvReader(streamReader, CultureInfo.InvariantCulture);
             csvReader.Read();
             csvReader.ReadHeader();
-            var customHeaders=csvReader.HeaderRecord.Where(header=>header.Contains("_FundingAvailable")).ToList();
+            var customHeaders = csvReader.HeaderRecord.Where(header => header.Contains("_FundingAvailable")).ToList();
             if (customHeaders.Any())
             {
                 var classMap = (TMap)Activator.CreateInstance(typeof(TMap), customHeaders);
@@ -92,4 +92,3 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
         }
     }
 }
-

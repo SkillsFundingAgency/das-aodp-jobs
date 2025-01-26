@@ -11,5 +11,6 @@ public class MapperProfile : Profile
         CreateMap<RegulatedQualificationsImport, RegulatedQualification>().ReverseMap();
         CreateMap<ProcessedRegulatedQualification, RegulatedQualification>();
         CreateMap<FundedQualification, FundedQualificationDTO>().ReverseMap();
+        CreateMap<FundedQualificationOffer, FundedQualificationOfferDTO>().ReverseMap();
     }
 }

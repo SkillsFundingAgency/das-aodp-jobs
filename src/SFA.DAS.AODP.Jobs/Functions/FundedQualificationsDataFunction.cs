@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using AutoMapper;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
@@ -15,12 +16,15 @@ namespace SFA.DAS.AODP.Functions
         private readonly ILogger<FundedQualificationsDataFunction> _logger;
         private readonly IApplicationDbContext _applicationDbContext;
         private readonly ICsvReaderService _csvReaderService;
+        private readonly IMapper _mapper;
 
-        public FundedQualificationsDataFunction(ILogger<FundedQualificationsDataFunction> logger, IApplicationDbContext applicationDbContext, ICsvReaderService csvReaderService)
+        public FundedQualificationsDataFunction(ILogger<FundedQualificationsDataFunction> logger, IApplicationDbContext applicationDbContext, ICsvReaderService csvReaderService, IMapper mapper)
         {
             _logger = logger;
             _applicationDbContext = applicationDbContext;
             _csvReaderService = csvReaderService;
+            _mapper = mapper;
+            
         }
 
         [Function("ApprovedQualificationsDataFunction")]
@@ -36,16 +40,15 @@ namespace SFA.DAS.AODP.Functions
                 var notFoundResponse = req.CreateResponse(System.Net.HttpStatusCode.NotFound);
                 return notFoundResponse;
             }
-
-            var approvedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(approvedUrlFilePath);
+          
+            var qualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(approvedUrlFilePath);
             var stopWatch = new Stopwatch();
             
-            if (approvedQualifications.Any())
+            if (qualifications.Any())
             {
-                await _applicationDbContext.TruncateTable("FundedQualificationsImport");
-                stopWatch.Start();
-                await _applicationDbContext.BulkInsertAsync(approvedQualifications);
-                stopWatch.Stop();
+                await _applicationDbContext.DeleteTable<FundedQualification>();
+
+                await WriteQualifications(qualifications, stopWatch);
             }
             else
             {
@@ -58,9 +61,7 @@ namespace SFA.DAS.AODP.Functions
            
             if (archivedQualifications.Any())
             {
-                stopWatch.Restart();
-                await _applicationDbContext.BulkInsertAsync(archivedQualifications);
-                stopWatch.Stop();
+                await WriteQualifications(archivedQualifications, stopWatch);
             }
             else
             {
@@ -71,9 +72,16 @@ namespace SFA.DAS.AODP.Functions
             _logger.LogInformation($"{archivedQualifications.Count()} records imported in {stopWatch.ElapsedMilliseconds/1000}");
 
             var successResponse = req.CreateResponse(System.Net.HttpStatusCode.OK);
-            _logger.LogInformation("{Count} records imported successfully", archivedQualifications.Count());
+            _logger.LogInformation($"{archivedQualifications.Count()} archived records imported successfully");
             await successResponse.WriteStringAsync($"{archivedQualifications.Count()} records imported successfully");
             return successResponse;
+        }
+
+        private async Task WriteQualifications(List<FundedQualificationDTO> approvedQualifications, Stopwatch stopWatch)
+        {
+            stopWatch.Restart();
+            await _applicationDbContext.BulkInsertAsync(_mapper.Map<List<FundedQualification>>(approvedQualifications));
+            stopWatch.Stop();
         }
     }
 }

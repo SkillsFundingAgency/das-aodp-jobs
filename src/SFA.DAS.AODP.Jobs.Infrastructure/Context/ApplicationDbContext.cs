@@ -1,5 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using SFA.DAS.AODP.Data.Entities;
+using System.Data;
 using Z.BulkOperations;
 
 namespace SFA.DAS.AODP.Infrastructure.Context
@@ -23,12 +25,13 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public async Task BulkInsertAsync<T>(IEnumerable<T> entities, CancellationToken cancellationToken = default) where T : class
         {
+            if(entities.Any())
             await this.BulkInsertAsync(entities.ToList(), options => { options.BatchSize = 1000; options.IncludeGraph = true; }, cancellationToken: cancellationToken);
         }
 
-        public async Task TruncateTable(string tableName)
+        public async Task DeleteTable<T>() where T:class
         {
-            await this.Database.ExecuteSqlRawAsync($"truncate table [{tableName}]");
+            await this.Set<T>().ExecuteDeleteAsync();
         }
     }
 }

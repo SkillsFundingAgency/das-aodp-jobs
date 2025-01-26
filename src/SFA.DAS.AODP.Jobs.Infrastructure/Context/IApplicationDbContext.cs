@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using SFA.DAS.AODP.Data.Entities;
 
 namespace SFA.DAS.AODP.Infrastructure.Context
@@ -11,6 +10,6 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         DbSet<RegulatedQualificationsImport> RegulatedQualificationsImport { get; set; }
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
         Task BulkInsertAsync<T>(IEnumerable<T> entities, CancellationToken cancellationToken = default) where T : class;
-        Task TruncateTable(string tableName);
+        Task DeleteTable<T>() where T : class;
     }
 }
