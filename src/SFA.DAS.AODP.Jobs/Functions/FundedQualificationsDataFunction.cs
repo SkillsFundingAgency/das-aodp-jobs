@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
+using SAF.DAS.AODP.Models.Qualification;
 using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Jobs.Interfaces;
@@ -36,7 +37,7 @@ namespace SFA.DAS.AODP.Functions
                 return notFoundResponse;
             }
 
-            var approvedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualification, FundedQualificationsImportClassMap>(approvedUrlFilePath);
+            var approvedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(approvedUrlFilePath);
             var stopWatch = new Stopwatch();
             
             if (approvedQualifications.Any())
@@ -53,7 +54,7 @@ namespace SFA.DAS.AODP.Functions
                 return notFoundResponse;
             }
 
-            var archivedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualification, FundedQualificationsImportClassMap>(archivedUrlFilePath);
+            var archivedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(archivedUrlFilePath);
            
             if (archivedQualifications.Any())
             {
@@ -67,11 +68,11 @@ namespace SFA.DAS.AODP.Functions
                 var notFoundResponse = req.CreateResponse(System.Net.HttpStatusCode.NotFound);
                 return notFoundResponse;
             }
-            _logger.LogInformation($"{approvedQualifications.Count} records imported in {stopWatch.ElapsedMilliseconds/1000}");
+            _logger.LogInformation($"{archivedQualifications.Count()} records imported in {stopWatch.ElapsedMilliseconds/1000}");
 
             var successResponse = req.CreateResponse(System.Net.HttpStatusCode.OK);
-            _logger.LogInformation("{Count} records imported successfully", approvedQualifications.Count);
-            await successResponse.WriteStringAsync($"{approvedQualifications.Count} records imported successfully");
+            _logger.LogInformation("{Count} records imported successfully", archivedQualifications.Count());
+            await successResponse.WriteStringAsync($"{archivedQualifications.Count()} records imported successfully");
             return successResponse;
         }
     }

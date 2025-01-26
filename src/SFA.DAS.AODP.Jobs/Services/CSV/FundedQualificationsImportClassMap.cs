@@ -1,9 +1,9 @@
 ﻿using CsvHelper.Configuration;
-using SFA.DAS.AODP.Data.Entities;
+using SAF.DAS.AODP.Models.Qualification;
 
 namespace SFA.DAS.AODP.Jobs.Services.CSV
 {
-    public class FundedQualificationsImportClassMap : ClassMap<FundedQualification>
+    public class FundedQualificationsImportClassMap : ClassMap<FundedQualificationDTO>
     {
         public FundedQualificationsImportClassMap(List<string> headers)
         {
@@ -21,11 +21,11 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
             Map(m => m.AwardingOrganisationUrl).Name("AwardingOrganisationURL");
             Map(m => m.Offers).Convert(r =>
             {
-                var offers = new List<FundedQualificationOffer>();
+                var offers = new List<FundedQualificationOfferDTO>();
                 foreach (var item in headers)
                 {
                     var offerName = item.Split("_")[0];
-                    offers.Add(new FundedQualificationOffer()
+                    offers.Add(new FundedQualificationOfferDTO()
                     {
                         Name = offerName,
                         FundingAvailable = r.Row.GetField($"{offerName}_FundingAvailable"),
@@ -33,11 +33,8 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
                         FundingApprovalEndDate = DateTime.TryParse(r.Row.GetField($"{offerName}_FundingApprovalEndDate"), out DateTime end) ? end : (DateTime?)null,
                         FundingApprovalStartDate = DateTime.TryParse(r.Row.GetField($"{offerName}_FundingApprovalStartDate"), out DateTime start) ? start : (DateTime?)null
                     });
-
-           
                 };
                 return offers;
-
             });
         }
     }
