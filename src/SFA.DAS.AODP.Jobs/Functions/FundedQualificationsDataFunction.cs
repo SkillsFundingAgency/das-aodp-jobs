@@ -41,18 +41,18 @@ namespace SFA.DAS.AODP.Functions
                 return notFoundResponse;
             }
           
-            var qualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(approvedUrlFilePath);
+            var approvedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(approvedUrlFilePath);
             var stopWatch = new Stopwatch();
             
-            if (qualifications.Any())
+            if (approvedQualifications.Any())
             {
                 await _applicationDbContext.DeleteTable<FundedQualification>();
 
-                await WriteQualifications(qualifications, stopWatch);
+                await WriteQualifications(approvedQualifications, stopWatch);
             }
             else
             {
-                _logger.LogInformation("No CSV file found at this location {FilePath}");
+                _logger.LogInformation("No data found found in approved qualifications csv");
                 var notFoundResponse = req.CreateResponse(System.Net.HttpStatusCode.NotFound);
                 return notFoundResponse;
             }
@@ -65,7 +65,7 @@ namespace SFA.DAS.AODP.Functions
             }
             else
             {
-                _logger.LogInformation("No CSV file found at this location {FilePath}");
+                _logger.LogInformation("No data found in archived qualifications csv");
                 var notFoundResponse = req.CreateResponse(System.Net.HttpStatusCode.NotFound);
                 return notFoundResponse;
             }
@@ -73,7 +73,7 @@ namespace SFA.DAS.AODP.Functions
 
             var successResponse = req.CreateResponse(System.Net.HttpStatusCode.OK);
             _logger.LogInformation($"{archivedQualifications.Count()} archived records imported successfully");
-            await successResponse.WriteStringAsync($"{archivedQualifications.Count()} records imported successfully");
+            await successResponse.WriteStringAsync($"{approvedQualifications.Count()} approved qualifications imported \n{archivedQualifications.Count()} archived qualifications imported\n{approvedQualifications.Count()+archivedQualifications.Count()} Total Records");
             return successResponse;
         }
 
