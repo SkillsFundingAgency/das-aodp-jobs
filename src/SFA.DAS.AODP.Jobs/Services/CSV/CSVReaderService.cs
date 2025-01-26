@@ -36,51 +36,11 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
             return fundedCsvRecords;
         }
 
-        public async Task<List<T>> ReadApprovedAndArchivedFromUrlAsync<T, TMap>(string approvedUrl, string archivedUrl) where TMap : ClassMap<T>
-        {
-            _logger.LogInformation("Downloading CSV file from url: {ApprovedUrlFilePath} {ArchivedUrlFilePath}", approvedUrl, archivedUrl);
-
-            var totalRecords = new List<T>();
-
-            try
-            {
-                HttpResponseMessage response;
-                response = await GetDataFromUrl(approvedUrl);
-
-                using var approvedResponseStream = await response.Content.ReadAsStreamAsync();
-
-                var approvedCsvData
-                    = ReadCsv<T, TMap>(approvedResponseStream);
-
-                _logger.LogInformation("Total approved Records Read: {Records}", approvedCsvData.Count);
-
-                response = await GetDataFromUrl(archivedUrl);
-                using var archivedResponseStream = await response.Content.ReadAsStreamAsync();
-
-                var archivedCsvData = ReadCsv<T, TMap>(archivedResponseStream);
-
-                _logger.LogInformation("Total archived Records Read: {Records}", archivedCsvData.Count);
-
-                totalRecords.AddRange(approvedCsvData);
-                totalRecords.AddRange(archivedCsvData);
-            }
-            catch (HttpRequestException ex)
-            {
-                _logger.LogError(ex, "HTTP request error downloading CSV file from url: {UrlFilePath}");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error downloading CSV file from url: {UrlFilePath}");
-            }
-
-            return totalRecords;
-        }
-
         public async Task<List<T>> ReadCsvFileFromUrlAsync<T, TMap>(string urlFilePath) where TMap : ClassMap<T>
         {
             _logger.LogInformation("Downloading CSV file from url: {UrlFilePath}", urlFilePath);
 
-            var fundedCsvRecords = new List<T>();
+            var records = new List<T>();
 
             try
             {
@@ -88,10 +48,10 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
 
                 using var approvedResponseStream = await response.Content.ReadAsStreamAsync();
 
-                 fundedCsvRecords
+                 records
                     = ReadCsv<T, TMap>(approvedResponseStream);
 
-                _logger.LogInformation("Total Records Read: {fundedCsvRecords}", fundedCsvRecords.Count);
+                _logger.LogInformation("Total Records Read: {fundedCsvRecords}", records.Count);
             }
             catch (HttpRequestException ex)
             {
@@ -101,7 +61,7 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
             {
                 _logger.LogError(ex, "Error downloading CSV file from url: {UrlFilePath}", urlFilePath);
             }
-            return fundedCsvRecords;
+            return records;
         }
 
         private async Task<HttpResponseMessage> GetDataFromUrl(string approvedUrlFilePath)
@@ -112,11 +72,22 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
             return response;
         }
 
-        private List<T> ReadCsv<T, TMap>(dynamic data) where TMap : ClassMap<T>
+        private List<T> ReadCsv<T, TMap>(dynamic data) where TMap :ClassMap<T>
         {
             using var streamReader = new StreamReader(data);
             using var csvReader = new CsvReader(streamReader, CultureInfo.InvariantCulture);
-            csvReader.Context.RegisterClassMap<TMap>();
+            csvReader.Read();
+            csvReader.ReadHeader();
+            var customHeaders=csvReader.HeaderRecord.Where(header=>header.Contains("_FundingAvailable")).ToList();
+            if (customHeaders.Any())
+            {
+                var classMap = (TMap)Activator.CreateInstance(typeof(TMap), customHeaders);
+                csvReader.Context.RegisterClassMap(classMap);
+            }
+            else
+            {
+                csvReader.Context.RegisterClassMap<TMap>();
+            }
             return csvReader.GetRecords<T>().ToList();
         }
     }

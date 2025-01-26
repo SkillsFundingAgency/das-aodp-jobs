@@ -36,7 +36,7 @@ namespace SFA.DAS.AODP.Functions
                 return notFoundResponse;
             }
 
-            var approvedQualifications = await _csvReaderService.ReadApprovedAndArchivedFromUrlAsync<FundedQualificationsImport, FundedQualificationsImportClassMap>(approvedUrlFilePath, archivedUrlFilePath);
+            var approvedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualification, FundedQualificationsImportClassMap>(approvedUrlFilePath);
             var stopWatch = new Stopwatch();
             
             if (approvedQualifications.Any())
@@ -44,6 +44,21 @@ namespace SFA.DAS.AODP.Functions
                 await _applicationDbContext.TruncateTable("FundedQualificationsImport");
                 stopWatch.Start();
                 await _applicationDbContext.BulkInsertAsync(approvedQualifications);
+                stopWatch.Stop();
+            }
+            else
+            {
+                _logger.LogInformation("No CSV file found at this location {FilePath}");
+                var notFoundResponse = req.CreateResponse(System.Net.HttpStatusCode.NotFound);
+                return notFoundResponse;
+            }
+
+            var archivedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualification, FundedQualificationsImportClassMap>(archivedUrlFilePath);
+           
+            if (archivedQualifications.Any())
+            {
+                stopWatch.Restart();
+                await _applicationDbContext.BulkInsertAsync(archivedQualifications);
                 stopWatch.Stop();
             }
             else

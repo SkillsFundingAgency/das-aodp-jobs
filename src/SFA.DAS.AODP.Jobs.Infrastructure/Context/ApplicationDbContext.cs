@@ -9,7 +9,8 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options) { }
 
-        public virtual DbSet<FundedQualificationsImport> FundedQualificationsImport { get; set; }
+        public virtual DbSet<FundedQualification> FundedQualifications { get; set; }
+        public virtual DbSet<FundedQualificationOffer> FundedQualificationOffers { get; set; }
 
         public virtual DbSet<ProcessedRegulatedQualification> ProcessedRegulatedQualifications { get; set; }
 
@@ -22,7 +23,7 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public async Task BulkInsertAsync<T>(IEnumerable<T> entities, CancellationToken cancellationToken = default) where T : class
         {
-            await this.BulkInsertAsync(entities.ToList(), options => { options.BatchSize = 1000; options.InsertIfNotExists = false;options.AutoMapOutputDirection = false; }, cancellationToken: cancellationToken);
+            await this.BulkInsertAsync(entities.ToList(), options => { options.BatchSize = 1000; options.IncludeGraph = true; }, cancellationToken: cancellationToken);
         }
 
         public async Task TruncateTable(string tableName)
