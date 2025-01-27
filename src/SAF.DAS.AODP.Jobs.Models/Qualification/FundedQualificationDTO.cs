@@ -13,7 +13,6 @@
         public string? SectorSubjectArea { get; set; }
         public string? Status { get; set; }
         public string? AwardingOrganisationURL { get; set; }
-        public string? QualificationNumberVarchar { get; set; }
         public ICollection<FundedQualificationOfferDTO> Offers { get; set; } = new List<FundedQualificationOfferDTO>();
     }
 }

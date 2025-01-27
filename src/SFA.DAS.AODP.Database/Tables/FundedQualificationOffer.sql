@@ -13,5 +13,3 @@
 	[id] ASC
 ),
  CONSTRAINT [FK_Offers_Qualificats_QualificationId] FOREIGN KEY ([FundedQualificationId]) REFERENCES [FundedQualifications] ([Id]) ON DELETE CASCADE);
-
-

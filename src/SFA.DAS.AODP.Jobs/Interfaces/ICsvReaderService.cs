@@ -1,10 +1,11 @@
-﻿using SAF.DAS.AODP.Models.Qualification;
-using SFA.DAS.AODP.Data.Entities;
+﻿using CsvHelper.Configuration;
 
 namespace SFA.DAS.AODP.Jobs.Interfaces
 {
     public interface ICsvReaderService
     {
-        Task<IEnumerable<FundedQualificationDTO>> ReadQualifications(string url);
+        List<T> ReadCSVFromFilePath<T, TMap>(string filePath) where TMap : ClassMap<T>;
+
+        Task<List<T>> ReadCsvFileFromUrlAsync<T, TMap>(string urlFilePath) where TMap : ClassMap<T>;
     }
 }

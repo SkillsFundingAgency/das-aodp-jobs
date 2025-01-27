@@ -1,4 +1,7 @@
-﻿namespace SFA.DAS.AODP.Data.Entities
+﻿using System.ComponentModel.DataAnnotations;
+using CsvHelper.Configuration;
+
+namespace SFA.DAS.AODP.Data.Entities
 {
     public partial class FundedQualification
     {
@@ -13,7 +16,6 @@
         public string? SectorSubjectArea { get; set; }
         public string? Status { get; set; }
         public string? AwardingOrganisationURL { get; set; }
-        public string? QualificationNumberVarchar { get; set; }
         public ICollection<FundedQualificationOffer> Offers { get; set; } = new List<FundedQualificationOffer>();
     }
 }

@@ -5,6 +5,7 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using RestEase;
+using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Jobs.Interfaces;
 
@@ -48,7 +49,7 @@ namespace SFA.DAS.AODP.Functions.Functions
 
                 _logger.LogInformation($"Clearing down RegulatedQualificationsImport table...");
 
-                await _applicationDbContext.DeleteFromTable("RegulatedQualificationsImport");
+                await _applicationDbContext.DeleteTable<RegulatedQualificationsImport>();
 
                 var parameters = _ofqualRegisterService.ParseQueryParameters(req.Query);
 

@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using System.Collections.Specialized;
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
@@ -48,7 +49,7 @@ public class RegulatedQualificationsDataFunctionTests
         // Arrange
         var qualificationEntities = new List<RegulatedQualificationsImport>();
         var httpRequestData = new MockHttpRequestData(_functionContext);
-
+        var parameters = new RegulatedQualificationsQueryParameters { Page = 1, Limit = 10 };
         var qualifications = new List<QualificationDTO>
                 {
                     new QualificationDTO { QualificationNumber = "1111", Title = "Test Qualification1" },
@@ -88,6 +89,10 @@ public class RegulatedQualificationsDataFunctionTests
             .Returns(Task.CompletedTask)
             .Verifiable();
 
+        _ofqualRegisterServiceMock.Setup(service => service.ParseQueryParameters(
+                It.IsAny<NameValueCollection>()))
+            .Returns(parameters);
+
         // Act
         var result = await _function.Run(httpRequestData);
 
@@ -109,6 +114,7 @@ public class RegulatedQualificationsDataFunctionTests
     {
         // Arrange
         var httpRequestData = new MockHttpRequestData(_functionContext);
+        var parameters = new RegulatedQualificationsQueryParameters { Page = 1, Limit = 10 };
 
         _ofqualRegisterServiceMock.Setup(x => x.SearchPrivateQualificationsAsync(
                 It.IsAny<RegulatedQualificationsQueryParameters>()))
@@ -116,6 +122,10 @@ public class RegulatedQualificationsDataFunctionTests
             {
                 Results = null
             });
+
+        _ofqualRegisterServiceMock.Setup(service => service.ParseQueryParameters(
+                It.IsAny<NameValueCollection>()))
+            .Returns(parameters);
 
         // Act
         var result = await _function.Run(httpRequestData);
@@ -153,6 +163,8 @@ public class RegulatedQualificationsDataFunctionTests
             new QualificationDTO { QualificationNumber = "5555", Title = "Test Qualification5" }
         };
 
+        var parameters = new RegulatedQualificationsQueryParameters { Page = 1, Limit = 10 };
+
         _ofqualRegisterServiceMock.Setup(api => api.SearchPrivateQualificationsAsync(
                 It.IsAny<RegulatedQualificationsQueryParameters>())
             )
@@ -170,6 +182,14 @@ public class RegulatedQualificationsDataFunctionTests
         )
         .Returns(qualifications);
 
+        _qualificationsServiceMock.Setup(service => service.SaveRegulatedQualificationsAsync(It.IsAny<List<QualificationDTO>>()))
+            .Returns(Task.CompletedTask)
+            .Verifiable();
+
+        _ofqualRegisterServiceMock.Setup(service => service.ParseQueryParameters(
+                It.IsAny<NameValueCollection>()))
+            .Returns(parameters);
+
         // Act
         var result = await _function.Run(httpRequestData);
 
@@ -178,10 +198,6 @@ public class RegulatedQualificationsDataFunctionTests
         var okResult = result as OkObjectResult;
         Assert.NotNull(okResult);
         Assert.Contains("Successfully processed", okResult.Value.ToString());
-
-        _qualificationsServiceMock.Setup(service => service.SaveRegulatedQualificationsAsync(It.IsAny<List<QualificationDTO>>()))
-            .Returns(Task.CompletedTask)
-            .Verifiable();
 
         _loggerMock.Verify(x => x.Log(
             LogLevel.Information,
@@ -196,11 +212,16 @@ public class RegulatedQualificationsDataFunctionTests
     {
         // Arrange
         var httpRequestData = new MockHttpRequestData(_functionContext);
+        var parameters = new RegulatedQualificationsQueryParameters { Page = 1, Limit = 10 };
 
         _ofqualRegisterServiceMock
             .Setup(service => service.SearchPrivateQualificationsAsync(
                 It.IsAny<RegulatedQualificationsQueryParameters>()))
             .ThrowsAsync(new SystemException("Unexpected error occurred"));
+
+        _ofqualRegisterServiceMock.Setup(service => service.ParseQueryParameters(
+                It.IsAny<NameValueCollection>()))
+            .Returns(parameters);
 
         // Act
         var result = await _function.Run(httpRequestData);
@@ -228,11 +249,16 @@ public class RegulatedQualificationsDataFunctionTests
             Content = new StringContent("Bad Request")
         };
         var apiException = new ApiException(requestMessage, responseMessage, "Bad Request");
+        var parameters = new RegulatedQualificationsQueryParameters { Page = 1, Limit = 10 };
 
         _ofqualRegisterServiceMock
             .Setup(service => service.SearchPrivateQualificationsAsync(
                 It.IsAny<RegulatedQualificationsQueryParameters>()))
             .ThrowsAsync(apiException);
+
+        _ofqualRegisterServiceMock.Setup(service => service.ParseQueryParameters(
+                It.IsAny<NameValueCollection>()))
+            .Returns(parameters);
 
         // Act
         var result = await _function.Run(httpRequestData);

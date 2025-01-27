@@ -58,12 +58,14 @@
   <ItemGroup>
     <Folder Include="Properties" />
     <Folder Include="Tables" />
+    <Folder Include="Views" />
   </ItemGroup>
   <ItemGroup>
-   <Build Include="Tables\FundedQualifications.sql" />
     <Build Include="Tables\ProcessedRegulatedQualifications.sql" />
     <Build Include="Tables\RegulatedQualificationsImport.sql" />
-     <Build Include="Tables\FundedQualificationOffer.sql" />
+    <Build Include="Tables\FundedQualifications.sql" />
+    <Build Include="Tables\FundedQualificationOffer.sql" />
+    <Build Include="Views\ViewFundedQualificationsAndAssociatedOffers.sql" />
   </ItemGroup>
   <ItemGroup>
     <RefactorLog Include="SFA.DAS.AODP.Database.refactorlog" />

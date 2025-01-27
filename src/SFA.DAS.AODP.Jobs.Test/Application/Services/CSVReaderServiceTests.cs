@@ -1,16 +1,10 @@
-﻿using System.Collections.Generic;
-using System.IO;
-using System.Net;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Net;
 using CsvHelper.Configuration;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
 using SFA.DAS.AODP.Jobs.Services.CSV;
-using Xunit;
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 {

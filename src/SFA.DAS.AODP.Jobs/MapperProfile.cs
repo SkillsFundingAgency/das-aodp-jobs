@@ -8,7 +8,7 @@ public class MapperProfile : Profile
     public MapperProfile()
     {
         CreateMap<RegulatedQualificationsImport, QualificationDTO>().ReverseMap();
-        CreateMap<SFA.DAS.AODP.Data.Entities.ProcessedRegulatedQualification, QualificationDTO>();
+        CreateMap<ProcessedRegulatedQualification, QualificationDTO>();
         CreateMap<FundedQualification, FundedQualificationDTO>().ReverseMap();
         CreateMap<FundedQualificationOffer, FundedQualificationOfferDTO>().ReverseMap();
     }

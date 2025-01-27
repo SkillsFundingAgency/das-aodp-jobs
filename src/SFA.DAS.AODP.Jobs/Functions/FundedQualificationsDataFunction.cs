@@ -3,9 +3,11 @@ using AutoMapper;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
+using SAF.DAS.AODP.Models.Qualification;
 using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Jobs.Interfaces;
+using SFA.DAS.AODP.Jobs.Services.CSV;
 
 namespace SFA.DAS.AODP.Functions
 {
@@ -14,53 +16,68 @@ namespace SFA.DAS.AODP.Functions
         private readonly ILogger<FundedQualificationsDataFunction> _logger;
         private readonly IApplicationDbContext _applicationDbContext;
         private readonly ICsvReaderService _csvReaderService;
-        private readonly IMapper _autoMapper;
+        private readonly IMapper _mapper;
 
-        public FundedQualificationsDataFunction(ILogger<FundedQualificationsDataFunction> logger, IApplicationDbContext applicationDbContext, ICsvReaderService csvReaderService,IMapper autoMapper)
+        public FundedQualificationsDataFunction(ILogger<FundedQualificationsDataFunction> logger, IApplicationDbContext applicationDbContext, ICsvReaderService csvReaderService, IMapper mapper)
         {
             _logger = logger;
             _applicationDbContext = applicationDbContext;
             _csvReaderService = csvReaderService;
-            _autoMapper = autoMapper;
+            _mapper = mapper;
         }
 
         [Function("ApprovedQualificationsDataFunction")]
         public async Task<HttpResponseData> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "api/approvedQualificationsImport")] HttpRequestData req)
         {
-            var stopWatch = new Stopwatch();
-            string? approvedQualificationsUrl = Environment.GetEnvironmentVariable("FundedQualificationsImportUrl");
-            string? archivedQualificationsUrl = Environment.GetEnvironmentVariable("ArchivedFundedQualificationsImportUrl");
+            string? approvedUrlFilePath = Environment.GetEnvironmentVariable("FundedQualificationsImportUrl");
+            string? archivedUrlFilePath = Environment.GetEnvironmentVariable("ArchivedFundedQualificationsImportUrl");
 
-            if (string.IsNullOrEmpty(approvedQualificationsUrl) || string.IsNullOrEmpty(archivedQualificationsUrl))
+            if (string.IsNullOrEmpty(approvedUrlFilePath) || string.IsNullOrEmpty(archivedUrlFilePath))
             {
                 _logger.LogInformation("Environment variable 'ApprovedQualificationsImportUrl' is not set or empty.");
                 var notFoundResponse = req.CreateResponse(System.Net.HttpStatusCode.NotFound);
                 return notFoundResponse;
             }
+            var approvedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(approvedUrlFilePath);
+            var stopWatch = new Stopwatch();
+            if (approvedQualifications.Any())
+            {
+                await _applicationDbContext.DeleteTable<FundedQualification>();
 
-            await _applicationDbContext.DeleteFromTable("FundedQualifications");
+                await WriteQualifications(approvedQualifications, stopWatch);
+            }
+            else
+            {
+                _logger.LogInformation("No data found found in approved qualifications csv");
+                var notFoundResponse = req.CreateResponse(System.Net.HttpStatusCode.NotFound);
+                return notFoundResponse;
+            }
 
-            var approvedQualifications = await _csvReaderService.ReadQualifications(approvedQualificationsUrl);
-
-            stopWatch.Start();
-            await _applicationDbContext.BulkInsertAsync<FundedQualification>(_autoMapper.Map<List<FundedQualification>>(approvedQualifications));
-            stopWatch.Stop();
-            _logger.LogInformation($"{approvedQualificationsUrl.Count()} records imported in {stopWatch.ElapsedMilliseconds / 1000}");
-
-            var archivedQualifications = await _csvReaderService.ReadQualifications(archivedQualificationsUrl);
-
-            stopWatch.Restart();
-            await _applicationDbContext.BulkInsertAsync<FundedQualification>(_autoMapper.Map<List<FundedQualification>>(archivedQualifications));
-            stopWatch.Stop();
-            _logger.LogInformation($"{archivedQualificationsUrl.Count()} records imported in {stopWatch.ElapsedMilliseconds / 1000}");
+            var archivedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(archivedUrlFilePath);
+            if (archivedQualifications.Any())
+            {
+                await WriteQualifications(archivedQualifications, stopWatch);
+            }
+            else
+            {
+                _logger.LogInformation("No data found in archived qualifications csv");
+                var notFoundResponse = req.CreateResponse(System.Net.HttpStatusCode.NotFound);
+                return notFoundResponse;
+            }
+            _logger.LogInformation($"{archivedQualifications.Count()} records imported in {stopWatch.ElapsedMilliseconds / 1000}");
 
             var successResponse = req.CreateResponse(System.Net.HttpStatusCode.OK);
-            _logger.LogInformation("{Count} records imported successfully", approvedQualifications.Count());
-            await successResponse.WriteStringAsync($"{approvedQualifications.Count()} records imported successfully");
+            _logger.LogInformation($"{archivedQualifications.Count()} archived records imported successfully");
+            await successResponse.WriteStringAsync($"{approvedQualifications.Count()} approved qualifications imported \n{archivedQualifications.Count()} archived qualifications imported\n{approvedQualifications.Count() + archivedQualifications.Count()} Total Records");
             return successResponse;
+        }
+
+        private async Task WriteQualifications(List<FundedQualificationDTO> approvedQualifications, Stopwatch stopWatch)
+        {
+            stopWatch.Restart();
+            await _applicationDbContext.BulkInsertAsync(_mapper.Map<List<FundedQualification>>(approvedQualifications));
+            stopWatch.Stop();
         }
     }
 }
-
-

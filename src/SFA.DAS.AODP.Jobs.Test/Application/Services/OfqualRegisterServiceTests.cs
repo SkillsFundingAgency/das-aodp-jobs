@@ -3,10 +3,9 @@ using SFA.DAS.AODP.Jobs.Services;
 using SFA.DAS.AODP.Functions.Interfaces;
 using SFA.DAS.AODP.Models.Qualification;
 using SFA.DAS.AODP.Data;
-using Xunit;
-using AutoMapper;
 using SFA.DAS.AODP.Infrastructure.Context;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Services
@@ -16,6 +15,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         private readonly Mock<ILogger<QualificationsService>> _mockLogger;
         private readonly Mock<IOfqualRegisterApi> _mockApiClient;
         private readonly Mock<IApplicationDbContext> _mockDbContext;
+        private readonly Mock<IConfiguration> _mockConfiguration;
         private readonly OfqualRegisterService _service;
 
         public QualificationsApiServiceTests()
@@ -23,8 +23,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             _mockApiClient = new Mock<IOfqualRegisterApi>();
             _mockLogger = new Mock<ILogger<QualificationsService>>();
             _mockDbContext = new Mock<IApplicationDbContext>();
-
-            _service = new OfqualRegisterService(_mockLogger.Object, _mockApiClient.Object, _mockDbContext.Object);
+            _mockConfiguration = new Mock<IConfiguration>();
+            _service = new OfqualRegisterService(_mockLogger.Object, _mockApiClient.Object, _mockConfiguration.Object);
         }
 
         [Fact]
@@ -34,6 +34,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var parameters = new RegulatedQualificationsQueryParameters
             {
                 Title = "Test Title",
+                Page = 1,
+                Limit = 10,
                 AssessmentMethods = "Test Method",
                 GradingTypes = "Test Grade",
                 AwardingOrganisations = "Test Organisation",
@@ -76,7 +78,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 .ReturnsAsync(expectedResult);
 
             // Act
-            var result = await _service.SearchPrivateQualificationsAsync(parameters, page, limit);
+            var result = await _service.SearchPrivateQualificationsAsync(parameters);
 
             // Assert
             _mockApiClient.Verify(client => client.SearchPrivateQualificationsAsync(
@@ -104,7 +106,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         public async Task SearchPrivateQualificationsAsync_ReturnsCorrectResult()
         {
             // Arrange
-            var parameters = new RegulatedQualificationsQueryParameters { Title = "Test Title" };
+            var parameters = new RegulatedQualificationsQueryParameters { Title = "Test Title", Page = 1, Limit = 10 };
             var expectedResult = new RegulatedQualificationsPaginatedResult<QualificationDTO>
             {
                 Results = new List<QualificationDTO> { new QualificationDTO { Title = "Test Qualification" } },
@@ -131,34 +133,17 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 .ReturnsAsync(expectedResult);
 
             // Act
-            var result = await _service.SearchPrivateQualificationsAsync(parameters, 1, 10);
+            var result = await _service.SearchPrivateQualificationsAsync(parameters);
 
             // Assert
             Assert.Equal(expectedResult, result);
         }
 
         [Fact]
-        public async Task SearchPrivateQualificationsAsync_ThrowsArgumentNullException_WhenParametersAreNull()
-        {
-            // Arrange
-            RegulatedQualificationsQueryParameters parameters = null;
-            int page = 1;
-            int limit = 10;
-
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<ArgumentNullException>(() => _service.SearchPrivateQualificationsAsync(parameters, page, limit));
-
-            // Assert
-            Assert.Equal("parameters", exception.ParamName);
-        }
-
-        [Fact]
         public async Task SearchPrivateQualificationsAsync_ReturnsEmptyResults_WhenApiReturnsNoData()
         {
             // Arrange
-            var parameters = new RegulatedQualificationsQueryParameters { Title = "Test Title" };
-            int page = 1;
-            int limit = 10;
+            var parameters = new RegulatedQualificationsQueryParameters { Title = "Test Title", Page = 1, Limit = 10 };
 
             var expectedResult = new RegulatedQualificationsPaginatedResult<QualificationDTO>
             {
@@ -168,8 +153,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
             _mockApiClient.Setup(client => client.SearchPrivateQualificationsAsync(
                     parameters.Title,
-                    page,
-                    limit,
+                    parameters.Page,
+                    parameters.Limit,
                     parameters.AssessmentMethods,
                     parameters.GradingTypes,
                     parameters.AwardingOrganisations,
@@ -186,7 +171,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 .ReturnsAsync(expectedResult);
 
             // Act
-            var result = await _service.SearchPrivateQualificationsAsync(parameters, page, limit);
+            var result = await _service.SearchPrivateQualificationsAsync(parameters);
 
             // Assert
             Assert.Empty(result.Results);
@@ -197,14 +182,12 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         public async Task SearchPrivateQualificationsAsync_ThrowsException_WhenApiClientFails()
         {
             // Arrange
-            var parameters = new RegulatedQualificationsQueryParameters { Title = "Test Title" };
-            int page = 1;
-            int limit = 10;
+            var parameters = new RegulatedQualificationsQueryParameters { Title = "Test Title", Page = 1, Limit = 10 };
 
             _mockApiClient.Setup(client => client.SearchPrivateQualificationsAsync(
                     parameters.Title,
-                    page,
-                    limit,
+                    parameters.Page,
+                    parameters.Limit,
                     parameters.AssessmentMethods,
                     parameters.GradingTypes,
                     parameters.AwardingOrganisations,
@@ -221,7 +204,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 .ThrowsAsync(new Exception("API failure"));
 
             // Act & Assert
-            var exception = await Assert.ThrowsAsync<Exception>(() => _service.SearchPrivateQualificationsAsync(parameters, page, limit));
+            var exception = await Assert.ThrowsAsync<Exception>(() => _service.SearchPrivateQualificationsAsync(parameters));
             Assert.Equal("API failure", exception.Message);
         }
 
@@ -229,9 +212,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         public async Task SearchPrivateQualificationsAsync_ReturnsLargeResultSet_WhenApiReturnsManyResults()
         {
             // Arrange
-            var parameters = new RegulatedQualificationsQueryParameters { Title = "Test Title" };
-            int page = 1;
-            int limit = 100;
+            var parameters = new RegulatedQualificationsQueryParameters { Title = "Test Title", Page = 1, Limit = 10 };
 
             var largeResults = new List<QualificationDTO>();
             for (int i = 0; i < 1000; i++)
@@ -247,8 +228,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
             _mockApiClient.Setup(client => client.SearchPrivateQualificationsAsync(
                     parameters.Title,
-                    page,
-                    limit,
+                    parameters.Page,
+                    parameters.Limit,
                     parameters.AssessmentMethods,
                     parameters.GradingTypes,
                     parameters.AwardingOrganisations,
@@ -265,7 +246,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 .ReturnsAsync(expectedResult);
 
             // Act
-            var result = await _service.SearchPrivateQualificationsAsync(parameters, page, limit);
+            var result = await _service.SearchPrivateQualificationsAsync(parameters);
 
             // Assert
             Assert.Equal(1000, result.Count);

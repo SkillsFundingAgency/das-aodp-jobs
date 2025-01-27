@@ -8,9 +8,6 @@
 		<UserSecretsId>f1c8a8c3-1de3-497d-999c-dabdd7e0f9da</UserSecretsId>
 	</PropertyGroup>
 	<ItemGroup>
-	  <Compile Remove="Services\CSV\FundedQualificationsImportClassMap.cs" />
-	</ItemGroup>
-	<ItemGroup>
 	  <Content Include="Data\funded.csv">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </Content>

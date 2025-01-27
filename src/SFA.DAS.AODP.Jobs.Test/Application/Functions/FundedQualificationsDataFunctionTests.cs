@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Moq;
 using FluentAssertions;
-using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Functions;
@@ -9,6 +8,10 @@ using SFA.DAS.AODP.Jobs.Services.CSV;
 using Microsoft.Azure.Functions.Worker;
 using SFA.DAS.AODP.Jobs.Test.Mocks;
 using Xunit;
+using SAF.DAS.AODP.Models.Qualification;
+using AutoMapper;
+using SFA.DAS.AODP.Data.Entities;
+using Amazon;
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
 {
@@ -19,6 +22,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
         private readonly Mock<ICsvReaderService> _csvReaderServiceMock;
         private readonly FunctionContext _functionContext;
         private readonly FundedQualificationsDataFunction _function;
+        private readonly IMapper _mapper;
 
         public FundedQualificationsDataFunctionTests()
         {
@@ -26,22 +30,28 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
             _applicationDbContextMock = new Mock<IApplicationDbContext>();
             _csvReaderServiceMock = new Mock<ICsvReaderService>();
             _functionContext = new Mock<FunctionContext>().Object;
+
+            var configuration = new MapperConfiguration(cfg => cfg.AddProfile(new MapperProfile()));
+            _mapper = new Mapper(configuration);
+            
             _function = new FundedQualificationsDataFunction(
                 _loggerMock.Object,
                 _applicationDbContextMock.Object,
-                _csvReaderServiceMock.Object);
+                _csvReaderServiceMock.Object,
+                _mapper);
         }
 
         [Fact]
         public async Task Run_ShouldReturnOk_WhenCsvFileIsProcessedSuccessfully()
         {
             // Arrange
-            var approvedQualifications = new List<FundedQualifications>
+            var approvedQualifications = new List<FundedQualificationDTO>
             {
-                new FundedQualifications { Id = 1, QualificationName = "Test Qualification" }
+                new FundedQualificationDTO {QualificationName = "Test Qualification" ,Offers=new List<FundedQualificationOfferDTO>(){ new()  } }
             };
             _csvReaderServiceMock
-                .Setup(service => service.ReadApprovedAndArchivedFromUrlAsync<FundedQualifications, FundedQualificationsImportClassMap>(It.IsAny<string>(),It.IsAny<string>()))
+                
+                .Setup(service => service.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(It.IsAny<string>()))
                 .ReturnsAsync(approvedQualifications);
 
             var httpRequestData = new MockHttpRequestData(_functionContext);
@@ -52,7 +62,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
 
             // Assert
             response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
-            _applicationDbContextMock.Verify(db => db.BulkInsertAsync(approvedQualifications, default), Times.Once);
+
+            _applicationDbContextMock.Verify(db => db.BulkInsertAsync(It.IsAny<IEnumerable<FundedQualification>>(), default), Times.Exactly(2));
         }
 
         [Fact]
@@ -60,8 +71,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
         {
             // Arrange
             _csvReaderServiceMock
-                .Setup(service => service.ReadApprovedAndArchivedFromUrlAsync<FundedQualifications, FundedQualificationsImportClassMap>(It.IsAny<string>(),It.IsAny<string>()))
-                .ReturnsAsync(new List<FundedQualifications>());
+                .Setup(service => service.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(It.IsAny<string>()))
+                .ReturnsAsync(new List<FundedQualificationDTO>());
 
             var httpRequestData = new MockHttpRequestData(_functionContext);
             Environment.SetEnvironmentVariable("FundedQualificationsImportUrl", "https://example.com/approved.csv");
@@ -71,7 +82,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
 
             // Assert
             response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
-            _applicationDbContextMock.Verify(db => db.BulkInsertAsync(It.IsAny<IEnumerable<FundedQualifications>>(), default), Times.Never);
+            _applicationDbContextMock.Verify(db => db.BulkInsertAsync(It.IsAny<IEnumerable<FundedQualification>>(), default), Times.Never);
         }
 
         [Fact]
@@ -86,8 +97,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
 
             // Assert
             response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
-            _csvReaderServiceMock.Verify(service => service.ReadCsvFileFromUrlAsync<FundedQualifications, FundedQualificationsImportClassMap>(It.IsAny<string>()), Times.Never);
-            _applicationDbContextMock.Verify(db => db.BulkInsertAsync(It.IsAny<IEnumerable<FundedQualifications>>(), default), Times.Never);
+            _csvReaderServiceMock.Verify(service => service.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(It.IsAny<string>()), Times.Never);
+            _applicationDbContextMock.Verify(db => db.BulkInsertAsync(It.IsAny<IEnumerable<FundedQualificationDTO>>(), default), Times.Never);
         }
     }
 }
