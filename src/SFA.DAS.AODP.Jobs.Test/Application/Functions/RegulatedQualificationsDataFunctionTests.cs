@@ -66,9 +66,7 @@ public class RegulatedQualificationsDataFunctionTests
             .Returns(Task.CompletedTask);
 
         _ofqualRegisterServiceMock.Setup(api => api.SearchPrivateQualificationsAsync(
-                It.IsAny<RegulatedQualificationsQueryParameters>(),
-                It.IsAny<int>(),
-                It.IsAny<int>())
+                It.IsAny<RegulatedQualificationsQueryParameters>())
             )
             .ReturnsAsync(new RegulatedQualificationsPaginatedResult<QualificationDTO>
             {
@@ -113,9 +111,7 @@ public class RegulatedQualificationsDataFunctionTests
         var httpRequestData = new MockHttpRequestData(_functionContext);
 
         _ofqualRegisterServiceMock.Setup(x => x.SearchPrivateQualificationsAsync(
-                It.IsAny<RegulatedQualificationsQueryParameters>(), 
-                It.IsAny<int>(), 
-                It.IsAny<int>()))
+                It.IsAny<RegulatedQualificationsQueryParameters>()))
             .ReturnsAsync(new RegulatedQualificationsPaginatedResult<QualificationDTO>
             {
                 Results = null
@@ -158,9 +154,7 @@ public class RegulatedQualificationsDataFunctionTests
         };
 
         _ofqualRegisterServiceMock.Setup(api => api.SearchPrivateQualificationsAsync(
-                It.IsAny<RegulatedQualificationsQueryParameters>(),
-                It.IsAny<int>(),
-                It.IsAny<int>())
+                It.IsAny<RegulatedQualificationsQueryParameters>())
             )
             .ReturnsAsync(new RegulatedQualificationsPaginatedResult<QualificationDTO>
             {
@@ -205,9 +199,7 @@ public class RegulatedQualificationsDataFunctionTests
 
         _ofqualRegisterServiceMock
             .Setup(service => service.SearchPrivateQualificationsAsync(
-                It.IsAny<RegulatedQualificationsQueryParameters>(), 
-                It.IsAny<int>(), 
-                It.IsAny<int>()))
+                It.IsAny<RegulatedQualificationsQueryParameters>()))
             .ThrowsAsync(new SystemException("Unexpected error occurred"));
 
         // Act
@@ -239,9 +231,7 @@ public class RegulatedQualificationsDataFunctionTests
 
         _ofqualRegisterServiceMock
             .Setup(service => service.SearchPrivateQualificationsAsync(
-                It.IsAny<RegulatedQualificationsQueryParameters>(),
-                It.IsAny<int>(),
-                It.IsAny<int>()))
+                It.IsAny<RegulatedQualificationsQueryParameters>()))
             .ThrowsAsync(apiException);
 
         // Act

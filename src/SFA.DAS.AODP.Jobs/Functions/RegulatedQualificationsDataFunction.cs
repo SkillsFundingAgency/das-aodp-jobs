@@ -36,14 +36,13 @@ namespace SFA.DAS.AODP.Functions.Functions
         {
             _logger.LogInformation($"Processing {nameof(RegulatedQualificationsDataFunction)} request...");
 
+            var stopWatch = new Stopwatch();
+            stopWatch.Start();
+
             try
             {
-                var stopWatch = new Stopwatch();
-                stopWatch.Start();
-
-                int page = 1;
-                int limit = 1000;
                 int totalProcessed = 0;
+                int pageCount = 1;
 
                 var processedQualifications = await _qualificationsService.GetAllProcessedRegulatedQualificationsAsync();
 
@@ -55,7 +54,7 @@ namespace SFA.DAS.AODP.Functions.Functions
 
                 while (true)
                 {
-                    var paginatedResult = await _ofqualRegisterService.SearchPrivateQualificationsAsync(parameters, page, limit);
+                    var paginatedResult = await _ofqualRegisterService.SearchPrivateQualificationsAsync(parameters);
 
                     if (paginatedResult.Results == null || !paginatedResult.Results.Any())
                     {
@@ -63,7 +62,7 @@ namespace SFA.DAS.AODP.Functions.Functions
                         break;
                     }
 
-                    _logger.LogInformation($"Processing page {page}. Retrieved {paginatedResult.Results?.Count} qualifications.");
+                    _logger.LogInformation($"Processing page {pageCount}. Retrieved {paginatedResult.Results?.Count} qualifications.");
 
                     var importedQualifications = _ofqualRegisterService.ExtractQualificationsList(paginatedResult);
 
@@ -73,13 +72,13 @@ namespace SFA.DAS.AODP.Functions.Functions
 
                     totalProcessed += importedQualifications.Count;
 
-                    if (paginatedResult.Results?.Count < limit)
+                    if (paginatedResult.Results?.Count < parameters.Limit)
                     {
                         _logger.LogInformation("Reached the end of the results set.");
                         break;
                     }
 
-                    page++;
+                    pageCount++;
 
                     _logger.LogInformation($"{importedQualifications.Count()} records imported in {stopWatch.ElapsedMilliseconds / 1000}");
                 }

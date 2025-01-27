@@ -2,6 +2,8 @@
 
 public class RegulatedQualificationsQueryParameters
 {
+    public int Page { get; set; }
+    public int Limit { get; set; }
     public string? Title { get; set; }
     public string? AssessmentMethods { get; set; }
     public string? GradingTypes { get; set; }

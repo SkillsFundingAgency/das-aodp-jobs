@@ -1,26 +1,30 @@
 ﻿using System.Collections.Specialized;
+using System.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.AODP.Data;
 using SFA.DAS.AODP.Functions.Interfaces;
-using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Models.Qualification;
 
 namespace SFA.DAS.AODP.Jobs.Services
 {
+
     public class OfqualRegisterService : IOfqualRegisterService
     {
         private readonly ILogger<QualificationsService> _logger;
         private readonly IOfqualRegisterApi _apiClient;
+        private readonly IConfiguration _configuration;
 
         public OfqualRegisterService(ILogger<QualificationsService> logger, IOfqualRegisterApi apiClient,
-            IApplicationDbContext appDbContext)
+            IConfiguration configuration)
         {
             _logger = logger;
             _apiClient = apiClient;
-        }
+            _configuration = configuration;
+    }
 
-        public async Task<RegulatedQualificationsPaginatedResult<QualificationDTO>> SearchPrivateQualificationsAsync(RegulatedQualificationsQueryParameters parameters, int page, int limit)
+        public async Task<RegulatedQualificationsPaginatedResult<QualificationDTO>> SearchPrivateQualificationsAsync(RegulatedQualificationsQueryParameters parameters)
         {
             if (parameters == null)
             {
@@ -29,8 +33,8 @@ namespace SFA.DAS.AODP.Jobs.Services
 
             return await _apiClient.SearchPrivateQualificationsAsync(
                 parameters.Title,
-                page,
-                limit,
+                parameters.Page,
+                parameters.Limit,
                 parameters.AssessmentMethods,
                 parameters.GradingTypes,
                 parameters.AwardingOrganisations,
@@ -112,14 +116,18 @@ namespace SFA.DAS.AODP.Jobs.Services
 
         public RegulatedQualificationsQueryParameters ParseQueryParameters(NameValueCollection query)
         {
+            int defaultPage = int.Parse(_configuration["DefaultPage"]);
+            int defaultLimit = int.Parse(_configuration["DefaultLimit"]);
+
             if (query == null || query.Count == 0)
             {
-                _logger.LogWarning("Query parameters are empty.");
-                return new RegulatedQualificationsQueryParameters();
+                _logger.LogWarning($"Url parameters are empty. Defaulting Page: {defaultPage} and Limit: {defaultLimit}");
             }
 
             return new RegulatedQualificationsQueryParameters
             {
+                Page = ParseInt(query["page"], defaultPage),
+                Limit = ParseInt(query["limit"], defaultLimit),
                 Title = query["title"],
                 AssessmentMethods = query["assessmentMethods"],
                 GradingTypes = query["gradingTypes"],
