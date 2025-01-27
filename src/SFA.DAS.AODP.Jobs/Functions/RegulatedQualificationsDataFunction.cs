@@ -54,6 +54,7 @@ namespace SFA.DAS.AODP.Functions.Functions
 
                 while (true)
                 {
+                    parameters.Page = pageCount;
                     var paginatedResult = await _ofqualRegisterService.SearchPrivateQualificationsAsync(parameters);
 
                     if (paginatedResult.Results == null || !paginatedResult.Results.Any())
