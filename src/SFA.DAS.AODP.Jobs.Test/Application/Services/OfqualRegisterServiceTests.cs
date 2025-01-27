@@ -4,19 +4,27 @@ using SFA.DAS.AODP.Functions.Interfaces;
 using SFA.DAS.AODP.Models.Qualification;
 using SFA.DAS.AODP.Data;
 using Xunit;
+using AutoMapper;
+using SFA.DAS.AODP.Infrastructure.Context;
+using Microsoft.Extensions.Logging;
 
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 {
     public class QualificationsApiServiceTests
     {
+        private readonly Mock<ILogger<QualificationsService>> _mockLogger;
         private readonly Mock<IOfqualRegisterApi> _mockApiClient;
-        private readonly QualificationsService _service;
+        private readonly Mock<IApplicationDbContext> _mockDbContext;
+        private readonly OfqualRegisterService _service;
 
         public QualificationsApiServiceTests()
         {
             _mockApiClient = new Mock<IOfqualRegisterApi>();
-            _service = new RegulatedQualificationsService(_mockApiClient.Object);
+            _mockLogger = new Mock<ILogger<QualificationsService>>();
+            _mockDbContext = new Mock<IApplicationDbContext>();
+
+            _service = new OfqualRegisterService(_mockLogger.Object, _mockApiClient.Object, _mockDbContext.Object);
         }
 
         [Fact]

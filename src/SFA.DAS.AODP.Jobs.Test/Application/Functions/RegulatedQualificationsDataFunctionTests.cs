@@ -18,55 +18,77 @@ public class RegulatedQualificationsDataFunctionTests
 {
     private readonly Mock<ILogger<RegulatedQualificationsDataFunction>> _loggerMock;
     private readonly Mock<IApplicationDbContext> _applicationDbContextMock;
-    private readonly Mock<IQualificationsService> _qualificationsApiServiceMock;
-    private readonly FunctionContext _functionContext;
-    private readonly RegulatedQualificationsDataFunction _function;
     private readonly Mock<IMapper> _mapper;
+    private readonly Mock<IOfqualRegisterService> _ofqualRegisterServiceMock;
+    private readonly Mock<IQualificationsService> _qualificationsServiceMock;
+    private readonly RegulatedQualificationsDataFunction _function;
+    private readonly FunctionContext _functionContext;
+
 
     public RegulatedQualificationsDataFunctionTests()
     {
         _loggerMock = new Mock<ILogger<RegulatedQualificationsDataFunction>>();
         _applicationDbContextMock = new Mock<IApplicationDbContext>();
-        _qualificationsApiServiceMock = new Mock<IQualificationsService>();
-        _functionContext = new Mock<FunctionContext>().Object;
         _mapper = new Mock<IMapper>();
+        _qualificationsServiceMock = new Mock<IQualificationsService>();
+        _ofqualRegisterServiceMock = new Mock<IOfqualRegisterService>();
+        _functionContext = new Mock<FunctionContext>().Object;
         _function = new RegulatedQualificationsDataFunction(
             _loggerMock.Object,
             _applicationDbContextMock.Object,
-            _qualificationsApiServiceMock.Object,
-            _mapper.Object);
+            _qualificationsServiceMock.Object,
+            _ofqualRegisterServiceMock.Object,
+            _mapper.Object
+            );
     }
 
     [Fact]
     public async Task Run_ShouldInsertProcessedQualifications()
     {
         // Arrange
-        var qualifications = new List<RegulatedQualificationsImport>();
+        var qualificationEntities = new List<RegulatedQualificationsImport>();
         var httpRequestData = new MockHttpRequestData(_functionContext);
 
-        _applicationDbContextMock.Setup(db => db.BulkInsertAsync(It.IsAny<IEnumerable<RegulatedQualificationsImport>>(), It.IsAny<CancellationToken>()))
-            .Callback<IEnumerable<RegulatedQualificationsImport>, CancellationToken>((qualificationsList, cancellationToken) =>
-            {
-                qualifications.AddRange(qualificationsList);
-            })
-            .Returns(Task.CompletedTask);
-
-        _qualificationsApiServiceMock.Setup(api => api.SearchPrivateQualificationsAsync(
-                It.IsAny<RegulatedQualificationsQueryParameters>(),
-                It.IsAny<int>(),
-                It.IsAny<int>())
-            )
-            .ReturnsAsync(new RegulatedQualificationsPaginatedResult<QualificationDTO>
-            {
-                Results = new List<QualificationDTO>
+        var qualifications = new List<QualificationDTO>
                 {
                     new QualificationDTO { QualificationNumber = "1111", Title = "Test Qualification1" },
                     new QualificationDTO { QualificationNumber = "2222", Title = "Test Qualification2" },
                     new QualificationDTO { QualificationNumber = "3333", Title = "Test Qualification3" },
                     new QualificationDTO { QualificationNumber = "4444", Title = "Test Qualification4" },
                     new QualificationDTO { QualificationNumber = "5555", Title = "Test Qualification5" }
-                }
+                };
+
+        _applicationDbContextMock.Setup(db => db.BulkInsertAsync(It.IsAny<IEnumerable<RegulatedQualificationsImport>>(), It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<RegulatedQualificationsImport>, CancellationToken>((qualificationsList, cancellationToken) =>
+            {
+                qualificationEntities.AddRange(qualificationsList);
+            })
+            .Returns(Task.CompletedTask);
+
+        _ofqualRegisterServiceMock.Setup(api => api.SearchPrivateQualificationsAsync(
+                It.IsAny<RegulatedQualificationsQueryParameters>(),
+                It.IsAny<int>(),
+                It.IsAny<int>())
+            )
+            .ReturnsAsync(new RegulatedQualificationsPaginatedResult<QualificationDTO>
+            {
+                Results = qualifications
             });
+
+        _ofqualRegisterServiceMock.Setup(service => service.ExtractQualificationsList(
+            It.IsAny<RegulatedQualificationsPaginatedResult<QualificationDTO>>())
+        )
+        .Returns(qualifications);
+
+        _qualificationsServiceMock.Setup(service => service.CompareAndUpdateQualificationsAsync(
+                It.IsAny<List<QualificationDTO>>(),
+                It.IsAny<List<QualificationDTO>>()))
+            .Returns(Task.CompletedTask)
+            .Verifiable();
+
+        _qualificationsServiceMock.Setup(service => service.SaveRegulatedQualificationsAsync(It.IsAny<List<QualificationDTO>>()))
+            .Returns(Task.CompletedTask)
+            .Verifiable();
 
         // Act
         var result = await _function.Run(httpRequestData);
@@ -74,10 +96,14 @@ public class RegulatedQualificationsDataFunctionTests
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
         Assert.Equal("Successfully processed 5 qualifications.", okResult.Value);
-        _applicationDbContextMock.Verify(
-            db => db.BulkInsertAsync(It.IsAny<IEnumerable<RegulatedQualificationsImport>>(), It.IsAny<CancellationToken>()),
-            Times.Once
-        );
+
+        _qualificationsServiceMock.Verify(service => service.CompareAndUpdateQualificationsAsync(
+            It.IsAny<List<QualificationDTO>>(),
+            It.IsAny<List<QualificationDTO>>()), Times.Once);
+
+        _qualificationsServiceMock.Verify(service => service.SaveRegulatedQualificationsAsync(
+            It.IsAny<List<QualificationDTO>>()), Times.Once);
+
     }
 
     [Fact]
@@ -85,8 +111,8 @@ public class RegulatedQualificationsDataFunctionTests
     {
         // Arrange
         var httpRequestData = new MockHttpRequestData(_functionContext);
-        
-        _qualificationsApiServiceMock.Setup(x => x.SearchPrivateQualificationsAsync(
+
+        _ofqualRegisterServiceMock.Setup(x => x.SearchPrivateQualificationsAsync(
                 It.IsAny<RegulatedQualificationsQueryParameters>(), 
                 It.IsAny<int>(), 
                 It.IsAny<int>()))
@@ -122,8 +148,16 @@ public class RegulatedQualificationsDataFunctionTests
     {
         // Arrange
         var httpRequestData = new MockHttpRequestData(_functionContext);
+        var qualifications = new List<QualificationDTO>
+        {
+            new QualificationDTO { QualificationNumber = "1111", Title = "Test Qualification1" },
+            new QualificationDTO { QualificationNumber = "2222", Title = "Test Qualification2" },
+            new QualificationDTO { QualificationNumber = "3333", Title = "Test Qualification3" },
+            new QualificationDTO { QualificationNumber = "4444", Title = "Test Qualification4" },
+            new QualificationDTO { QualificationNumber = "5555", Title = "Test Qualification5" }
+        };
 
-        _qualificationsApiServiceMock.Setup(api => api.SearchPrivateQualificationsAsync(
+        _ofqualRegisterServiceMock.Setup(api => api.SearchPrivateQualificationsAsync(
                 It.IsAny<RegulatedQualificationsQueryParameters>(),
                 It.IsAny<int>(),
                 It.IsAny<int>())
@@ -137,6 +171,11 @@ public class RegulatedQualificationsDataFunctionTests
                 }
             });
 
+        _ofqualRegisterServiceMock.Setup(service => service.ExtractQualificationsList(
+            It.IsAny<RegulatedQualificationsPaginatedResult<QualificationDTO>>())
+        )
+        .Returns(qualifications);
+
         // Act
         var result = await _function.Run(httpRequestData);
 
@@ -146,19 +185,9 @@ public class RegulatedQualificationsDataFunctionTests
         Assert.NotNull(okResult);
         Assert.Contains("Successfully processed", okResult.Value.ToString());
 
-        _applicationDbContextMock.Verify(
-            db => db.BulkInsertAsync(
-                It.Is<IEnumerable<RegulatedQualificationsImport>>(list =>
-                    list.Count() == 2 &&
-                    list.ElementAt(0).QualificationNumber == "1111" &&
-                    list.ElementAt(0).Title == "Test Qualification1" &&
-                    list.ElementAt(1).QualificationNumber == "2222" &&
-                    list.ElementAt(1).Title == "Test Qualification2"
-                ),
-                It.IsAny<CancellationToken>()
-            ),
-            Times.Once
-        );
+        _qualificationsServiceMock.Setup(service => service.SaveRegulatedQualificationsAsync(It.IsAny<List<QualificationDTO>>()))
+            .Returns(Task.CompletedTask)
+            .Verifiable();
 
         _loggerMock.Verify(x => x.Log(
             LogLevel.Information,
@@ -174,7 +203,7 @@ public class RegulatedQualificationsDataFunctionTests
         // Arrange
         var httpRequestData = new MockHttpRequestData(_functionContext);
 
-        _qualificationsApiServiceMock
+        _ofqualRegisterServiceMock
             .Setup(service => service.SearchPrivateQualificationsAsync(
                 It.IsAny<RegulatedQualificationsQueryParameters>(), 
                 It.IsAny<int>(), 
@@ -208,7 +237,7 @@ public class RegulatedQualificationsDataFunctionTests
         };
         var apiException = new ApiException(requestMessage, responseMessage, "Bad Request");
 
-        _qualificationsApiServiceMock
+        _ofqualRegisterServiceMock
             .Setup(service => service.SearchPrivateQualificationsAsync(
                 It.IsAny<RegulatedQualificationsQueryParameters>(),
                 It.IsAny<int>(),

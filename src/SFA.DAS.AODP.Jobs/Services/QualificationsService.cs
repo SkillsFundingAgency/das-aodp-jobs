@@ -90,16 +90,16 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                 var qualificationsEntities = _mapper.Map<List<RegulatedQualificationsImport>>(qualifications);
 
-                //await _applicationDbContext.BulkInsertAsync(qualificationsEntities);
-                _applicationDbContext.RegulatedQualificationsImport.AddRange(qualificationsEntities);
-                await _applicationDbContext.SaveChangesAsync();
+                await _applicationDbContext.BulkInsertAsync(qualificationsEntities);
+                //_applicationDbContext.RegulatedQualificationsImport.AddRange(qualificationsEntities);
+                //await _applicationDbContext.SaveChangesAsync();
 
                 _logger.LogInformation("Successfully saved regulated qualification records.");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while saving regulated qualification records.");
-                throw; // Rethrow the exception to let the caller handle it
+                throw; 
             }
         }
 

@@ -42,7 +42,7 @@ namespace SFA.DAS.AODP.Functions.Functions
                 stopWatch.Start();
 
                 int page = 1;
-                int limit = 500;
+                int limit = 1000;
                 int totalProcessed = 0;
 
                 var processedQualifications = await _qualificationsService.GetAllProcessedRegulatedQualificationsAsync();
