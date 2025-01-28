@@ -25,7 +25,6 @@ public class RegulatedQualificationsDataFunctionTests
     private readonly RegulatedQualificationsDataFunction _function;
     private readonly FunctionContext _functionContext;
 
-
     public RegulatedQualificationsDataFunctionTests()
     {
         _loggerMock = new Mock<ILogger<RegulatedQualificationsDataFunction>>();
@@ -52,11 +51,11 @@ public class RegulatedQualificationsDataFunctionTests
         var parameters = new RegulatedQualificationsQueryParameters { Page = 1, Limit = 10 };
         var qualifications = new List<QualificationDTO>
                 {
-                    new QualificationDTO { QualificationNumber = "1111", Title = "Test Qualification1" },
-                    new QualificationDTO { QualificationNumber = "2222", Title = "Test Qualification2" },
-                    new QualificationDTO { QualificationNumber = "3333", Title = "Test Qualification3" },
-                    new QualificationDTO { QualificationNumber = "4444", Title = "Test Qualification4" },
-                    new QualificationDTO { QualificationNumber = "5555", Title = "Test Qualification5" }
+                    new() { QualificationNumber = "1111", Title = "Test Qualification1" },
+                    new() { QualificationNumber = "2222", Title = "Test Qualification2" },
+                    new() { QualificationNumber = "3333", Title = "Test Qualification3" },
+                    new() { QualificationNumber = "4444", Title = "Test Qualification4" },
+                    new() { QualificationNumber = "5555", Title = "Test Qualification5" }
                 };
 
         _applicationDbContextMock.Setup(db => db.BulkInsertAsync(It.IsAny<IEnumerable<RegulatedQualificationsImport>>(), It.IsAny<CancellationToken>()))
@@ -120,7 +119,7 @@ public class RegulatedQualificationsDataFunctionTests
                 It.IsAny<RegulatedQualificationsQueryParameters>()))
             .ReturnsAsync(new RegulatedQualificationsPaginatedResult<QualificationDTO>
             {
-                Results = null
+                Results = new List<QualificationDTO>()
             });
 
         _ofqualRegisterServiceMock.Setup(service => service.ParseQueryParameters(
@@ -141,7 +140,7 @@ public class RegulatedQualificationsDataFunctionTests
             It.IsAny<EventId>(),
             It.Is<It.IsAnyType>((v, t) => v.ToString() == "No more qualifications to process."),
             It.IsAny<Exception>(),
-            It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
+            It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
 
         _applicationDbContextMock.Verify(
             db => db.BulkInsertAsync(It.IsAny<IEnumerable<RegulatedQualificationsImport>>(), It.IsAny<CancellationToken>()),
@@ -197,14 +196,14 @@ public class RegulatedQualificationsDataFunctionTests
         Assert.IsType<OkObjectResult>(result);
         var okResult = result as OkObjectResult;
         Assert.NotNull(okResult);
-        Assert.Contains("Successfully processed", okResult.Value.ToString());
+        Assert.Contains("Successfully processed", okResult.Value?.ToString());
 
         _loggerMock.Verify(x => x.Log(
             LogLevel.Information,
             It.IsAny<EventId>(),
             It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Processing page")),
             It.IsAny<Exception>(),
-            It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
+            It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
     }
 
     [Fact]
@@ -234,7 +233,7 @@ public class RegulatedQualificationsDataFunctionTests
             It.IsAny<EventId>(),
             It.Is<It.IsAnyType>((o, t) => o.ToString().Contains("Unexpected error occurred")),
             It.IsAny<Exception>(),
-            (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()
+            (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()
         ), Times.Once);
     }
 
@@ -273,7 +272,7 @@ public class RegulatedQualificationsDataFunctionTests
                                             o.ToString().Contains("GET \"https://test.com/\"") &&
                                             o.ToString().Contains("400 (Bad Request)")),
             It.IsAny<Exception>(),
-            (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()
+            (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()
         ), Times.Once);
     }
 

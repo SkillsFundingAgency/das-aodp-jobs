@@ -9,9 +9,6 @@ namespace SFA.DAS.AODP.Functions.Interfaces
         [Header("Ocp-Apim-Subscription-Key")]
         string SubscriptionKey { get; set; }
 
-        //[Get("gov/Qualification/{qualificationsNumber}")]
-        //Task<RegulatedQualification> GetPrivateQualificationsAsync([Path] string qualificationNumber);
-
         [Get("gov/Qualifications")]
         Task<RegulatedQualificationsPaginatedResult<QualificationDTO>> SearchPrivateQualificationsAsync(
             [Query("title")] string title,

@@ -32,7 +32,7 @@ var host = new HostBuilder()
             const string baseUrl = "https://register-api.ofqual.gov.uk";
             var config = provider.GetRequiredService<IConfiguration>();
             var api = RestClient.For<IOfqualRegisterApi>(baseUrl);
-            api.SubscriptionKey = config["OcpApimSubscriptionKey"];
+            api.SubscriptionKey = config["OcpApimSubscriptionKey"] ?? "";
             return api;
         });
 

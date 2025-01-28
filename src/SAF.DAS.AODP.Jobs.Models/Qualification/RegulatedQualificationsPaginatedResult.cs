@@ -5,7 +5,7 @@ namespace SFA.DAS.AODP.Data
     public class RegulatedQualificationsPaginatedResult<T>
     {
         [JsonProperty("results")]
-        public required List<T>? Results { get; set; }
+        public required List<T> Results { get; set; }
 
         [JsonProperty("count")]
         public int Count { get; set; }

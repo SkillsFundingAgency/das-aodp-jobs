@@ -132,7 +132,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                     It.IsAny<EventId>(),
                     It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Error downloading CSV file from url")),
                     It.IsAny<Exception>(),
-                    It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
         }
 
         private class TestRecord

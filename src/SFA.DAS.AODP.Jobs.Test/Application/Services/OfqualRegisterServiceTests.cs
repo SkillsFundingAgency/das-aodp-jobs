@@ -155,18 +155,18 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                     parameters.Title,
                     parameters.Page,
                     parameters.Limit,
-                    parameters.AssessmentMethods,
-                    parameters.GradingTypes,
-                    parameters.AwardingOrganisations,
-                    parameters.Availability,
-                    parameters.QualificationTypes,
-                    parameters.QualificationLevels,
-                    parameters.NationalAvailability,
-                    parameters.SectorSubjectAreas,
-                    parameters.MinTotalQualificationTime,
-                    parameters.MaxTotalQualificationTime,
-                    parameters.MinGuidedLearningHours,
-                    parameters.MaxGuidedLearningHours
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<int>(),
+                    It.IsAny<int>(),
+                    It.IsAny<int>(),
+                    It.IsAny<int>()
                 ))
                 .ReturnsAsync(expectedResult);
 
@@ -188,18 +188,18 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                     parameters.Title,
                     parameters.Page,
                     parameters.Limit,
-                    parameters.AssessmentMethods,
-                    parameters.GradingTypes,
-                    parameters.AwardingOrganisations,
-                    parameters.Availability,
-                    parameters.QualificationTypes,
-                    parameters.QualificationLevels,
-                    parameters.NationalAvailability,
-                    parameters.SectorSubjectAreas,
-                    parameters.MinTotalQualificationTime,
-                    parameters.MaxTotalQualificationTime,
-                    parameters.MinGuidedLearningHours,
-                    parameters.MaxGuidedLearningHours
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<int>(),
+                    It.IsAny<int>(),
+                    It.IsAny<int>(),
+                    It.IsAny<int>()
                 ))
                 .ThrowsAsync(new Exception("API failure"));
 
@@ -230,18 +230,18 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                     parameters.Title,
                     parameters.Page,
                     parameters.Limit,
-                    parameters.AssessmentMethods,
-                    parameters.GradingTypes,
-                    parameters.AwardingOrganisations,
-                    parameters.Availability,
-                    parameters.QualificationTypes,
-                    parameters.QualificationLevels,
-                    parameters.NationalAvailability,
-                    parameters.SectorSubjectAreas,
-                    parameters.MinTotalQualificationTime,
-                    parameters.MaxTotalQualificationTime,
-                    parameters.MinGuidedLearningHours,
-                    parameters.MaxGuidedLearningHours
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<int>(),
+                    It.IsAny<int>(),
+                    It.IsAny<int>(),
+                    It.IsAny<int>()
                 ))
                 .ReturnsAsync(expectedResult);
 
@@ -252,7 +252,5 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             Assert.Equal(1000, result.Count);
             Assert.Equal(1000, result.Results.Count);
         }
-
-
     }
 }

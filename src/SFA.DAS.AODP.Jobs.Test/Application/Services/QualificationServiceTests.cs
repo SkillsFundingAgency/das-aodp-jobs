@@ -115,7 +115,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                     It.IsAny<EventId>(),
                     It.IsAny<It.IsAnyType>(),
                     It.IsAny<Exception>(),
-                    (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
+                    (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
                 Times.Once);
         }
 
@@ -151,7 +151,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                     It.IsAny<EventId>(),
                     It.Is<It.IsAnyType>((v, t) => v.ToString() == "Retrieving all processed regulated qualification records..."),
                     It.IsAny<Exception>(),
-                    It.IsAny<Func<It.IsAnyType, Exception, string>>())
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>())
             );
         }
 

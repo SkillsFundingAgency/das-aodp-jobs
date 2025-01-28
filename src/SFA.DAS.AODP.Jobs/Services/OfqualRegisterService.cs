@@ -8,7 +8,6 @@ using SFA.DAS.AODP.Models.Qualification;
 
 namespace SFA.DAS.AODP.Jobs.Services
 {
-
     public class OfqualRegisterService : IOfqualRegisterService
     {
         private readonly ILogger<QualificationsService> _logger;
@@ -21,7 +20,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             _logger = logger;
             _apiClient = apiClient;
             _configuration = configuration;
-    }
+        }
 
         public async Task<RegulatedQualificationsPaginatedResult<QualificationDTO>> SearchPrivateQualificationsAsync(RegulatedQualificationsQueryParameters parameters)
         {
@@ -31,17 +30,17 @@ namespace SFA.DAS.AODP.Jobs.Services
             }
 
             return await _apiClient.SearchPrivateQualificationsAsync(
-                parameters.Title,
+                parameters.Title ?? string.Empty,
                 parameters.Page,
                 parameters.Limit,
-                parameters.AssessmentMethods,
-                parameters.GradingTypes,
-                parameters.AwardingOrganisations,
-                parameters.Availability,
-                parameters.QualificationTypes,
-                parameters.QualificationLevels,
-                parameters.NationalAvailability,
-                parameters.SectorSubjectAreas,
+                parameters.AssessmentMethods ?? string.Empty,
+                parameters.GradingTypes ?? string.Empty,
+                parameters.AwardingOrganisations ?? string.Empty,
+                parameters.Availability ?? string.Empty,
+                parameters.QualificationTypes ?? string.Empty,
+                parameters.QualificationLevels ?? string.Empty,
+                parameters.NationalAvailability ?? string.Empty,
+                parameters.SectorSubjectAreas ?? string.Empty,
                 parameters.MinTotalQualificationTime,
                 parameters.MaxTotalQualificationTime,
                 parameters.MinGuidedLearningHours,
@@ -54,7 +53,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             return paginatedResult.Results.Select(q => new QualificationDTO
             {
                 QualificationNumber = q.QualificationNumber,
-                QualificationNumberNoObliques = q.QualificationNumberNoObliques ?? "",
+                QualificationNumberNoObliques = q.QualificationNumberNoObliques ?? string.Empty,
                 Title = q.Title,
                 Status = q.Status,
                 OrganisationName = q.OrganisationName,
@@ -115,18 +114,23 @@ namespace SFA.DAS.AODP.Jobs.Services
 
         public RegulatedQualificationsQueryParameters ParseQueryParameters(NameValueCollection query)
         {
-            int defaultPage = int.Parse(_configuration["DefaultPage"]);
-            int defaultLimit = int.Parse(_configuration["DefaultLimit"]);
+            int defaultPage = int.Parse(_configuration["DefaultPage"] ?? "1");
+            int defaultLimit = int.Parse(_configuration["DefaultLimit"] ?? "10");
 
             if (query == null || query.Count == 0)
             {
                 _logger.LogWarning($"Url parameters are empty. Defaulting Page: {defaultPage} and Limit: {defaultLimit}");
+                return new RegulatedQualificationsQueryParameters
+                {
+                    Page = defaultPage,
+                    Limit = defaultLimit
+                };
             }
 
             return new RegulatedQualificationsQueryParameters
             {
-                Page = ParseInt(query["page"], defaultPage),
-                Limit = ParseInt(query["limit"], defaultLimit),
+                Page = ParseInt(query["page"] ?? string.Empty, defaultPage),
+                Limit = ParseInt(query["limit"] ?? string.Empty, defaultLimit),
                 Title = query["title"],
                 AssessmentMethods = query["assessmentMethods"],
                 GradingTypes = query["gradingTypes"],
@@ -136,10 +140,10 @@ namespace SFA.DAS.AODP.Jobs.Services
                 QualificationLevels = query["qualificationLevels"],
                 NationalAvailability = query["nationalAvailability"],
                 SectorSubjectAreas = query["sectorSubjectAreas"],
-                MinTotalQualificationTime = ParseNullableInt(query["minTotalQualificationTime"] ?? ""),
-                MaxTotalQualificationTime = ParseNullableInt(query["maxTotalQualificationTime"] ?? ""),
-                MinGuidedLearningHours = ParseNullableInt(query["minGuidedLearninghours"] ?? ""),
-                MaxGuidedLearningHours = ParseNullableInt(query["maxGuidedLearninghours"] ?? "")
+                MinTotalQualificationTime = ParseNullableInt(query["minTotalQualificationTime"] ?? string.Empty),
+                MaxTotalQualificationTime = ParseNullableInt(query["maxTotalQualificationTime"] ?? string.Empty),
+                MinGuidedLearningHours = ParseNullableInt(query["minGuidedLearninghours"] ?? string.Empty),
+                MaxGuidedLearningHours = ParseNullableInt(query["maxGuidedLearninghours"] ?? string.Empty)
             };
         }
 
