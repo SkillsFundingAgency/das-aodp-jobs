@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using CsvHelper.Configuration;
-using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
@@ -33,11 +32,11 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var result = _csvReaderService.ReadCSVFromFilePath<TestRecord, TestRecordMap>(filePath);
 
             // Assert
-            result.Should().HaveCount(2);
-            result[0].Id.Should().Be(1);
-            result[0].Name.Should().Be("Test");
-            result[1].Id.Should().Be(2);
-            result[1].Name.Should().Be("Test2");
+            Assert.Equal(2, result.Count);
+            Assert.Equal(1, result[0].Id);
+            Assert.Equal("Test", result[0].Name);
+            Assert.Equal(2, result[1].Id);
+            Assert.Equal("Test2", result[1].Name);
 
             // Clean up
             File.Delete(filePath);
@@ -68,11 +67,11 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var result = await _csvReaderService.ReadCsvFileFromUrlAsync<TestRecord, TestRecordMap>("http://test.com/test.csv");
 
             // Assert
-            result.Should().HaveCount(2);
-            result[0].Id.Should().Be(1);
-            result[0].Name.Should().Be("Test");
-            result[1].Id.Should().Be(2);
-            result[1].Name.Should().Be("Test2");
+            Assert.Equal(2, result.Count);
+            Assert.Equal(1, result[0].Id);
+            Assert.Equal("Test", result[0].Name);
+            Assert.Equal(2, result[1].Id);
+            Assert.Equal("Test2", result[1].Name);
         }
 
         [Fact]
@@ -95,7 +94,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var result = await _csvReaderService.ReadCsvFileFromUrlAsync<TestRecord, TestRecordMap>("http://test.com/test.csv");
 
             // Assert
-            result.Should().BeEmpty();
+            Assert.Empty(result);
             _loggerMock.Verify(
                 x => x.Log(
                     It.Is<LogLevel>(l => l == LogLevel.Error),
@@ -125,7 +124,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var result = await _csvReaderService.ReadCsvFileFromUrlAsync<TestRecord, TestRecordMap>("http://test.com/test.csv");
 
             // Assert
-            result.Should().BeEmpty();
+            Assert.Empty(result);
             _loggerMock.Verify(
                 x => x.Log(
                     It.Is<LogLevel>(l => l == LogLevel.Error),
@@ -143,15 +142,15 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
         private sealed class TestRecordMap : ClassMap<TestRecord>
         {
-#pragma warning disable S1144 // Unused private types or members should be removed
             public TestRecordMap()
             {
                 Map(m => m.Id).Name("Id");
                 Map(m => m.Name).Name("Name");
             }
-#pragma warning restore S1144 // Unused private types or members should be removed
         }
     }
 }
+
+
 
 
