@@ -53,16 +53,16 @@ namespace SFA.DAS.AODP.Functions.Functions
 
                 var parameters = _ofqualRegisterService.ParseQueryParameters(req.Query);
 
-                while (true)
-                {
-                    parameters.Page = pageCount;
+                //while (true)
+                //{
+                //    parameters.Page = pageCount;
                     var paginatedResult = await _ofqualRegisterService.SearchPrivateQualificationsAsync(parameters);
 
-                    if (paginatedResult.Results == null || !paginatedResult.Results.Any())
-                    {
-                        _logger.LogInformation("No more qualifications to process.");
-                        break;
-                    }
+                    //if (paginatedResult.Results == null || !paginatedResult.Results.Any())
+                    //{
+                    //    _logger.LogInformation("No more qualifications to process.");
+                    //    break;
+                    //}
 
                     _logger.LogInformation($"Processing page {pageCount}. Retrieved {paginatedResult.Results?.Count} qualifications.");
 
@@ -74,16 +74,16 @@ namespace SFA.DAS.AODP.Functions.Functions
 
                     totalProcessed += importedQualifications.Count;
 
-                    if (paginatedResult.Results?.Count < parameters.Limit)
-                    {
-                        _logger.LogInformation("Reached the end of the results set.");
-                        break;
-                    }
+                    //if (paginatedResult.Results?.Count < parameters.Limit)
+                    //{
+                    //    _logger.LogInformation("Reached the end of the results set.");
+                    //    break;
+                    //}
 
-                    pageCount++;
+                    //pageCount++;
 
                     _logger.LogInformation($"{importedQualifications.Count()} records imported in {stopWatch.ElapsedMilliseconds / 1000}");
-                }
+                //}
 
                 stopWatch.Stop();
 

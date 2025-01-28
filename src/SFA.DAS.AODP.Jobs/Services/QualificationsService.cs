@@ -24,29 +24,7 @@ namespace SFA.DAS.AODP.Jobs.Services
 
         public async Task CompareAndUpdateQualificationsAsync(List<QualificationDTO> importedQualifications, List<QualificationDTO> processedQualifications)
         {
-            var columnsToCompare = new Dictionary<string, Func<QualificationDTO, object>>()
-            {
-                { "OrganisationName", x => x.OrganisationName },
-                { "Title", x => x.Title },
-                { "QualificationLevelCode", x => x.Level },
-                { "QualificationType", x => x.Type },
-                { "QualCredit", x => x.TotalCredits },
-                { "QualSSADescription", x => x.Ssa },
-                { "OverallGradingType", x => x.GradingType },
-                { "OfferedInEngland", x => x.OfferedInEngland },
-                { "PreSixteen", x => x.PreSixteen },
-                { "SixteenToEighteen", x => x.SixteenToEighteen },
-                { "EighteenPlus", x => x.EighteenPlus },
-                { "NineteenPlus", x => x.NineteenPlus },
-                { "FundingInEngland", x => x.OfferedInEngland },
-                { "QualGLH", x => x.Glh },
-                { "QualMinimumGLH", x => x.MinimumGlh },
-                { "TQT", x => x.Tqt },
-                { "OperationalEndDate", x => x.OperationalEndDate },
-                { "LastUpdatedDate", x => x.LastUpdatedDate },
-                { "Version", x => x.Version },
-                { "OfferedInternationally", x => x.OfferedInternationally }
-            };
+            var columnsToCompare = GetColumnsToCompare();
 
             foreach (var importRow in importedQualifications)
             {
@@ -90,9 +68,10 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                 var qualificationsEntities = _mapper.Map<List<RegulatedQualificationsImport>>(qualifications);
 
-                await _applicationDbContext.BulkInsertAsync(qualificationsEntities);
-                //_applicationDbContext.RegulatedQualificationsImport.AddRange(qualificationsEntities);
-                //await _applicationDbContext.SaveChangesAsync();
+                //await _applicationDbContext.BulkInsertAsync(qualificationsEntities);
+                
+                _applicationDbContext.RegulatedQualificationsImport.AddRange(qualificationsEntities);
+                await _applicationDbContext.SaveChangesAsync();
 
                 _logger.LogInformation("Successfully saved regulated qualification records.");
             }
@@ -110,6 +89,33 @@ namespace SFA.DAS.AODP.Jobs.Services
             var processedQualificationsEntities = await _applicationDbContext.ProcessedRegulatedQualifications.ToListAsync();
 
             return _mapper.Map<List<QualificationDTO>>(processedQualificationsEntities);
+        }
+
+        private static Dictionary<string, Func<QualificationDTO, object>> GetColumnsToCompare()
+        {
+            return new Dictionary<string, Func<QualificationDTO, object>>
+            {
+                { "OrganisationName", dto => dto.OrganisationName },
+                { "Title", dto => dto.Title },
+                { "Level", dto => dto.Level },
+                { "Type", dto => dto.Type },
+                { "TotalCredits", dto => dto.TotalCredits ?? 0 },
+                { "Ssa", dto => dto.Ssa },
+                { "GradingType", dto => dto.GradingType ?? string.Empty },
+                { "OfferedInEngland", dto => dto.OfferedInEngland },
+                { "PreSixteen", dto => dto.PreSixteen ?? false },
+                { "SixteenToEighteen", dto => dto.SixteenToEighteen ?? false },
+                { "EighteenPlus", dto => dto.EighteenPlus ?? false },
+                { "NineteenPlus", dto => dto.NineteenPlus ?? false },
+                //{ "OfferedInEngland", dto => dto.OfferedInEngland },
+                { "QualGlh", dto => dto.Glh ?? 0 },
+                { "QualMinimumGLH", dto => dto.MinimumGlh ?? 0 },
+                { "TQT", dto => dto.Tqt ?? 0 },
+                { "OperationalEndDate", dto => dto.OperationalEndDate ?? DateTime.MinValue },
+                { "LastUpdatedDate", dto => dto.LastUpdatedDate },
+                { "Version", dto => dto.Version ?? 0 },
+                { "OfferedInternationally", dto => dto.OfferedInternationally ?? false }
+            };
         }
 
     }
