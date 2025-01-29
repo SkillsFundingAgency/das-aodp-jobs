@@ -20,8 +20,4 @@
     <PackageReference Include="Z.EntityFramework.Extensions.EFCore" Version="9.103.7" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\SFA.DAS.AODP.Data\SFA.DAS.AODP.Data.csproj" />
-  </ItemGroup>
-
 </Project>
