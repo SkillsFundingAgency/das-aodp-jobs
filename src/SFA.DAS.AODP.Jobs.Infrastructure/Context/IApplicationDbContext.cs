@@ -5,9 +5,17 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 {
     public interface IApplicationDbContext
     {
-        DbSet<FundedQualification> FundedQualifications { get; set; }
-        DbSet<ProcessedRegulatedQualification> ProcessedRegulatedQualifications { get; set; }
-        DbSet<RegulatedQualificationsImport> RegulatedQualificationsImport { get; set; }
+        DbSet<ActionType> ActionTypes { get; set; }
+        DbSet<LifecycleStage> LifecycleStages { get; set; }
+        DbSet<Organisation> Organisations { get; set; }
+        DbSet<ProcessStatus> ProcessStatuses { get; set; }
+        DbSet<Qualification> Qualifications { get; set; }
+        DbSet<Qualifications> FundedQualifications { get; set; }
+        DbSet<QualificationDiscussionHistory> QualificationDiscussionHistories { get; set; }
+        DbSet<QualificationOffer> QualificationOffers { get; set; }
+        DbSet<QualificationVersion> QualificationVersions { get; set; }
+        DbSet<VersionFieldChange> VersionFieldChanges { get; set; }
+
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
         Task BulkInsertAsync<T>(IEnumerable<T> entities, CancellationToken cancellationToken = default) where T : class;
         Task DeleteTable<T>() where T : class;
