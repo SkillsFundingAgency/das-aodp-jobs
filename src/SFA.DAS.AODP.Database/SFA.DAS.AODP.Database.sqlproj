@@ -66,6 +66,7 @@
     <Build Include="Tables\FundedQualifications.sql" />
     <Build Include="Tables\FundedQualificationOffer.sql" />
     <Build Include="Views\ViewFundedQualificationsAndAssociatedOffers.sql" />
+    <Build Include="Tables\RegulatedQualificationsImportStaging.sql" />
   </ItemGroup>
   <ItemGroup>
     <RefactorLog Include="SFA.DAS.AODP.Database.refactorlog" />

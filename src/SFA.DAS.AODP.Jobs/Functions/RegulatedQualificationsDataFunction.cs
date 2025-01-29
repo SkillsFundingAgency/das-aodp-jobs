@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using RestEase;
 using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Infrastructure.Context;
@@ -37,24 +38,29 @@ namespace SFA.DAS.AODP.Functions.Functions
         {
             _logger.LogInformation($"Processing {nameof(RegulatedQualificationsDataFunction)} request...");
 
-            var stopWatch = new Stopwatch();
-            stopWatch.Start();
-
             try
             {
                 int totalProcessed = 0;
                 int pageCount = 1;
+                var loopCycleStopWatch = new Stopwatch();
+                var processStopWatch = new Stopwatch();
+                processStopWatch.Start();
 
                 var processedQualifications = await _qualificationsService.GetAllProcessedRegulatedQualificationsAsync();
 
-                _logger.LogInformation($"Clearing down RegulatedQualificationsImport table...");
+                //_logger.LogInformation($"Clearing down RegulatedQualificationsImport table...");
+                //await _applicationDbContext.DeleteTable<RegulatedQualificationsImport>();
 
-                await _applicationDbContext.DeleteTable<RegulatedQualificationsImport>();
+                _logger.LogInformation($"Clearing down RegulatedQualificationsImportStaging table...");
+                await _applicationDbContext.DeleteTable<RegulatedQualificationsImportStaging>();
 
                 var parameters = _ofqualRegisterService.ParseQueryParameters(req.Query);
 
                 while (true)
                 {
+                    loopCycleStopWatch.Reset();
+                    loopCycleStopWatch.Start();
+
                     parameters.Page = pageCount;
                     var paginatedResult = await _ofqualRegisterService.SearchPrivateQualificationsAsync(parameters);
 
@@ -66,13 +72,17 @@ namespace SFA.DAS.AODP.Functions.Functions
 
                     _logger.LogInformation($"Processing page {pageCount}. Retrieved {paginatedResult.Results?.Count} qualifications.");
 
-                    var importedQualifications = _ofqualRegisterService.ExtractQualificationsList(paginatedResult);
+                    var importedQualificationsJson = paginatedResult.Results
+                        .Select(JsonConvert.SerializeObject)
+                        .ToList();
 
-                    await _qualificationsService.CompareAndUpdateQualificationsAsync(importedQualifications, processedQualifications);
+                    await _qualificationsService.SaveRegulatedQualificationsStagingAsync(importedQualificationsJson);
 
-                    await _qualificationsService.SaveRegulatedQualificationsAsync(importedQualifications);
+                    //var importedQualifications = _ofqualRegisterService.ExtractQualificationsList(paginatedResult);
+                    //await _qualificationsService.CompareAndUpdateQualificationsAsync(importedQualifications, processedQualifications);
+                    //await _qualificationsService.SaveRegulatedQualificationsAsync(importedQualifications);
 
-                    totalProcessed += importedQualifications.Count;
+                    totalProcessed += paginatedResult.Results.Count;
 
                     if (paginatedResult.Results?.Count < parameters.Limit)
                     {
@@ -80,14 +90,15 @@ namespace SFA.DAS.AODP.Functions.Functions
                         break;
                     }
 
+                    loopCycleStopWatch.Stop();
+                    _logger.LogInformation($"Page {pageCount} import complete. {paginatedResult.Results.Count()} records imported in {loopCycleStopWatch.Elapsed.TotalSeconds:F2} seconds");
+                    
                     pageCount++;
-
-                    _logger.LogInformation($"{importedQualifications.Count()} records imported in {stopWatch.ElapsedMilliseconds / 1000}");
                 }
 
-                stopWatch.Stop();
+                processStopWatch.Stop();
 
-                _logger.LogInformation($"Total qualifications processed: {totalProcessed}");
+                _logger.LogInformation($"Total qualifications processed: {totalProcessed} in {processStopWatch.Elapsed.TotalSeconds:F2} seconds");
                 return new OkObjectResult($"Successfully processed {totalProcessed} qualifications.");
             }
             catch (ApiException ex)

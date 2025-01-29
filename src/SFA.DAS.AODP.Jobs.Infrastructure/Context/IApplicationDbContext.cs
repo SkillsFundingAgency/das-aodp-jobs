@@ -8,6 +8,7 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         DbSet<FundedQualification> FundedQualifications { get; set; }
         DbSet<ProcessedRegulatedQualification> ProcessedRegulatedQualifications { get; set; }
         DbSet<RegulatedQualificationsImport> RegulatedQualificationsImport { get; set; }
+        DbSet<RegulatedQualificationsImportStaging> RegulatedQualificationsImportStaging { get; set; }
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
         Task BulkInsertAsync<T>(IEnumerable<T> entities, CancellationToken cancellationToken = default) where T : class;
         Task DeleteTable<T>() where T : class;

@@ -8,6 +8,8 @@ namespace SFA.DAS.AODP.Jobs.Interfaces
 
         Task SaveRegulatedQualificationsAsync(List<QualificationDTO> qualifications);
 
+        Task SaveRegulatedQualificationsStagingAsync(List<string> qualificationsJson);
+
         Task<List<QualificationDTO>> GetAllProcessedRegulatedQualificationsAsync();
     }
 }

@@ -18,6 +18,8 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public virtual DbSet<RegulatedQualificationsImport> RegulatedQualificationsImport { get; set; }
 
+        public virtual DbSet<RegulatedQualificationsImportStaging> RegulatedQualificationsImportStaging { get; set; }
+
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             return base.SaveChangesAsync(cancellationToken);

@@ -81,6 +81,28 @@ namespace SFA.DAS.AODP.Jobs.Services
             }
         }
 
+        public async Task SaveRegulatedQualificationsStagingAsync(List<string> qualificationsJson)
+        {
+            try
+            {
+                _logger.LogInformation("Saving regulated qualification records...");
+
+                var qualificationsJsonEntities = _mapper.Map<List<RegulatedQualificationsImportStaging>>(qualificationsJson);
+
+                await _applicationDbContext.BulkInsertAsync(qualificationsJsonEntities);
+                
+                //_applicationDbContext.RegulatedQualificationsImportStaging.AddRange(qualificationsJsonEntities);
+                //await _applicationDbContext.SaveChangesAsync();
+
+                _logger.LogInformation("Successfully saved regulated qualification records.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while saving regulated qualification records.");
+                throw;
+            }
+        }
+
         public async Task<List<QualificationDTO>> GetAllProcessedRegulatedQualificationsAsync()
         {
             _logger.LogInformation("Retreiving all processed regulated qualification records...");
