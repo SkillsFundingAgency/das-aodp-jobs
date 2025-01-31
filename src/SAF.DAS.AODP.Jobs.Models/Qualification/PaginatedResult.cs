@@ -2,7 +2,7 @@
 
 namespace SFA.DAS.AODP.Data
 {
-    public class RegulatedQualificationsPaginatedResult<T>
+    public class PaginatedResult<T>
     {
         [JsonProperty("results")]
         public required List<T>? Results { get; set; }

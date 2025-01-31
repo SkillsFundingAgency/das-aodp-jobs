@@ -31,7 +31,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         public async Task SearchPrivateQualificationsAsync_CallsApiClient_WithCorrectParameters()
         {
             // Arrange
-            var parameters = new RegulatedQualificationsQueryParameters
+            var parameters = new QualificationsQueryParameters
             {
                 Title = "Test Title",
                 Page = 1,
@@ -52,7 +52,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             int page = 1;
             int limit = 10;
 
-            var expectedResult = new RegulatedQualificationsPaginatedResult<QualificationDTO>
+            var expectedResult = new PaginatedResult<QualificationDTO>
             {
                 Results = new List<QualificationDTO>(),
                 Count = 0
@@ -106,8 +106,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         public async Task SearchPrivateQualificationsAsync_ReturnsCorrectResult()
         {
             // Arrange
-            var parameters = new RegulatedQualificationsQueryParameters { Title = "Test Title", Page = 1, Limit = 10 };
-            var expectedResult = new RegulatedQualificationsPaginatedResult<QualificationDTO>
+            var parameters = new QualificationsQueryParameters { Title = "Test Title", Page = 1, Limit = 10 };
+            var expectedResult = new PaginatedResult<QualificationDTO>
             {
                 Results = new List<QualificationDTO> { new QualificationDTO { Title = "Test Qualification" } },
                 Count = 1
@@ -143,9 +143,9 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         public async Task SearchPrivateQualificationsAsync_ReturnsEmptyResults_WhenApiReturnsNoData()
         {
             // Arrange
-            var parameters = new RegulatedQualificationsQueryParameters { Title = "Test Title", Page = 1, Limit = 10 };
+            var parameters = new QualificationsQueryParameters { Title = "Test Title", Page = 1, Limit = 10 };
 
-            var expectedResult = new RegulatedQualificationsPaginatedResult<QualificationDTO>
+            var expectedResult = new PaginatedResult<QualificationDTO>
             {
                 Results = new List<QualificationDTO>(),
                 Count = 0
@@ -182,7 +182,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         public async Task SearchPrivateQualificationsAsync_ThrowsException_WhenApiClientFails()
         {
             // Arrange
-            var parameters = new RegulatedQualificationsQueryParameters { Title = "Test Title", Page = 1, Limit = 10 };
+            var parameters = new QualificationsQueryParameters { Title = "Test Title", Page = 1, Limit = 10 };
 
             _mockApiClient.Setup(client => client.SearchPrivateQualificationsAsync(
                     parameters.Title,
@@ -212,7 +212,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         public async Task SearchPrivateQualificationsAsync_ReturnsLargeResultSet_WhenApiReturnsManyResults()
         {
             // Arrange
-            var parameters = new RegulatedQualificationsQueryParameters { Title = "Test Title", Page = 1, Limit = 10 };
+            var parameters = new QualificationsQueryParameters { Title = "Test Title", Page = 1, Limit = 10 };
 
             var largeResults = new List<QualificationDTO>();
             for (int i = 0; i < 1000; i++)
@@ -220,7 +220,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 largeResults.Add(new QualificationDTO { Title = $"Qualification {i}" });
             }
 
-            var expectedResult = new RegulatedQualificationsPaginatedResult<QualificationDTO>
+            var expectedResult = new PaginatedResult<QualificationDTO>
             {
                 Results = largeResults,
                 Count = 1000

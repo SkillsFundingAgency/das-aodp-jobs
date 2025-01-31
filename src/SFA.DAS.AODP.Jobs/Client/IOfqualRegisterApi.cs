@@ -10,7 +10,7 @@ namespace SFA.DAS.AODP.Jobs.Client
         string SubscriptionKey { get; set; }
 
         [Get("gov/Qualifications")]
-        Task<RegulatedQualificationsPaginatedResult<QualificationDTO>> SearchPrivateQualificationsAsync(
+        Task<PaginatedResult<QualificationDTO>> SearchPrivateQualificationsAsync(
             [Query("title")] string title,
             [Query("page")] int pageNumber,
             [Query("limit")] int pageSize,
