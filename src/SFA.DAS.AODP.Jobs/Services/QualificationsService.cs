@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using System.Text.Json;
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.AODP.Data.Entities;
@@ -82,16 +83,17 @@ namespace SFA.DAS.AODP.Jobs.Services
             }
         }
 
-        public async Task SaveRegulatedQualificationsAsync(List<QualificationDTO> qualifications)
+        public async Task SaveQualificationsStagingAsync(List<string> qualificationsJson)
         {
             try
             {
                 _logger.LogInformation("Saving regulated qualification records...");
 
-                var qualificationsEntities = _mapper.Map<List<RegulatedQualificationsImport>>(qualifications);
+                var qualificationsJsonEntities = _mapper.Map<List<StagedQualifications>>(qualificationsJson);
 
-                await _applicationDbContext.BulkInsertAsync(qualificationsEntities);
-                //_applicationDbContext.RegulatedQualificationsImport.AddRange(qualificationsEntities);
+                await _applicationDbContext.BulkInsertAsync(qualificationsJsonEntities);
+                
+                //_applicationDbContext.QualificationsImportStaging.AddRange(qualificationsJsonEntities);
                 //await _applicationDbContext.SaveChangesAsync();
 
                 _logger.LogInformation("Successfully saved regulated qualification records.");
@@ -99,17 +101,28 @@ namespace SFA.DAS.AODP.Jobs.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while saving regulated qualification records.");
-                throw; 
+                throw;
             }
         }
 
-        public async Task<List<QualificationDTO>> GetAllProcessedRegulatedQualificationsAsync()
+        public async Task<List<QualificationDTO>> GetStagedQualifcationsAsync()
         {
-            _logger.LogInformation("Retreiving all processed regulated qualification records...");
+            try
+            {
+                _logger.LogInformation("Retrieving staged qualifications...");
 
-            var processedQualificationsEntities = await _applicationDbContext.ProcessedRegulatedQualifications.ToListAsync();
+                var stagedQualifications = await _applicationDbContext.StagedQualifications.ToListAsync();
 
-            return _mapper.Map<List<QualificationDTO>>(processedQualificationsEntities);
+                return stagedQualifications
+                    .Select(q => JsonSerializer.Deserialize<QualificationDTO>(q.JsonData, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }))
+                    .Where(dto => dto != null)
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while saving regulated qualification records.");
+                throw;
+            }
         }
 
     }

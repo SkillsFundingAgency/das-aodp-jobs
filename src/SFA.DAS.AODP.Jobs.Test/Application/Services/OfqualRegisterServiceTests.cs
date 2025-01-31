@@ -1,11 +1,11 @@
 ﻿using Moq;
 using SFA.DAS.AODP.Jobs.Services;
-using SFA.DAS.AODP.Functions.Interfaces;
 using SFA.DAS.AODP.Models.Qualification;
 using SFA.DAS.AODP.Data;
 using SFA.DAS.AODP.Infrastructure.Context;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
+using SFA.DAS.AODP.Jobs.Client;
 
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Services

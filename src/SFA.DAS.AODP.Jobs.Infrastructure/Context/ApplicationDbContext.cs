@@ -15,11 +15,11 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public virtual DbSet<LifecycleStage> LifecycleStages { get; set; }
 
-        public virtual DbSet<Organisation> Organisations { get; set; }
+        public virtual DbSet<Organisation> Organisation { get; set; }
 
         public virtual DbSet<ProcessStatus> ProcessStatuses { get; set; }
 
-        public virtual DbSet<Qualification> Qualifications { get; set; }
+        public virtual DbSet<Qualification> Qualification { get; set; }
 
         public virtual DbSet<Qualifications> FundedQualifications { get; set; }
 
@@ -28,6 +28,8 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         public virtual DbSet<QualificationOffer> QualificationOffers { get; set; }
 
         public virtual DbSet<QualificationVersion> QualificationVersions { get; set; }
+
+        public virtual DbSet<StagedQualifications> StagedQualifications { get; set; }
 
         public virtual DbSet<VersionFieldChange> VersionFieldChanges { get; set; }
 

@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.AODP.Data;
-using SFA.DAS.AODP.Functions.Interfaces;
+using SFA.DAS.AODP.Jobs.Client;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Models.Qualification;
 
@@ -21,7 +21,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             _logger = logger;
             _apiClient = apiClient;
             _configuration = configuration;
-    }
+        }
 
         public async Task<RegulatedQualificationsPaginatedResult<QualificationDTO>> SearchPrivateQualificationsAsync(RegulatedQualificationsQueryParameters parameters)
         {
