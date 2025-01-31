@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-
-namespace SFA.DAS.AODP.Data.Entities;
+﻿namespace SFA.DAS.AODP.Data.Entities;
 
 public partial class Organisation
 {
