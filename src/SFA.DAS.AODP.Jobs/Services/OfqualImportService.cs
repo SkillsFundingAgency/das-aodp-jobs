@@ -50,7 +50,7 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                 var parameters = _ofqualRegisterService.ParseQueryParameters(request.Query);
 
-                while (true)
+                while (true && pageCount < 1000000)
                 {
                     parameters.Page = pageCount;
                     var paginatedResult = await _ofqualRegisterService.SearchPrivateQualificationsAsync(parameters);
@@ -90,11 +90,11 @@ namespace SFA.DAS.AODP.Jobs.Services
             }
             catch (ApiException ex)
             {
-                _logger.LogError($"Unexpected api exception occurred: {ex.Message}");
+                _logger.LogError(ex, "Unexpected API exception occurred.");
             }
             catch (SystemException ex)
             {
-                _logger.LogError($"Unexpected system exception occurred: {ex.Message}");
+                _logger.LogError(ex, "Unexpected system exception occurred.");
             }
         }
 
@@ -111,9 +111,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                 foreach (var qualificationData in importedQualifications)
                 {
                     // Check for new Organisations
-                    var organisation = await (_applicationDbContext.Organisation?.Any() == true
-                        ? _applicationDbContext.Organisation.FirstOrDefaultAsync(o => o.RecognitionNumber == qualificationData.OrganisationRecognitionNumber)
-                        : Task.FromResult<Organisation?>(null));
+                    var organisation = _applicationDbContext.Organisation.Local
+                        .FirstOrDefault(o => o.Name == qualificationData.OrganisationName);
 
                     if (organisation == null)
                     {
@@ -127,9 +126,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                     }
 
                     // Check for new Qualifications
-                    var qualification = await (_applicationDbContext.Qualification?.Any() == true
-                        ? _applicationDbContext.Qualification.FirstOrDefaultAsync(o => o.Qan == qualificationData.QualificationNumberNoObliques)
-                        : Task.FromResult<Qualification?>(null));
+                    var qualification = _applicationDbContext.Qualification.Local
+                        .FirstOrDefault(o => o.Qan == qualificationData.QualificationNumber);
 
                     if (qualification == null)
                     {
@@ -169,7 +167,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-                _logger.LogError($"Error processing qualifications: {ex.Message}");
+                _logger.LogError(ex, "Error processing qualifications.");
                 throw;
             }
         }

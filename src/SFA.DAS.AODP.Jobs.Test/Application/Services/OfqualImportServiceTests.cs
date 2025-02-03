@@ -7,13 +7,12 @@ using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Infrastructure.Context;
 using Microsoft.Azure.Functions.Worker.Http;
 using SFA.DAS.AODP.Data.Entities;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 using SFA.DAS.AODP.Jobs.Client;
 using SFA.DAS.AODP.Models.Qualification;
 using SFA.DAS.AODP.Data;
 using System.Collections.Specialized;
 using Microsoft.Azure.Functions.Worker;
+using AutoFixture;
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 {
@@ -27,6 +26,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         private readonly Mock<IQualificationsService> _qualificationsServiceMock;
         private readonly FunctionContext _functionContext;
         private readonly OfqualImportService _service;
+        private Fixture _fixture;
 
         public OfqualImportServiceTests()
         {
@@ -37,6 +37,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             _ofqualRegisterServiceMock = new Mock<IOfqualRegisterService>();
             _qualificationsServiceMock = new Mock<IQualificationsService>();
             _functionContext = new Mock<FunctionContext>().Object;
+            _fixture = new Fixture();
 
             _service = new OfqualImportService(
                 _loggerMock.Object,
@@ -68,9 +69,9 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var searchResult = new PaginatedResult<QualificationDTO>
             {
                 Results = new List<QualificationDTO>
-            {
-                new QualificationDTO { QualificationNumberNoObliques = "12345", Title = "Sample Qualification" }
-            }
+                {
+                    _fixture.Create<QualificationDTO>()
+                }
             };
 
             _ofqualRegisterServiceMock.Setup(s => s.ParseQueryParameters(It.IsAny<NameValueCollection>()))
