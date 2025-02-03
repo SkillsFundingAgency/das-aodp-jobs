@@ -19,6 +19,6 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
         Task BulkInsertAsync<T>(IEnumerable<T> entities, CancellationToken cancellationToken = default) where T : class;
-        Task DeleteTable<T>() where T : class;
+        Task TruncateTable<T>() where T : class;
     }
 }

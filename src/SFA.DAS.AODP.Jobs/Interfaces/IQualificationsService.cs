@@ -4,10 +4,9 @@ namespace SFA.DAS.AODP.Jobs.Interfaces
 {
     public interface IQualificationsService
     {
-        Task CompareAndUpdateQualificationsAsync(List<QualificationDTO> importedQualifications, List<QualificationDTO> processedQualifications);
-
         Task SaveQualificationsStagingAsync(List<string> qualificationsJson);
 
-        Task<List<QualificationDTO>> GetStagedQualifcationsAsync();
+        Task<List<QualificationDTO>> GetStagedQualificationsBatchAsync(int batchSize, int processedCount);
+
     }
 }

@@ -44,7 +44,7 @@ namespace SFA.DAS.AODP.Infrastructure.Context
             await this.BulkInsertAsync(entities.ToList(), options => { options.BatchSize = 1000; options.IncludeGraph = true; }, cancellationToken: cancellationToken);
         }
 
-        public async Task DeleteTable<T>() where T:class
+        public async Task TruncateTable<T>() where T:class
         {
             await this.Set<T>().ExecuteDeleteAsync();
         }

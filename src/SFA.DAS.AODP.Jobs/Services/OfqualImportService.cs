@@ -6,7 +6,6 @@ using SFA.DAS.AODP.Jobs.Interfaces;
 using Microsoft.Azure.Functions.Worker.Http;
 using SFA.DAS.AODP.Jobs.Client;
 using SFA.DAS.AODP.Infrastructure.Context;
-using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using System.Diagnostics;
 
@@ -15,40 +14,37 @@ namespace SFA.DAS.AODP.Jobs.Services
     public class OfqualImportService : IOfqualImportService
     {
         private readonly ILogger<OfqualImportService> _logger;
-        private readonly IConfiguration _configuration;
         private readonly IApplicationDbContext _applicationDbContext;
-        private readonly IOfqualRegisterApi _apiClient;
         private readonly IOfqualRegisterService _ofqualRegisterService;
         private readonly IQualificationsService _qualificationsService;
+        private Stopwatch _loopCycleStopWatch = new Stopwatch();
+        private Stopwatch _processStopWatch = new Stopwatch();
 
         public OfqualImportService(ILogger<OfqualImportService> logger, IConfiguration configuration, IApplicationDbContext applicationDbContext, 
             IOfqualRegisterApi apiClient, IOfqualRegisterService ofqualRegisterService, IQualificationsService qualificationsService)
         {
             _logger = logger;
-            _configuration = configuration;
             _applicationDbContext = applicationDbContext;
-            _apiClient = apiClient;
             _ofqualRegisterService = ofqualRegisterService;
             _qualificationsService = qualificationsService;
         }
 
         public async Task StageQualificationsDataAsync(HttpRequestData request) 
         {
-            _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(StageQualificationsDataAsync)}] -> Starting import Ofqual Qualifications to staging area...");
+            _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(StageQualificationsDataAsync)}] -> Import Ofqual Qualifications to staging area...");
 
             int totalProcessed = 0;
             int pageCount = 1;
-            var loopCycleStopWatch = new Stopwatch();
-            var processStopWatch = new Stopwatch();
-            processStopWatch.Start();
+            _processStopWatch.Start();
 
             try
             {
                 _logger.LogInformation($"Clearing down StageQualifications table...");
 
-                await _applicationDbContext.DeleteTable<StagedQualifications>();
-
+                await _applicationDbContext.TruncateTable<StagedQualifications>();
                 var parameters = _ofqualRegisterService.ParseQueryParameters(request.Query);
+
+                _logger.LogInformation($"Ofqual data import started...");
 
                 while (true && pageCount < 1000000)
                 {
@@ -77,16 +73,14 @@ namespace SFA.DAS.AODP.Jobs.Services
                         break;
                     }
 
-                    loopCycleStopWatch.Stop();
-                    _logger.LogInformation($"Page {pageCount} import complete. {paginatedResult.Results.Count()} records imported in {loopCycleStopWatch.Elapsed.TotalSeconds:F2} seconds");
+                    _loopCycleStopWatch.Stop();
+                    _logger.LogInformation($"Page {pageCount} import complete. {paginatedResult.Results.Count()} records imported in {_loopCycleStopWatch.Elapsed.TotalSeconds:F2} seconds");
 
                     pageCount++;
                 }
 
-                processStopWatch.Stop();
-
-
-                _logger.LogInformation($"Successfully imported {totalProcessed} qualifications in {processStopWatch.Elapsed.TotalSeconds:F2} seconds");
+                _processStopWatch.Stop();
+                _logger.LogInformation($"Successfully imported {totalProcessed} qualifications in {_processStopWatch.Elapsed.TotalSeconds:F2} seconds");
             }
             catch (ApiException ex)
             {
@@ -102,74 +96,77 @@ namespace SFA.DAS.AODP.Jobs.Services
         {
             _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ProcessQualificationsDataAsync)}] -> Processing Ofqual Qualifications Staging Data...");
 
-            using var transaction = await (_applicationDbContext as ApplicationDbContext)!.Database.BeginTransactionAsync();
+            int batchSize = 500;
+            int processedCount = 0;
+            _processStopWatch.Restart();
 
             try
             {
-                var importedQualifications = await _qualificationsService.GetStagedQualifcationsAsync();
+                await PreProcessTableClense();
 
-                foreach (var qualificationData in importedQualifications)
+                while (true && processedCount < 1000000)
                 {
-                    // Check for new Organisations
-                    var organisation = _applicationDbContext.Organisation.Local
-                        .FirstOrDefault(o => o.Name == qualificationData.OrganisationName);
+                    var batch = await _qualificationsService.GetStagedQualificationsBatchAsync(batchSize, processedCount);
 
-                    if (organisation == null)
+                    if (batch.Count == 0)
                     {
-                        organisation = new Organisation
-                        {
-                            RecognitionNumber = qualificationData.OrganisationRecognitionNumber,
-                            Name = qualificationData.OrganisationName,
-                            Acronym = qualificationData.OrganisationAcronym
-                        };
-                        await _applicationDbContext.Organisation.AddAsync(organisation);
+                        break;
                     }
 
-                    // Check for new Qualifications
-                    var qualification = _applicationDbContext.Qualification.Local
-                        .FirstOrDefault(o => o.Qan == qualificationData.QualificationNumber);
-
-                    if (qualification == null)
+                    foreach (var qualificationData in batch)
                     {
-                        qualification = new Qualification
+                        // Check for new Organisations
+                        var organisation = _applicationDbContext.Organisation.Local
+                            .FirstOrDefault(o => o.Name == qualificationData.OrganisationName);
+
+                        if (organisation == null)
                         {
-                            Qan = qualificationData.QualificationNumberNoObliques,
-                            QualificationName = qualificationData.Title
-                        };
-                        await _applicationDbContext.Qualification.AddAsync(qualification);
+                            organisation = new Organisation
+                            {
+                                RecognitionNumber = qualificationData.OrganisationRecognitionNumber,
+                                Name = qualificationData.OrganisationName,
+                                Acronym = qualificationData.OrganisationAcronym
+                            };
+                            await _applicationDbContext.Organisation.AddAsync(organisation);
+                        }
+
+                        // Check for new Qualifications
+                        var qualification = _applicationDbContext.Qualification.Local
+                            .FirstOrDefault(o => o.Qan == qualificationData.QualificationNumber);
+
+                        if (qualification == null)
+                        {
+                            qualification = new Qualification
+                            {
+                                Qan = qualificationData.QualificationNumberNoObliques,
+                                QualificationName = qualificationData.Title
+                            };
+                            await _applicationDbContext.Qualification.AddAsync(qualification);
+                        }
                     }
 
-                    // Check for new QualificationVersion
-                    var qualificationVersion = new QualificationVersion
-                    {
-                        QualificationId = qualification.Id,
+                    processedCount += batch.Count;
 
-
-                        OrganisationId = organisation.Id,
-                        Status = qualificationData.Status,
-                        Type = qualificationData.Type,
-                        Level = qualificationData.Level,
-                        RegulationStartDate = qualificationData.RegulationStartDate,
-                        OperationalStartDate = qualificationData.OperationalStartDate,
-                        LastUpdatedDate = DateTime.UtcNow,
-
-                        Organisation = organisation,
-                        Qualification = qualification
-                    };
-
-                    await _applicationDbContext.QualificationVersions.AddAsync(qualificationVersion);
+                    await _applicationDbContext.SaveChangesAsync();
                 }
 
-                await _applicationDbContext.SaveChangesAsync();
-                await transaction.CommitAsync();
-
+                _processStopWatch.Stop();
+                _logger.LogInformation($"Processed {processedCount} records from staging area completed in {_processStopWatch.Elapsed.TotalSeconds:F2} seconds");
             }
             catch (Exception ex)
             {
-                await transaction.RollbackAsync();
                 _logger.LogError(ex, "Error processing qualifications.");
                 throw;
             }
+        }
+
+        private async Task PreProcessTableClense()
+        {
+            _logger.LogInformation($"Clearing down Organisation table...");
+            await _applicationDbContext.TruncateTable<Organisation>();
+
+            _logger.LogInformation($"Clearing down Qualification table...");
+            await _applicationDbContext.TruncateTable<Qualification>();
         }
 
     }
