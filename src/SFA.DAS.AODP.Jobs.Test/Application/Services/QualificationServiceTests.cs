@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.EntityFrameworkCore;
@@ -68,92 +69,5 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             Assert.Contains("Title", importedQualifications[0].ChangedFields);
             _mockDbContext.Verify(x => x.SaveChangesAsync(default), Times.Once);
         }
-
-        [Fact]
-        public async Task SaveRegulatedQualificationsAsync_SavesQualifications()
-        {
-            // Arrange
-            var qualifications = new List<QualificationDTO> { new QualificationDTO { QualificationNumberNoObliques = "123" } };
-            var qualificationEntities = new List<RegulatedQualificationsImport>{ new RegulatedQualificationsImport { QualificationNumberNoObliques = "123" } };
-
-            _mockMapper.Setup(m => m.Map<List<RegulatedQualificationsImport>>(qualifications))
-                       .Returns(qualificationEntities);
-
-            _mockDbContext.Setup(x => x.SaveChangesAsync(default)).ReturnsAsync(1);
-
-            // Act
-            await _service.SaveRegulatedQualificationsAsync(qualifications);
-
-            // Assert
-            //_mockDbContext.Verify(x => x.RegulatedQualificationsImport.AddRange(qualificationEntities), Times.Once);
-            //_mockDbContext.Verify(x => x.SaveChangesAsync(default), Times.Once);
-            _mockDbContext.Verify(
-                db => db.BulkInsertAsync(It.IsAny<IEnumerable<RegulatedQualificationsImport>>(), It.IsAny<CancellationToken>()),
-                Times.Once
-            );
-        }
-
-        [Fact]
-        public async Task SaveRegulatedQualificationsAsync_LogsErrorOnException()
-        {
-            // Arrange
-            var qualifications = new List<QualificationDTO>
-        {
-            new QualificationDTO { QualificationNumberNoObliques = "123" }
-        };
-
-            _mockMapper.Setup(m => m.Map<List<RegulatedQualificationsImport>>(qualifications))
-                       .Throws(new Exception("Test exception"));
-
-            // Act & Assert
-            await Assert.ThrowsAsync<Exception>(async () =>
-                await _service.SaveRegulatedQualificationsAsync(qualifications));
-
-            _mockLogger.Verify(
-                x => x.Log(
-                    LogLevel.Error,
-                    It.IsAny<EventId>(),
-                    It.IsAny<It.IsAnyType>(),
-                    It.IsAny<Exception>(),
-                    (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
-                Times.Once);
-        }
-
-        [Fact]
-        public async Task GetAllProcessedRegulatedQualificationsAsync_ReturnsMappedQualifications()
-        {
-            // Arrange
-            var processedEntities = new List<ProcessedRegulatedQualification>
-            {
-                new ProcessedRegulatedQualification { QualificationNumberNoObliques = "123" }
-            };
-
-            var mappedQualifications = new List<QualificationDTO>
-            {
-                new QualificationDTO { QualificationNumberNoObliques = "123" }
-            };
-
-            _mockDbContext.Setup(x => x.ProcessedRegulatedQualifications)
-                          .ReturnsDbSet(processedEntities);
-
-            _mockMapper.Setup(m => m.Map<List<QualificationDTO>>(processedEntities))
-                       .Returns(mappedQualifications);
-
-            // Act
-            var result = await _service.GetAllProcessedRegulatedQualificationsAsync();
-
-            // Assert
-            Assert.Equal(mappedQualifications, result);
-            var loggerMock = new Mock<ILogger<QualificationsService>>();
-            loggerMock.Setup(logger =>
-                logger.Log(
-                    LogLevel.Information,
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => v.ToString() == "Retrieving all processed regulated qualification records..."),
-                    It.IsAny<Exception>(),
-                    It.IsAny<Func<It.IsAnyType, Exception, string>>())
-            );
-        }
-
     }
 }

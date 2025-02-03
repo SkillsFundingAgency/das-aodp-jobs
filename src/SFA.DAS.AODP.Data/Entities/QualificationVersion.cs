@@ -1,22 +1,24 @@
 ﻿namespace SFA.DAS.AODP.Data.Entities;
 
-public partial class ProcessedRegulatedQualification
+public partial class QualificationVersion
 {
     public int Id { get; set; }
 
-    public string QualificationNumber { get; set; } = null!;
+    public int QualificationId { get; set; }
 
-    public string QualificationNumberNoObliques { get; set; } = null!;
+    public int VersionFieldChangesId { get; set; }
 
-    public string Title { get; set; } = null!;
+    public int ProcessStatusId { get; set; }
+
+    public int AdditionalKeyChangesReceivedFlag { get; set; }
+
+    public int LifecycleStageId { get; set; }
+
+    public string? OutcomeJustificationNotes { get; set; }
+
+    public int OrganisationId { get; set; }
 
     public string Status { get; set; } = null!;
-
-    public string OrganisationName { get; set; } = null!;
-
-    public string OrganisationAcronym { get; set; } = null!;
-
-    public string OrganisationRecognitionNumber { get; set; } = null!;
 
     public string Type { get; set; } = null!;
 
@@ -54,7 +56,7 @@ public partial class ProcessedRegulatedQualification
 
     public bool OfferedInEngland { get; set; }
 
-    public bool OfferedInNorthernIreland { get; set; }
+    public bool OfferedInNi { get; set; }
 
     public bool? OfferedInternationally { get; set; }
 
@@ -64,7 +66,7 @@ public partial class ProcessedRegulatedQualification
 
     public string? AssessmentMethods { get; set; }
 
-    public string? ApprovedForDelfundedProgramme { get; set; }
+    public string? ApprovedForDelFundedProgramme { get; set; }
 
     public string? LinkToSpecification { get; set; }
 
@@ -76,11 +78,11 @@ public partial class ProcessedRegulatedQualification
 
     public string? NiDiscountCode { get; set; }
 
-    public string? GceSizeEquivalence { get; set; }
+    public string? GceSizeEquivelence { get; set; }
 
-    public string? GcseSizeEquivalence { get; set; }
+    public string? GcseSizeEquivelence { get; set; }
 
-    public string? EntitlementFrameworkDesignation { get; set; }
+    public string? EntitlementFrameworkDesign { get; set; }
 
     public DateTime LastUpdatedDate { get; set; }
 
@@ -91,8 +93,6 @@ public partial class ProcessedRegulatedQualification
     public int? Version { get; set; }
 
     public bool? AppearsOnPublicRegister { get; set; }
-
-    public int? OrganisationId { get; set; }
 
     public int? LevelId { get; set; }
 
@@ -111,4 +111,16 @@ public partial class ProcessedRegulatedQualification
     public bool? EighteenPlus { get; set; }
 
     public bool? NineteenPlus { get; set; }
+
+    public string? ImportStatus { get; set; }
+
+    public virtual LifecycleStage LifecycleStage { get; set; } = null!;
+
+    public virtual Organisation Organisation { get; set; } = null!;
+
+    public virtual ProcessStatus ProcessStatus { get; set; } = null!;
+
+    public virtual Qualification Qualification { get; set; } = null!;
+
+    public virtual VersionFieldChange VersionFieldChanges { get; set; } = null!;
 }

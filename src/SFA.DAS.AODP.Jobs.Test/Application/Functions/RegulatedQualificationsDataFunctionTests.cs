@@ -1,281 +1,98 @@
-﻿using System.Collections.Specialized;
-using AutoMapper;
+﻿using System.Net;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using Moq;
-using RestEase;
-using SFA.DAS.AODP.Data;
-using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Functions.Functions;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Jobs.Test.Mocks;
-using SFA.DAS.AODP.Models.Qualification;
+using RestEase;
+using Xunit;
+using Microsoft.Azure.Functions.Worker;
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Functions;
 
 public class RegulatedQualificationsDataFunctionTests
 {
     private readonly Mock<ILogger<RegulatedQualificationsDataFunction>> _loggerMock;
-    private readonly Mock<IApplicationDbContext> _applicationDbContextMock;
-    private readonly Mock<IMapper> _mapper;
-    private readonly Mock<IOfqualRegisterService> _ofqualRegisterServiceMock;
+    private readonly Mock<IApplicationDbContext> _dbContextMock;
     private readonly Mock<IQualificationsService> _qualificationsServiceMock;
+    private readonly Mock<IOfqualImportService> _ofqualImportServiceMock;
     private readonly RegulatedQualificationsDataFunction _function;
     private readonly FunctionContext _functionContext;
-
 
     public RegulatedQualificationsDataFunctionTests()
     {
         _loggerMock = new Mock<ILogger<RegulatedQualificationsDataFunction>>();
-        _applicationDbContextMock = new Mock<IApplicationDbContext>();
-        _mapper = new Mock<IMapper>();
+        _dbContextMock = new Mock<IApplicationDbContext>();
         _qualificationsServiceMock = new Mock<IQualificationsService>();
-        _ofqualRegisterServiceMock = new Mock<IOfqualRegisterService>();
+        _ofqualImportServiceMock = new Mock<IOfqualImportService>();
         _functionContext = new Mock<FunctionContext>().Object;
+
         _function = new RegulatedQualificationsDataFunction(
             _loggerMock.Object,
-            _applicationDbContextMock.Object,
+            _dbContextMock.Object,
             _qualificationsServiceMock.Object,
-            _ofqualRegisterServiceMock.Object,
-            _mapper.Object
-            );
-    }
-
-    [Fact]
-    public async Task Run_ShouldInsertProcessedQualifications()
-    {
-        // Arrange
-        var qualificationEntities = new List<RegulatedQualificationsImport>();
-        var httpRequestData = new MockHttpRequestData(_functionContext);
-        var parameters = new RegulatedQualificationsQueryParameters { Page = 1, Limit = 10 };
-        var qualifications = new List<QualificationDTO>
-                {
-                    new QualificationDTO { QualificationNumber = "1111", Title = "Test Qualification1" },
-                    new QualificationDTO { QualificationNumber = "2222", Title = "Test Qualification2" },
-                    new QualificationDTO { QualificationNumber = "3333", Title = "Test Qualification3" },
-                    new QualificationDTO { QualificationNumber = "4444", Title = "Test Qualification4" },
-                    new QualificationDTO { QualificationNumber = "5555", Title = "Test Qualification5" }
-                };
-
-        _applicationDbContextMock.Setup(db => db.BulkInsertAsync(It.IsAny<IEnumerable<RegulatedQualificationsImport>>(), It.IsAny<CancellationToken>()))
-            .Callback<IEnumerable<RegulatedQualificationsImport>, CancellationToken>((qualificationsList, cancellationToken) =>
-            {
-                qualificationEntities.AddRange(qualificationsList);
-            })
-            .Returns(Task.CompletedTask);
-
-        _ofqualRegisterServiceMock.Setup(api => api.SearchPrivateQualificationsAsync(
-                It.IsAny<RegulatedQualificationsQueryParameters>())
-            )
-            .ReturnsAsync(new RegulatedQualificationsPaginatedResult<QualificationDTO>
-            {
-                Results = qualifications
-            });
-
-        _ofqualRegisterServiceMock.Setup(service => service.ExtractQualificationsList(
-            It.IsAny<RegulatedQualificationsPaginatedResult<QualificationDTO>>())
-        )
-        .Returns(qualifications);
-
-        _qualificationsServiceMock.Setup(service => service.CompareAndUpdateQualificationsAsync(
-                It.IsAny<List<QualificationDTO>>(),
-                It.IsAny<List<QualificationDTO>>()))
-            .Returns(Task.CompletedTask)
-            .Verifiable();
-
-        _qualificationsServiceMock.Setup(service => service.SaveRegulatedQualificationsAsync(It.IsAny<List<QualificationDTO>>()))
-            .Returns(Task.CompletedTask)
-            .Verifiable();
-
-        _ofqualRegisterServiceMock.Setup(service => service.ParseQueryParameters(
-                It.IsAny<NameValueCollection>()))
-            .Returns(parameters);
-
-        // Act
-        var result = await _function.Run(httpRequestData);
-
-        // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal("Successfully processed 5 qualifications.", okResult.Value);
-
-        _qualificationsServiceMock.Verify(service => service.CompareAndUpdateQualificationsAsync(
-            It.IsAny<List<QualificationDTO>>(),
-            It.IsAny<List<QualificationDTO>>()), Times.Once);
-
-        _qualificationsServiceMock.Verify(service => service.SaveRegulatedQualificationsAsync(
-            It.IsAny<List<QualificationDTO>>()), Times.Once);
-
-    }
-
-    [Fact]
-    public async Task Run_ShouldLogAndReturnWhenApiReturnsNoResults()
-    {
-        // Arrange
-        var httpRequestData = new MockHttpRequestData(_functionContext);
-        var parameters = new RegulatedQualificationsQueryParameters { Page = 1, Limit = 10 };
-
-        _ofqualRegisterServiceMock.Setup(x => x.SearchPrivateQualificationsAsync(
-                It.IsAny<RegulatedQualificationsQueryParameters>()))
-            .ReturnsAsync(new RegulatedQualificationsPaginatedResult<QualificationDTO>
-            {
-                Results = null
-            });
-
-        _ofqualRegisterServiceMock.Setup(service => service.ParseQueryParameters(
-                It.IsAny<NameValueCollection>()))
-            .Returns(parameters);
-
-        // Act
-        var result = await _function.Run(httpRequestData);
-
-        // Assert
-        Assert.IsType<OkObjectResult>(result);
-        var okResult = result as OkObjectResult;
-        Assert.NotNull(okResult);
-        Assert.Equal("Successfully processed 0 qualifications.", okResult.Value);
-
-        _loggerMock.Verify(x => x.Log(
-            LogLevel.Information,
-            It.IsAny<EventId>(),
-            It.Is<It.IsAnyType>((v, t) => v.ToString() == "No more qualifications to process."),
-            It.IsAny<Exception>(),
-            It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
-
-        _applicationDbContextMock.Verify(
-            db => db.BulkInsertAsync(It.IsAny<IEnumerable<RegulatedQualificationsImport>>(), It.IsAny<CancellationToken>()),
-            Times.Never
+            _ofqualImportServiceMock.Object
         );
     }
 
     [Fact]
-    public async Task Run_ShouldBulkInsertQualificationsWhenApiReturnsResults()
+    public async Task Run_Should_Return_Ok_When_Processing_Succeeds()
     {
         // Arrange
-        var httpRequestData = new MockHttpRequestData(_functionContext);
-        var qualifications = new List<QualificationDTO>
-        {
-            new QualificationDTO { QualificationNumber = "1111", Title = "Test Qualification1" },
-            new QualificationDTO { QualificationNumber = "2222", Title = "Test Qualification2" },
-            new QualificationDTO { QualificationNumber = "3333", Title = "Test Qualification3" },
-            new QualificationDTO { QualificationNumber = "4444", Title = "Test Qualification4" },
-            new QualificationDTO { QualificationNumber = "5555", Title = "Test Qualification5" }
-        };
+        var httpRequestMock = new Mock<HttpRequestData>(_functionContext);
 
-        var parameters = new RegulatedQualificationsQueryParameters { Page = 1, Limit = 10 };
-
-        _ofqualRegisterServiceMock.Setup(api => api.SearchPrivateQualificationsAsync(
-                It.IsAny<RegulatedQualificationsQueryParameters>())
-            )
-            .ReturnsAsync(new RegulatedQualificationsPaginatedResult<QualificationDTO>
-            {
-                Results = new List<QualificationDTO>
-                {
-                    new QualificationDTO { QualificationNumber = "1111", Title = "Test Qualification1" },
-                    new QualificationDTO { QualificationNumber = "2222", Title = "Test Qualification2" }
-                }
-            });
-
-        _ofqualRegisterServiceMock.Setup(service => service.ExtractQualificationsList(
-            It.IsAny<RegulatedQualificationsPaginatedResult<QualificationDTO>>())
-        )
-        .Returns(qualifications);
-
-        _qualificationsServiceMock.Setup(service => service.SaveRegulatedQualificationsAsync(It.IsAny<List<QualificationDTO>>()))
-            .Returns(Task.CompletedTask)
-            .Verifiable();
-
-        _ofqualRegisterServiceMock.Setup(service => service.ParseQueryParameters(
-                It.IsAny<NameValueCollection>()))
-            .Returns(parameters);
+        _ofqualImportServiceMock.Setup(s => s.StageQualificationsDataAsync(It.IsAny<HttpRequestData>()))
+            .Returns(Task.CompletedTask);
+        _ofqualImportServiceMock.Setup(s => s.ProcessQualificationsDataAsync())
+            .Returns(Task.CompletedTask);
 
         // Act
-        var result = await _function.Run(httpRequestData);
+        var result = await _function.Run(httpRequestMock.Object);
 
         // Assert
-        Assert.IsType<OkObjectResult>(result);
-        var okResult = result as OkObjectResult;
-        Assert.NotNull(okResult);
-        Assert.Contains("Successfully processed", okResult.Value.ToString());
-
-        _loggerMock.Verify(x => x.Log(
-            LogLevel.Information,
-            It.IsAny<EventId>(),
-            It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Processing page")),
-            It.IsAny<Exception>(),
-            It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal("Successfully Imported Ofqual Data.", okResult.Value);
     }
 
     [Fact]
-    public async Task Run_ShouldReturnInternalServerError_OnSystemException()
+    public async Task Run_Should_Return_StatusCodeResult_When_ApiException_Occurs()
     {
         // Arrange
-        var httpRequestData = new MockHttpRequestData(_functionContext);
-        var parameters = new RegulatedQualificationsQueryParameters { Page = 1, Limit = 10 };
-
-        _ofqualRegisterServiceMock
-            .Setup(service => service.SearchPrivateQualificationsAsync(
-                It.IsAny<RegulatedQualificationsQueryParameters>()))
-            .ThrowsAsync(new SystemException("Unexpected error occurred"));
-
-        _ofqualRegisterServiceMock.Setup(service => service.ParseQueryParameters(
-                It.IsAny<NameValueCollection>()))
-            .Returns(parameters);
-
-        // Act
-        var result = await _function.Run(httpRequestData);
-
-        // Assert
-        var statusCodeResult = Assert.IsType<StatusCodeResult>(result);
-        Assert.Equal(500, statusCodeResult.StatusCode);
-        _loggerMock.Verify(logger => logger.Log(
-            LogLevel.Error,
-            It.IsAny<EventId>(),
-            It.Is<It.IsAnyType>((o, t) => o.ToString().Contains("Unexpected error occurred")),
-            It.IsAny<Exception>(),
-            (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()
-        ), Times.Once);
-    }
-
-    [Fact]
-    public async Task Run_ShouldReturnStatusCode_OnApiException()
-    {
-        // Arrange
-        var httpRequestData = new MockHttpRequestData(_functionContext);
+        var httpRequestMock = new Mock<HttpRequestData>(_functionContext);
         var requestMessage = new HttpRequestMessage(HttpMethod.Get, "https://test.com");
         var responseMessage = new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest)
         {
             Content = new StringContent("Bad Request")
         };
         var apiException = new ApiException(requestMessage, responseMessage, "Bad Request");
-        var parameters = new RegulatedQualificationsQueryParameters { Page = 1, Limit = 10 };
 
-        _ofqualRegisterServiceMock
-            .Setup(service => service.SearchPrivateQualificationsAsync(
-                It.IsAny<RegulatedQualificationsQueryParameters>()))
+        _ofqualImportServiceMock.Setup(s => s.StageQualificationsDataAsync(It.IsAny<HttpRequestData>()))
             .ThrowsAsync(apiException);
 
-        _ofqualRegisterServiceMock.Setup(service => service.ParseQueryParameters(
-                It.IsAny<NameValueCollection>()))
-            .Returns(parameters);
-
         // Act
-        var result = await _function.Run(httpRequestData);
+        var result = await _function.Run(httpRequestMock.Object);
 
         // Assert
         var statusCodeResult = Assert.IsType<StatusCodeResult>(result);
-        Assert.Equal(400, statusCodeResult.StatusCode);
-        _loggerMock.Verify(logger => logger.Log(
-            LogLevel.Error,
-            It.IsAny<EventId>(),
-            It.Is<It.IsAnyType>((o, t) => o.ToString().Contains("Unexpected api exception occurred:") &&
-                                            o.ToString().Contains("GET \"https://test.com/\"") &&
-                                            o.ToString().Contains("400 (Bad Request)")),
-            It.IsAny<Exception>(),
-            (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()
-        ), Times.Once);
+        Assert.Equal((int)HttpStatusCode.BadRequest, statusCodeResult.StatusCode);
     }
 
+    [Fact]
+    public async Task Run_Should_Return_InternalServerError_When_SystemException_Occurs()
+    {
+        // Arrange
+        var httpRequestMock = new Mock<HttpRequestData>(_functionContext);
 
+        _ofqualImportServiceMock.Setup(s => s.StageQualificationsDataAsync(It.IsAny<HttpRequestData>()))
+            .ThrowsAsync(new SystemException("System error"));
+
+        // Act
+        var result = await _function.Run(httpRequestMock.Object);
+
+        // Assert
+        var statusCodeResult = Assert.IsType<StatusCodeResult>(result);
+        Assert.Equal(500, statusCodeResult.StatusCode);
+    }
 }

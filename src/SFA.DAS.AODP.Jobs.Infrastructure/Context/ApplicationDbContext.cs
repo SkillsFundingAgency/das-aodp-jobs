@@ -11,12 +11,27 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options) { }
 
-        public virtual DbSet<FundedQualification> FundedQualifications { get; set; }
-        public virtual DbSet<FundedQualificationOffer> FundedQualificationOffers { get; set; }
+        public virtual DbSet<ActionType> ActionTypes { get; set; }
 
-        public virtual DbSet<ProcessedRegulatedQualification> ProcessedRegulatedQualifications { get; set; }
+        public virtual DbSet<LifecycleStage> LifecycleStages { get; set; }
 
-        public virtual DbSet<RegulatedQualificationsImport> RegulatedQualificationsImport { get; set; }
+        public virtual DbSet<Organisation> Organisation { get; set; }
+
+        public virtual DbSet<ProcessStatus> ProcessStatuses { get; set; }
+
+        public virtual DbSet<Qualification> Qualification { get; set; }
+
+        public virtual DbSet<Qualifications> FundedQualifications { get; set; }
+
+        public virtual DbSet<QualificationDiscussionHistory> QualificationDiscussionHistories { get; set; }
+
+        public virtual DbSet<QualificationOffer> QualificationOffers { get; set; }
+
+        public virtual DbSet<QualificationVersion> QualificationVersions { get; set; }
+
+        public virtual DbSet<StagedQualifications> StagedQualifications { get; set; }
+
+        public virtual DbSet<VersionFieldChange> VersionFieldChanges { get; set; }
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {

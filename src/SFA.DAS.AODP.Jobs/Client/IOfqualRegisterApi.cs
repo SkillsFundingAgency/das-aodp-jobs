@@ -2,18 +2,15 @@
 using SFA.DAS.AODP.Data;
 using SFA.DAS.AODP.Models.Qualification;
 
-namespace SFA.DAS.AODP.Functions.Interfaces
+namespace SFA.DAS.AODP.Jobs.Client
 {
     public interface IOfqualRegisterApi
     {
         [Header("Ocp-Apim-Subscription-Key")]
         string SubscriptionKey { get; set; }
 
-        //[Get("gov/Qualification/{qualificationsNumber}")]
-        //Task<RegulatedQualification> GetPrivateQualificationsAsync([Path] string qualificationNumber);
-
         [Get("gov/Qualifications")]
-        Task<RegulatedQualificationsPaginatedResult<QualificationDTO>> SearchPrivateQualificationsAsync(
+        Task<PaginatedResult<QualificationDTO>> SearchPrivateQualificationsAsync(
             [Query("title")] string title,
             [Query("page")] int pageNumber,
             [Query("limit")] int pageSize,

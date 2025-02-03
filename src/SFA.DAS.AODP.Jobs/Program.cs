@@ -4,11 +4,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using RestEase;
-using SFA.DAS.AODP.Functions.Interfaces;
 using SFA.DAS.AODP.Jobs.Services;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Jobs.Services.CSV;
+using SFA.DAS.AODP.Jobs.Client;
 
 
 var host = new HostBuilder()
@@ -26,6 +26,7 @@ var host = new HostBuilder()
         services.AddScoped<IApplicationDbContext, ApplicationDbContext>();
         services.AddScoped<IQualificationsService, QualificationsService>();
         services.AddTransient<IOfqualRegisterService, OfqualRegisterService>();
+        services.AddTransient<IOfqualImportService, OfqualImportService>();
         services.AddScoped<ICsvReaderService, CsvReaderService>();
         services.AddScoped<IOfqualRegisterApi>(provider =>
         {

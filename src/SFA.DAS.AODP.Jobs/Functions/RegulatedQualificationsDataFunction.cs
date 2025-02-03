@@ -1,11 +1,9 @@
 using System.Diagnostics;
-using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using RestEase;
-using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Jobs.Interfaces;
 
@@ -16,19 +14,20 @@ namespace SFA.DAS.AODP.Functions.Functions
         private readonly IApplicationDbContext _applicationDbContext;
         private readonly ILogger<RegulatedQualificationsDataFunction> _logger;
         private readonly IQualificationsService _qualificationsService;
-        private readonly IOfqualRegisterService _ofqualRegisterService;
+        private readonly IOfqualImportService _ofqualImportService;
+
 
         public RegulatedQualificationsDataFunction(
             ILogger<RegulatedQualificationsDataFunction> logger, 
             IApplicationDbContext appDbContext, 
             IQualificationsService qualificationsService,
-            IOfqualRegisterService ofqualRegisterService,
-            IMapper mapper)
+            IOfqualImportService ofqualImportService
+            )
         {
             _logger = logger;
             _applicationDbContext = appDbContext;
             _qualificationsService = qualificationsService;
-            _ofqualRegisterService = ofqualRegisterService;
+            _ofqualImportService = ofqualImportService;
         }
 
         [Function("RegulatedQualificationsDataFunction")]
@@ -38,57 +37,20 @@ namespace SFA.DAS.AODP.Functions.Functions
             _logger.LogInformation($"Processing {nameof(RegulatedQualificationsDataFunction)} request...");
 
             var stopWatch = new Stopwatch();
-            stopWatch.Start();
-
+            
             try
             {
-                int totalProcessed = 0;
-                int pageCount = 1;
+                stopWatch.Start();
 
-                var processedQualifications = await _qualificationsService.GetAllProcessedRegulatedQualificationsAsync();
+                // STAGE 1 - Import Ofqual Api data to staging area
+                await _ofqualImportService.StageQualificationsDataAsync(req);
 
-                _logger.LogInformation($"Clearing down RegulatedQualificationsImport table...");
-
-                await _applicationDbContext.DeleteTable<RegulatedQualificationsImport>();
-
-                var parameters = _ofqualRegisterService.ParseQueryParameters(req.Query);
-
-                while (true)
-                {
-                    parameters.Page = pageCount;
-                    var paginatedResult = await _ofqualRegisterService.SearchPrivateQualificationsAsync(parameters);
-
-                    if (paginatedResult.Results == null || !paginatedResult.Results.Any())
-                    {
-                        _logger.LogInformation("No more qualifications to process.");
-                        break;
-                    }
-
-                    _logger.LogInformation($"Processing page {pageCount}. Retrieved {paginatedResult.Results?.Count} qualifications.");
-
-                    var importedQualifications = _ofqualRegisterService.ExtractQualificationsList(paginatedResult);
-
-                    await _qualificationsService.CompareAndUpdateQualificationsAsync(importedQualifications, processedQualifications);
-
-                    await _qualificationsService.SaveRegulatedQualificationsAsync(importedQualifications);
-
-                    totalProcessed += importedQualifications.Count;
-
-                    if (paginatedResult.Results?.Count < parameters.Limit)
-                    {
-                        _logger.LogInformation("Reached the end of the results set.");
-                        break;
-                    }
-
-                    pageCount++;
-
-                    _logger.LogInformation($"{importedQualifications.Count()} records imported in {stopWatch.ElapsedMilliseconds / 1000}");
-                }
+                // STAGE 2 - Process staging data into AODP database
+                await _ofqualImportService.ProcessQualificationsDataAsync();
 
                 stopWatch.Stop();
 
-                _logger.LogInformation($"Total qualifications processed: {totalProcessed}");
-                return new OkObjectResult($"Successfully processed {totalProcessed} qualifications.");
+                return new OkObjectResult($"Successfully Imported Ofqual Data.");
             }
             catch (ApiException ex)
             {

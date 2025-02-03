@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.AODP.Data;
-using SFA.DAS.AODP.Functions.Interfaces;
+using SFA.DAS.AODP.Jobs.Client;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Models.Qualification;
 
@@ -21,9 +21,9 @@ namespace SFA.DAS.AODP.Jobs.Services
             _logger = logger;
             _apiClient = apiClient;
             _configuration = configuration;
-    }
+        }
 
-        public async Task<RegulatedQualificationsPaginatedResult<QualificationDTO>> SearchPrivateQualificationsAsync(RegulatedQualificationsQueryParameters parameters)
+        public async Task<PaginatedResult<QualificationDTO>> SearchPrivateQualificationsAsync(QualificationsQueryParameters parameters)
         {
             if (parameters == null)
             {
@@ -49,7 +49,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             );
         }
 
-        public List<QualificationDTO> ExtractQualificationsList(RegulatedQualificationsPaginatedResult<QualificationDTO> paginatedResult)
+        public List<QualificationDTO> ExtractQualificationsList(PaginatedResult<QualificationDTO> paginatedResult)
         {
             return paginatedResult.Results.Select(q => new QualificationDTO
             {
@@ -113,7 +113,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             }).ToList();
         }
 
-        public RegulatedQualificationsQueryParameters ParseQueryParameters(NameValueCollection query)
+        public QualificationsQueryParameters ParseQueryParameters(NameValueCollection query)
         {
             int defaultPage = int.Parse(_configuration["DefaultPage"]);
             int defaultLimit = int.Parse(_configuration["DefaultLimit"]);
@@ -123,7 +123,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                 _logger.LogWarning($"Url parameters are empty. Defaulting Page: {defaultPage} and Limit: {defaultLimit}");
             }
 
-            return new RegulatedQualificationsQueryParameters
+            return new QualificationsQueryParameters
             {
                 Page = ParseInt(query["page"], defaultPage),
                 Limit = ParseInt(query["limit"], defaultLimit),

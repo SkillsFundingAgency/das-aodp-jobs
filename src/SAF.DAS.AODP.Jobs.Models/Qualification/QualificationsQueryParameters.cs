@@ -1,6 +1,6 @@
 ﻿namespace SFA.DAS.AODP.Models.Qualification;
 
-public class RegulatedQualificationsQueryParameters
+public class QualificationsQueryParameters
 {
     public int Page { get; set; }
     public int Limit { get; set; }
