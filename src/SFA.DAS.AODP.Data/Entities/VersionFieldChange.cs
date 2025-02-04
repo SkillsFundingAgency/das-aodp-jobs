@@ -4,7 +4,7 @@ public partial class VersionFieldChange
 {
     public int Id { get; set; }
 
-    public int? QanId { get; set; }
+    public int? QanId { get; set; } // not needed for now
 
     public int? QualificationVersionNumber { get; set; }
 
