@@ -29,7 +29,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             {
                 _logger.LogInformation("Saving regulated qualification records...");
 
-                var qualificationsJsonEntities = _mapper.Map<List<StagedQualifications>>(qualificationsJson);
+                var qualificationsJsonEntities = _mapper.Map<List<QualificationImportStaging>>(qualificationsJson);
 
                 await _applicationDbContext.BulkInsertAsync(qualificationsJsonEntities);
                 
@@ -51,7 +51,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             {
                 _logger.LogInformation($"Retrieving next batch of {batchSize} staged qualifications from record {processedCount}...");
 
-                var stagedQualifications = await _applicationDbContext.StagedQualifications
+                var stagedQualifications = await _applicationDbContext.QualificationImportStaging
                     .OrderBy(q => q.Id)
                     .Skip(processedCount)
                     .Take(batchSize)

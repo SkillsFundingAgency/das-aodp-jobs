@@ -1,14 +1,20 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿namespace SFA.DAS.AODP.Data.Entities;
 
-namespace SFA.DAS.AODP.Data.Entities;
-
-public partial class Organisation
+public partial class AwardingOrganisation
 {
     public int Id { get; set; }
+    
+    public int? Ukpm { get; set; }
 
     public string? RecognitionNumber { get; set; }
 
-    public string? Name { get; set; }
+    public string? NameLegal { get; set; }
+
+    public string? NameOfqual { get; set; }
+
+    public string? NameGovUk { get; set; }
+
+    public string? Name_Dsi { get; set; }
 
     public string? Acronym { get; set; }
 

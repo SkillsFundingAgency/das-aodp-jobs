@@ -7,7 +7,7 @@ namespace SFA.DAS.AODP.Infrastructure.Context
     {
         DbSet<ActionType> ActionTypes { get; set; }
         DbSet<LifecycleStage> LifecycleStages { get; set; }
-        DbSet<Organisation> Organisation { get; set; }
+        DbSet<AwardingOrganisation> AwardingOrganisation { get; set; }
         DbSet<ProcessStatus> ProcessStatus { get; set; }
         DbSet<Qualification> Qualification { get; set; }
         DbSet<Qualifications> FundedQualifications { get; set; }
@@ -15,7 +15,7 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         DbSet<QualificationOffer> QualificationOffers { get; set; }
         DbSet<QualificationVersions> QualificationVersions { get; set; }
         DbSet<VersionFieldChange> VersionFieldChanges { get; set; }
-        DbSet<StagedQualifications> StagedQualifications { get; set; }
+        DbSet<QualificationImportStaging> QualificationImportStaging { get; set; }
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
         Task BulkInsertAsync<T>(IEnumerable<T> entities, CancellationToken cancellationToken = default) where T : class;

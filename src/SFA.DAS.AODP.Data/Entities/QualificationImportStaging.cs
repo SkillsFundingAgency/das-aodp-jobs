@@ -1,6 +1,6 @@
 ﻿namespace SFA.DAS.AODP.Data.Entities;
 
-public partial class StagedQualifications
+public partial class QualificationImportStaging
 {
     public int Id { get; set; }
 

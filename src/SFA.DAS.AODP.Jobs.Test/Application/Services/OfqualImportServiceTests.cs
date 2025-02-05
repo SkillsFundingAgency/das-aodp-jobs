@@ -54,11 +54,11 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         {
             var requestMock = new Mock<HttpRequestData>(_functionContext);
 
-            _dbContextMock.Setup(db => db.TruncateTable<StagedQualifications>()).Returns(Task.CompletedTask);
+            _dbContextMock.Setup(db => db.TruncateTable<QualificationImportStaging>()).Returns(Task.CompletedTask);
 
             await _service.StageQualificationsDataAsync(requestMock.Object);
 
-            _dbContextMock.Verify(db => db.TruncateTable<StagedQualifications>(), Times.Once);
+            _dbContextMock.Verify(db => db.TruncateTable<QualificationImportStaging>(), Times.Once);
         }
 
         [Fact]

@@ -19,7 +19,7 @@ public partial class QualificationVersions
 
     public string? OutcomeJustificationNotes { get; set; }
 
-    public int OrganisationId { get; set; }
+    public int AwardingOrganisationId { get; set; }
 
     public string Status { get; set; } = null!;
 
@@ -119,7 +119,7 @@ public partial class QualificationVersions
 
     public virtual LifecycleStage LifecycleStage { get; set; } = null!;
 
-    public virtual Organisation Organisation { get; set; } = null!;
+    public virtual AwardingOrganisation Organisation { get; set; } = null!;
 
     public virtual ProcessStatus ProcessStatus { get; set; } = null!;
 

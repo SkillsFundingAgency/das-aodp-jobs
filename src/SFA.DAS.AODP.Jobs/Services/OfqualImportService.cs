@@ -9,7 +9,6 @@ using SFA.DAS.AODP.Infrastructure.Context;
 using Newtonsoft.Json;
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Immutable;
 
 namespace SFA.DAS.AODP.Jobs.Services
 {
@@ -43,7 +42,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             {
                 _logger.LogInformation($"Clearing down StageQualifications table...");
 
-                await _applicationDbContext.TruncateTable<StagedQualifications>();
+                await _applicationDbContext.TruncateTable<QualificationImportStaging>();
                 var parameters = _ofqualRegisterService.ParseQueryParameters(request.Query);
 
                 _logger.LogInformation($"Ofqual data import started...");
@@ -68,19 +67,19 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                     await _qualificationsService.SaveQualificationsStagingAsync(importedQualificationsJson);
 
-                    totalProcessed += paginatedResult.Results.Count;
+                totalProcessed += paginatedResult.Results.Count;
 
-                    if (paginatedResult.Results?.Count < parameters.Limit)
-                    {
-                        _logger.LogInformation("Reached the end of the results set.");
-                        break;
-                    }
-
-                    _loopCycleStopWatch.Stop();
-                    _logger.LogInformation($"Page {pageCount} import complete. {paginatedResult.Results.Count()} records imported in {_loopCycleStopWatch.Elapsed.TotalSeconds:F2} seconds");
-
-                    pageCount++;
+                if (paginatedResult.Results?.Count < parameters.Limit)
+                {
+                    _logger.LogInformation("Reached the end of the results set.");
+                    break;
                 }
+
+                _loopCycleStopWatch.Stop();
+                _logger.LogInformation($"Page {pageCount} import complete. {paginatedResult.Results.Count()} records imported in {_loopCycleStopWatch.Elapsed.TotalSeconds:F2} seconds");
+
+                pageCount++;
+            }
 
                 _processStopWatch.Stop();
                 _logger.LogInformation($"Successfully imported {totalProcessed} qualifications in {_processStopWatch.Elapsed.TotalSeconds:F2} seconds");
@@ -106,7 +105,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             try
             {
                 // Pre-fetch existing organisations and qualifications
-                var organisationIds = await _applicationDbContext.Organisation
+                var organisationIds = await _applicationDbContext.AwardingOrganisation
                     .AsNoTracking()
                     .Select(o => o.Id)
                     .ToListAsync();
@@ -122,7 +121,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                     if (batch.Count == 0)
                         break;
 
-                    var existingOrganisations = await _applicationDbContext.Organisation
+                    var existingOrganisations = await _applicationDbContext.AwardingOrganisation
                         .Where(o => organisationIds.Contains(o.Id))
                         .ToDictionaryAsync(o => o.Id);
 
@@ -130,7 +129,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                         .Where(q => qualificationNumbers.Contains(q.Qan))
                         .ToDictionaryAsync(q => q.Qan);
 
-                    var newOrganisations = new List<Organisation>();
+                    var newOrganisations = new List<AwardingOrganisation>();
                     var newQualifications = new List<Qualification>();
                     var newQualificationVersions = new List<QualificationVersions>();
 
@@ -139,10 +138,10 @@ namespace SFA.DAS.AODP.Jobs.Services
                         // Fetch or create Organisation
                         if (!existingOrganisations.TryGetValue(qualificationData.OrganisationId ?? 0, out var organisation))
                         {
-                            organisation = new Organisation
+                            organisation = new AwardingOrganisation
                             {
                                 RecognitionNumber = qualificationData.OrganisationRecognitionNumber,
-                                Name = qualificationData.OrganisationName,
+                                NameOfqual = qualificationData.OrganisationName,
                                 Acronym = qualificationData.OrganisationAcronym
                             };
                             newOrganisations.Add(organisation);
@@ -183,7 +182,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 ProcessStatusId = processStatus.Id,
                                 AdditionalKeyChangesReceivedFlag = 0,
                                 LifecycleStageId = lifecycleStage.Id,
-                                OrganisationId = organisation.Id,
+                                AwardingOrganisationId = organisation.Id,
                                 Status = qualificationData.Status,
                                 Type = qualificationData.Type,
                                 Ssa = qualificationData.Ssa,
@@ -246,7 +245,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                     }
 
                     // Bulk insert all new entities
-                    if (newOrganisations.Any()) await _applicationDbContext.Organisation.AddRangeAsync(newOrganisations);
+                    if (newOrganisations.Any()) await _applicationDbContext.AwardingOrganisation.AddRangeAsync(newOrganisations);
                     if (newQualifications.Any()) await _applicationDbContext.Qualification.AddRangeAsync(newQualifications);
                     if (newQualificationVersions.Any()) await _applicationDbContext.QualificationVersions.AddRangeAsync(newQualificationVersions);
 

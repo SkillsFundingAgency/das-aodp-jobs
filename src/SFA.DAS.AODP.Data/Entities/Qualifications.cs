@@ -8,7 +8,7 @@ public partial class Qualifications
 
     public int? QualificationId { get; set; }
 
-    public int? OrganisationId { get; set; }
+    public int? AwardingOrganisationId { get; set; }
 
     public string? Level { get; set; }
 
@@ -24,7 +24,7 @@ public partial class Qualifications
 
     public DateTime ImportDate { get; set; }
 
-    public virtual Organisation? Organisation { get; set; }
+    public virtual AwardingOrganisation? Organisation { get; set; }
 
     public virtual Qualification? Qualification { get; set; }
 }
