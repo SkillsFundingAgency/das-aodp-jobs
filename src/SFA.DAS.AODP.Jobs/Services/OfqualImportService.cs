@@ -8,6 +8,8 @@ using SFA.DAS.AODP.Jobs.Client;
 using SFA.DAS.AODP.Infrastructure.Context;
 using Newtonsoft.Json;
 using System.Diagnostics;
+using Microsoft.EntityFrameworkCore;
+using System.Collections.Immutable;
 
 namespace SFA.DAS.AODP.Jobs.Services
 {
@@ -49,6 +51,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                 while (true && pageCount < 1000000)
                 {
                     parameters.Page = pageCount;
+
                     var paginatedResult = await _ofqualRegisterService.SearchPrivateQualificationsAsync(parameters);
 
                     if (paginatedResult.Results == null || !paginatedResult.Results.Any())
@@ -102,24 +105,39 @@ namespace SFA.DAS.AODP.Jobs.Services
 
             try
             {
-                await PreProcessTableClense();
+                // Pre-fetch existing organisations and qualifications
+                var organisationIds = await _applicationDbContext.Organisation
+                    .AsNoTracking()
+                    .Select(o => o.Id)
+                    .ToListAsync();
+
+                var qualificationNumbers = await _applicationDbContext.Qualification
+                    .AsNoTracking()
+                    .Select(o => o.Qan)
+                    .ToListAsync();
 
                 while (true && processedCount < 1000000)
                 {
                     var batch = await _qualificationsService.GetStagedQualificationsBatchAsync(batchSize, processedCount);
-
                     if (batch.Count == 0)
-                    {
                         break;
-                    }
+
+                    var existingOrganisations = await _applicationDbContext.Organisation
+                        .Where(o => organisationIds.Contains(o.Id))
+                        .ToDictionaryAsync(o => o.Id);
+
+                    var existingQualifications = await _applicationDbContext.Qualification
+                        .Where(q => qualificationNumbers.Contains(q.Qan))
+                        .ToDictionaryAsync(q => q.Qan);
+
+                    var newOrganisations = new List<Organisation>();
+                    var newQualifications = new List<Qualification>();
+                    var newQualificationVersions = new List<QualificationVersions>();
 
                     foreach (var qualificationData in batch)
                     {
-                        // Check for new Organisations
-                        var organisation = _applicationDbContext.Organisation.Local
-                            .FirstOrDefault(o => o.Name == qualificationData.OrganisationName);
-
-                        if (organisation == null)
+                        // Fetch or create Organisation
+                        if (!existingOrganisations.TryGetValue(qualificationData.OrganisationId ?? 0, out var organisation))
                         {
                             organisation = new Organisation
                             {
@@ -127,46 +145,124 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 Name = qualificationData.OrganisationName,
                                 Acronym = qualificationData.OrganisationAcronym
                             };
-                            await _applicationDbContext.Organisation.AddAsync(organisation);
+                            newOrganisations.Add(organisation);
+                            existingOrganisations[qualificationData.OrganisationId ?? 0]  = organisation;
                         }
 
-                        // Check for new Qualifications
-                        var qualification = _applicationDbContext.Qualification.Local
-                            .FirstOrDefault(o => o.Qan == qualificationData.QualificationNumber);
-
-                        if (qualification == null)
+                        // Fetch or create Qualification
+                        if (!existingQualifications.TryGetValue(qualificationData.QualificationNumberNoObliques, out var qualification))
                         {
                             qualification = new Qualification
                             {
                                 Qan = qualificationData.QualificationNumberNoObliques,
                                 QualificationName = qualificationData.Title
                             };
-                            await _applicationDbContext.Qualification.AddAsync(qualification);
+                            newQualifications.Add(qualification);
+                            existingQualifications[qualificationData.QualificationNumberNoObliques] = qualification;
+                        }
+
+                        // Check Qualification Version
+                        var qualificationVersionExists = await _applicationDbContext.QualificationVersions
+                            .AnyAsync(qv => qv.QualificationId == qualificationData.Id);
+
+                        if (!qualificationVersionExists)
+                        {
+                            var versionFieldChanges = new VersionFieldChange { QanId = 0, QualificationVersionNumber = 1 };
+                            var processStatus = new ProcessStatus();
+                            var lifecycleStage = new LifecycleStage();
+
+                            await _applicationDbContext.VersionFieldChanges.AddAsync(versionFieldChanges);
+                            await _applicationDbContext.ProcessStatus.AddAsync(processStatus);
+                            await _applicationDbContext.LifecycleStages.AddAsync(lifecycleStage);
+                            await _applicationDbContext.SaveChangesAsync(); // Save these first to get their IDs
+
+                            var qualificationVersion = new QualificationVersions
+                            {
+                                QualificationId = qualification.Id,
+                                VersionFieldChangesId = versionFieldChanges.Id,
+                                ProcessStatusId = processStatus.Id,
+                                AdditionalKeyChangesReceivedFlag = 0,
+                                LifecycleStageId = lifecycleStage.Id,
+                                OrganisationId = organisation.Id,
+                                Status = qualificationData.Status,
+                                Type = qualificationData.Type,
+                                Ssa = qualificationData.Ssa,
+                                Level = qualificationData.Level,
+                                SubLevel = qualificationData.SubLevel,
+                                EqfLevel = qualificationData.EqfLevel,
+                                GradingType = qualificationData.GradingType,
+                                GradingScale = qualificationData.GradingScale,
+                                TotalCredits = qualificationData.TotalCredits,
+                                Tqt = qualificationData.Tqt,
+                                Glh = qualificationData.Glh,
+                                MinimumGlh = qualificationData.MinimumGlh,
+                                MaximumGlh = qualificationData.MaximumGlh,
+                                RegulationStartDate = qualificationData.RegulationStartDate,
+                                OperationalStartDate = qualificationData.OperationalStartDate,
+                                OperationalEndDate = qualificationData.OperationalEndDate,
+                                CertificationEndDate = qualificationData.CertificationEndDate,
+                                ReviewDate = qualificationData.ReviewDate,
+                                OfferedInEngland = qualificationData.OfferedInEngland,
+                                OfferedInNi = qualificationData.OfferedInNorthernIreland,
+                                OfferedInternationally = qualificationData.OfferedInternationally,
+                                Specialism = qualificationData.Specialism,
+                                Pathways = qualificationData.Pathways,
+                                AssessmentMethods = qualificationData.AssessmentMethods != null
+                                    ? string.Join(", ", qualificationData.AssessmentMethods)
+                                    : string.Empty,
+                                ApprovedForDelFundedProgramme = qualificationData.ApprovedForDelfundedProgramme,
+                                LinkToSpecification = qualificationData.LinkToSpecification,
+                                ApprenticeshipStandardReferenceNumber = qualificationData.ApprenticeshipStandardReferenceNumber,
+                                ApprenticeshipStandardTitle = qualificationData.ApprenticeshipStandardTitle,
+                                RegulatedByNorthernIreland = qualificationData.RegulatedByNorthernIreland,
+                                NiDiscountCode = qualificationData.NiDiscountCode,
+                                GceSizeEquivelence = qualificationData.GceSizeEquivalence,
+                                GcseSizeEquivelence = qualificationData.GcseSizeEquivalence,
+                                EntitlementFrameworkDesign = qualificationData.EntitlementFrameworkDesignation,
+                                LastUpdatedDate = qualificationData.LastUpdatedDate,
+                                UiLastUpdatedDate = qualificationData.UiLastUpdatedDate,
+                                InsertedDate = qualificationData.InsertedDate,
+                                Version = 1,
+                                AppearsOnPublicRegister = qualificationData.AppearsOnPublicRegister,
+                                LevelId = qualificationData.LevelId,
+                                TypeId = qualificationData.TypeId,
+                                SsaId = qualificationData.SsaId,
+                                GradingTypeId = qualificationData.GradingTypeId,
+                                GradingScaleId = qualificationData.GradingScaleId,
+                                PreSixteen = qualificationData.PreSixteen,
+                                SixteenToEighteen = qualificationData.SixteenToEighteen,
+                                EighteenPlus = qualificationData.EighteenPlus,
+                                NineteenPlus = qualificationData.NineteenPlus,
+                                ImportStatus = qualificationData.ImportStatus,
+                                LifecycleStage = lifecycleStage,
+                                Organisation = organisation,
+                                ProcessStatus = processStatus,
+                                Qualification = qualification,
+                                VersionFieldChanges = versionFieldChanges
+                            };
+
+                            newQualificationVersions.Add(qualificationVersion);
                         }
                     }
 
-                    processedCount += batch.Count;
+                    // Bulk insert all new entities
+                    if (newOrganisations.Any()) await _applicationDbContext.Organisation.AddRangeAsync(newOrganisations);
+                    if (newQualifications.Any()) await _applicationDbContext.Qualification.AddRangeAsync(newQualifications);
+                    if (newQualificationVersions.Any()) await _applicationDbContext.QualificationVersions.AddRangeAsync(newQualificationVersions);
 
                     await _applicationDbContext.SaveChangesAsync();
+
+                    processedCount += batch.Count;
                 }
 
                 _processStopWatch.Stop();
-                _logger.LogInformation($"Processed {processedCount} records from staging area completed in {_processStopWatch.Elapsed.TotalSeconds:F2} seconds");
+                _logger.LogInformation($"Processed {processedCount} records in {_processStopWatch.Elapsed.TotalSeconds:F2} seconds");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing qualifications.");
                 throw;
             }
-        }
-
-        private async Task PreProcessTableClense()
-        {
-            _logger.LogInformation($"Clearing down Organisation table...");
-            await _applicationDbContext.TruncateTable<Organisation>();
-
-            _logger.LogInformation($"Clearing down Qualification table...");
-            await _applicationDbContext.TruncateTable<Qualification>();
         }
 
     }

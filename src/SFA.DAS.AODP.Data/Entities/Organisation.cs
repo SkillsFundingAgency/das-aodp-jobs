@@ -1,4 +1,6 @@
-﻿namespace SFA.DAS.AODP.Data.Entities;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace SFA.DAS.AODP.Data.Entities;
 
 public partial class Organisation
 {
@@ -12,5 +14,5 @@ public partial class Organisation
 
     public virtual ICollection<Qualifications> Qualifications { get; set; } = new List<Qualifications>();
 
-    public virtual ICollection<QualificationVersion> QualificationVersions { get; set; } = new List<QualificationVersion>();
+    public virtual ICollection<QualificationVersions> QualificationVersions { get; set; } = new List<QualificationVersions>();
 }

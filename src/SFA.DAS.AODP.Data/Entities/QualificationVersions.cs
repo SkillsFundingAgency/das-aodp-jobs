@@ -1,6 +1,9 @@
-﻿namespace SFA.DAS.AODP.Data.Entities;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 
-public partial class QualificationVersion
+namespace SFA.DAS.AODP.Data.Entities;
+
+[Table("QualificationVersions", Schema = "regulated")]
+public partial class QualificationVersions
 {
     public int Id { get; set; }
 

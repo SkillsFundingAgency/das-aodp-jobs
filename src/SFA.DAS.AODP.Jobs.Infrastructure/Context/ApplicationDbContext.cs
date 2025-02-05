@@ -17,7 +17,7 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public virtual DbSet<Organisation> Organisation { get; set; }
 
-        public virtual DbSet<ProcessStatus> ProcessStatuses { get; set; }
+        public virtual DbSet<ProcessStatus> ProcessStatus { get; set; }
 
         public virtual DbSet<Qualification> Qualification { get; set; }
 
@@ -27,7 +27,7 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public virtual DbSet<QualificationOffer> QualificationOffers { get; set; }
 
-        public virtual DbSet<QualificationVersion> QualificationVersions { get; set; }
+        public virtual DbSet<QualificationVersions> QualificationVersions { get; set; }
 
         public virtual DbSet<StagedQualifications> StagedQualifications { get; set; }
 
@@ -46,7 +46,13 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public async Task TruncateTable<T>() where T:class
         {
-            await this.Set<T>().ExecuteDeleteAsync();
+            //await this.Set<T>().ExecuteDeleteAsync();
+
+            var tableName = this.Model.FindEntityType(typeof(T))?.GetTableName();
+            if (tableName != null)
+            {
+                await this.Database.ExecuteSqlRawAsync($"TRUNCATE TABLE {tableName}");
+            }
         }
     }
 }

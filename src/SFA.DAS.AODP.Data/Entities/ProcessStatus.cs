@@ -1,5 +1,8 @@
-﻿namespace SFA.DAS.AODP.Data.Entities;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 
+namespace SFA.DAS.AODP.Data.Entities;
+
+[Table("ProcessStatus", Schema = "regulated")]
 public partial class ProcessStatus
 {
     public int Id { get; set; }
@@ -8,6 +11,6 @@ public partial class ProcessStatus
 
     public int? IsOutcomeDecision { get; set; }
 
-    public virtual ICollection<QualificationVersion> QualificationVersions { get; set; } = new List<QualificationVersion>();
+    public virtual ICollection<QualificationVersions> QualificationVersions { get; set; } = new List<QualificationVersions>();
 }
 

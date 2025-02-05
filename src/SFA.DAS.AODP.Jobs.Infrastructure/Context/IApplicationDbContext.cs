@@ -8,12 +8,12 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         DbSet<ActionType> ActionTypes { get; set; }
         DbSet<LifecycleStage> LifecycleStages { get; set; }
         DbSet<Organisation> Organisation { get; set; }
-        DbSet<ProcessStatus> ProcessStatuses { get; set; }
+        DbSet<ProcessStatus> ProcessStatus { get; set; }
         DbSet<Qualification> Qualification { get; set; }
         DbSet<Qualifications> FundedQualifications { get; set; }
         DbSet<QualificationDiscussionHistory> QualificationDiscussionHistories { get; set; }
         DbSet<QualificationOffer> QualificationOffers { get; set; }
-        DbSet<QualificationVersion> QualificationVersions { get; set; }
+        DbSet<QualificationVersions> QualificationVersions { get; set; }
         DbSet<VersionFieldChange> VersionFieldChanges { get; set; }
         DbSet<StagedQualifications> StagedQualifications { get; set; }
 
