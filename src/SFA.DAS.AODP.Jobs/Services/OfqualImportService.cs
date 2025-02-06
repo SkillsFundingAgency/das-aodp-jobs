@@ -21,7 +21,7 @@ namespace SFA.DAS.AODP.Jobs.Services
         private Stopwatch _loopCycleStopWatch = new Stopwatch();
         private Stopwatch _processStopWatch = new Stopwatch();
 
-        public OfqualImportService(ILogger<OfqualImportService> logger, IConfiguration configuration, IApplicationDbContext applicationDbContext, 
+        public OfqualImportService(ILogger<OfqualImportService> logger, IConfiguration configuration, IApplicationDbContext applicationDbContext,
             IOfqualRegisterApi apiClient, IOfqualRegisterService ofqualRegisterService, IQualificationsService qualificationsService)
         {
             _logger = logger;
@@ -30,7 +30,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             _qualificationsService = qualificationsService;
         }
 
-        public async Task StageQualificationsDataAsync(HttpRequestData request) 
+        public async Task StageQualificationsDataAsync(HttpRequestData request)
         {
             _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(StageQualificationsDataAsync)}] -> Import Ofqual Qualifications to staging area...");
 
@@ -67,19 +67,19 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                     await _qualificationsService.SaveQualificationsStagingAsync(importedQualificationsJson);
 
-                totalProcessed += paginatedResult.Results.Count;
+                    totalProcessed += paginatedResult.Results.Count;
 
-                if (paginatedResult.Results?.Count < parameters.Limit)
-                {
-                    _logger.LogInformation("Reached the end of the results set.");
-                    break;
+                    if (paginatedResult.Results?.Count < parameters.Limit)
+                    {
+                        _logger.LogInformation("Reached the end of the results set.");
+                        break;
+                    }
+
+                    _loopCycleStopWatch.Stop();
+                    _logger.LogInformation($"Page {pageCount} import complete. {paginatedResult.Results.Count()} records imported in {_loopCycleStopWatch.Elapsed.TotalSeconds:F2} seconds");
+
+                    pageCount++;
                 }
-
-                _loopCycleStopWatch.Stop();
-                _logger.LogInformation($"Page {pageCount} import complete. {paginatedResult.Results.Count()} records imported in {_loopCycleStopWatch.Elapsed.TotalSeconds:F2} seconds");
-
-                pageCount++;
-            }
 
                 _processStopWatch.Stop();
                 _logger.LogInformation($"Successfully imported {totalProcessed} qualifications in {_processStopWatch.Elapsed.TotalSeconds:F2} seconds");
@@ -136,16 +136,18 @@ namespace SFA.DAS.AODP.Jobs.Services
                     foreach (var qualificationData in batch)
                     {
                         // Fetch or create Organisation
-                        if (!existingOrganisations.TryGetValue(qualificationData.OrganisationId ?? 0, out var organisation))
+                        if (!qualificationData.AwardingOrganisationId.HasValue ||
+                            !existingOrganisations.TryGetValue(qualificationData.AwardingOrganisationId.Value, out var organisation))
                         {
                             organisation = new AwardingOrganisation
                             {
+                                Id = Guid.NewGuid(),
                                 RecognitionNumber = qualificationData.OrganisationRecognitionNumber,
                                 NameOfqual = qualificationData.OrganisationName,
                                 Acronym = qualificationData.OrganisationAcronym
                             };
                             newOrganisations.Add(organisation);
-                            existingOrganisations[qualificationData.OrganisationId ?? 0]  = organisation;
+                            existingOrganisations[qualificationData.AwardingOrganisationId.Value] = organisation;
                         }
 
                         // Fetch or create Qualification
@@ -153,6 +155,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                         {
                             qualification = new Qualification
                             {
+                                Id = Guid.NewGuid(),
                                 Qan = qualificationData.QualificationNumberNoObliques,
                                 QualificationName = qualificationData.Title
                             };
@@ -166,9 +169,9 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                         if (!qualificationVersionExists)
                         {
-                            var versionFieldChanges = new VersionFieldChange { QanId = 0, QualificationVersionNumber = 1 };
-                            var processStatus = new ProcessStatus();
-                            var lifecycleStage = new LifecycleStage();
+                            var versionFieldChanges = new VersionFieldChange { Id = Guid.NewGuid(), QualificationVersionNumber = 1 };
+                            var processStatus = new ProcessStatus { Id = Guid.NewGuid() };
+                            var lifecycleStage = new LifecycleStage { Id = Guid.NewGuid() };
 
                             await _applicationDbContext.VersionFieldChanges.AddAsync(versionFieldChanges);
                             await _applicationDbContext.ProcessStatus.AddAsync(processStatus);

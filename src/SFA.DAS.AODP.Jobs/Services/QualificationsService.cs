@@ -29,7 +29,13 @@ namespace SFA.DAS.AODP.Jobs.Services
             {
                 _logger.LogInformation("Saving regulated qualification records...");
 
-                var qualificationsJsonEntities = _mapper.Map<List<QualificationImportStaging>>(qualificationsJson);
+                var qualificationsJsonEntities = qualificationsJson
+                    .Select(json => new QualificationImportStaging
+                    {
+                        Id = Guid.NewGuid(),
+                        JsonData = json,
+                        CreatedDate = DateTime.Now
+                    }).ToList();
 
                 await _applicationDbContext.BulkInsertAsync(qualificationsJsonEntities);
                 
