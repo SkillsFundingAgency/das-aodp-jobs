@@ -107,7 +107,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                 // Pre-fetch existing organisations and qualifications
                 var organisationIds = await _applicationDbContext.AwardingOrganisation
                     .AsNoTracking()
-                    .Select(o => o.Id)
+                    .Select(o => o.Ukprn)
                     .ToListAsync();
 
                 var qualificationNumbers = await _applicationDbContext.Qualification
@@ -122,8 +122,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                         break;
 
                     var existingOrganisations = await _applicationDbContext.AwardingOrganisation
-                        .Where(o => organisationIds.Contains(o.Id))
-                        .ToDictionaryAsync(o => o.Id);
+                        .Where(o => organisationIds.Contains(o.Ukprn))
+                        .ToDictionaryAsync(o => o.Ukprn);
 
                     var existingQualifications = await _applicationDbContext.Qualification
                         .Where(q => qualificationNumbers.Contains(q.Qan))
@@ -136,18 +136,18 @@ namespace SFA.DAS.AODP.Jobs.Services
                     foreach (var qualificationData in batch)
                     {
                         // Fetch or create Organisation
-                        if (qualificationData.AwardingOrganisationId.HasValue &&
-                            existingOrganisations.TryGetValue(qualificationData.AwardingOrganisationId.Value, out var organisation))
+                        if (!existingOrganisations.TryGetValue(qualificationData.OrganisationId ?? 0, out var organisation))
                         {
                             organisation = new AwardingOrganisation
                             {
                                 Id = Guid.NewGuid(),
+                                Ukprn = qualificationData.OrganisationId,
                                 RecognitionNumber = qualificationData.OrganisationRecognitionNumber,
                                 NameOfqual = qualificationData.OrganisationName,
                                 Acronym = qualificationData.OrganisationAcronym
                             };
                             newOrganisations.Add(organisation);
-                            existingOrganisations[qualificationData.AwardingOrganisationId.Value] = organisation;
+                            existingOrganisations[qualificationData.OrganisationId] = organisation;
                         }
 
                         // Fetch or create Qualification
