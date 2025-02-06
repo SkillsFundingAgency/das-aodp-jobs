@@ -15,9 +15,9 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public virtual DbSet<LifecycleStage> LifecycleStages { get; set; }
 
-        public virtual DbSet<Organisation> Organisation { get; set; }
+        public virtual DbSet<AwardingOrganisation> AwardingOrganisation { get; set; }
 
-        public virtual DbSet<ProcessStatus> ProcessStatuses { get; set; }
+        public virtual DbSet<ProcessStatus> ProcessStatus { get; set; }
 
         public virtual DbSet<Qualification> Qualification { get; set; }
 
@@ -27,9 +27,9 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public virtual DbSet<QualificationOffer> QualificationOffers { get; set; }
 
-        public virtual DbSet<QualificationVersion> QualificationVersions { get; set; }
+        public virtual DbSet<QualificationVersions> QualificationVersions { get; set; }
 
-        public virtual DbSet<StagedQualifications> StagedQualifications { get; set; }
+        public virtual DbSet<QualificationImportStaging> QualificationImportStaging { get; set; }
 
         public virtual DbSet<VersionFieldChange> VersionFieldChanges { get; set; }
 
@@ -40,13 +40,19 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public async Task BulkInsertAsync<T>(IEnumerable<T> entities, CancellationToken cancellationToken = default) where T : class
         {
-            if(entities.Any())
-            await this.BulkInsertAsync(entities.ToList(), options => { options.BatchSize = 1000; options.IncludeGraph = true; }, cancellationToken: cancellationToken);
+            if (entities.Any())
+                await this.BulkInsertAsync(entities.ToList(), options => { options.BatchSize = 1000; options.IncludeGraph = true; }, cancellationToken: cancellationToken);
         }
 
-        public async Task DeleteTable<T>() where T:class
+        public async Task TruncateTable<T>() where T : class
         {
-            await this.Set<T>().ExecuteDeleteAsync();
+            //await this.Set<T>().ExecuteDeleteAsync();
+
+            var tableName = this.Model.FindEntityType(typeof(T))?.GetTableName();
+            if (tableName != null)
+            {
+                await this.Database.ExecuteSqlRawAsync($"TRUNCATE TABLE {tableName}");
+            }
         }
     }
 }

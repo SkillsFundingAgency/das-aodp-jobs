@@ -99,7 +99,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                 InsertedDate = q.InsertedDate,
                 Version = q.Version,
                 AppearsOnPublicRegister = q.AppearsOnPublicRegister,
-                OrganisationId = q.OrganisationId,
+                AwardingOrganisationId = q.AwardingOrganisationId,
                 LevelId = q.LevelId,
                 TypeId = q.TypeId,
                 SsaId = q.SsaId,

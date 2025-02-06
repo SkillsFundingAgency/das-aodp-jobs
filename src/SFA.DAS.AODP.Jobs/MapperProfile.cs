@@ -8,8 +8,5 @@ public class MapperProfile : Profile
     {
         CreateMap<FundedQualification, FundedQualificationDTO>().ReverseMap();
         CreateMap<FundedQualificationOffer, FundedQualificationOfferDTO>().ReverseMap();
-        CreateMap<string, StagedQualifications>()
-            .ForMember(dest => dest.Id, opt => opt.Ignore())
-            .ForMember(dest => dest.JsonData, opt => opt.MapFrom(src => src));
     }
 }
