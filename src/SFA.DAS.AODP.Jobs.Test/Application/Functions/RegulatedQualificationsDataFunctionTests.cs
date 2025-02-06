@@ -45,8 +45,6 @@ public class RegulatedQualificationsDataFunctionTests
 
         _ofqualImportServiceMock.Setup(s => s.StageQualificationsDataAsync(It.IsAny<HttpRequestData>()))
             .Returns(Task.CompletedTask);
-        _ofqualImportServiceMock.Setup(s => s.ProcessQualificationsDataAsync())
-            .Returns(Task.CompletedTask);
 
         // Act
         var result = await _function.Run(httpRequestMock.Object);
