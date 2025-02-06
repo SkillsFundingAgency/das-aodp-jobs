@@ -1,6 +1,9 @@
-﻿namespace SFA.DAS.AODP.Data.Entities;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 
-public partial class QualificationVersion
+namespace SFA.DAS.AODP.Data.Entities;
+
+[Table("QualificationVersions", Schema = "regulated")]
+public partial class QualificationVersions
 {
     public int Id { get; set; }
 
@@ -16,7 +19,7 @@ public partial class QualificationVersion
 
     public string? OutcomeJustificationNotes { get; set; }
 
-    public int OrganisationId { get; set; }
+    public int AwardingOrganisationId { get; set; }
 
     public string Status { get; set; } = null!;
 
@@ -116,7 +119,7 @@ public partial class QualificationVersion
 
     public virtual LifecycleStage LifecycleStage { get; set; } = null!;
 
-    public virtual Organisation Organisation { get; set; } = null!;
+    public virtual AwardingOrganisation Organisation { get; set; } = null!;
 
     public virtual ProcessStatus ProcessStatus { get; set; } = null!;
 

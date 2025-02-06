@@ -1,5 +1,8 @@
-﻿namespace SFA.DAS.AODP.Data.Entities;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 
+namespace SFA.DAS.AODP.Data.Entities;
+
+[Table("VersionFieldChanges", Schema = "regulated")]
 public partial class VersionFieldChange
 {
     public int Id { get; set; }
@@ -10,5 +13,5 @@ public partial class VersionFieldChange
 
     public string? ChangedFieldNames { get; set; }
 
-    public virtual ICollection<QualificationVersion> QualificationVersions { get; set; } = new List<QualificationVersion>();
+    public virtual ICollection<QualificationVersions> QualificationVersions { get; set; } = new List<QualificationVersions>();
 }
