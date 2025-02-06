@@ -40,11 +40,11 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public async Task BulkInsertAsync<T>(IEnumerable<T> entities, CancellationToken cancellationToken = default) where T : class
         {
-            if(entities.Any())
-            await this.BulkInsertAsync(entities.ToList(), options => { options.BatchSize = 1000; options.IncludeGraph = true; }, cancellationToken: cancellationToken);
+            if (entities.Any())
+                await this.BulkInsertAsync(entities.ToList(), options => { options.BatchSize = 1000; options.IncludeGraph = true; }, cancellationToken: cancellationToken);
         }
 
-        public async Task TruncateTable<T>() where T:class
+        public async Task TruncateTable<T>() where T : class
         {
             //await this.Set<T>().ExecuteDeleteAsync();
 
@@ -56,4 +56,3 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         }
     }
 }
-

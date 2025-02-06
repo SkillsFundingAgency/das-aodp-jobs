@@ -2,11 +2,11 @@
 
 public partial class QualificationDiscussionHistory
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
 
-    public int QualificationId { get; set; }
+    public Guid QualificationId { get; set; }
 
-    public int ActionTypeId { get; set; }
+    public Guid ActionTypeId { get; set; }
 
     public string? UserDisplayName { get; set; }
 
@@ -18,4 +18,3 @@ public partial class QualificationDiscussionHistory
 
     public virtual Qualification Qualification { get; set; } = null!;
 }
-

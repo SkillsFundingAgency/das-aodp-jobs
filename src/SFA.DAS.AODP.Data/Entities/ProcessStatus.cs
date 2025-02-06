@@ -5,7 +5,7 @@ namespace SFA.DAS.AODP.Data.Entities;
 [Table("ProcessStatus", Schema = "regulated")]
 public partial class ProcessStatus
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
 
     public string? Name { get; set; }
 
@@ -13,4 +13,3 @@ public partial class ProcessStatus
 
     public virtual ICollection<QualificationVersions> QualificationVersions { get; set; } = new List<QualificationVersions>();
 }
-

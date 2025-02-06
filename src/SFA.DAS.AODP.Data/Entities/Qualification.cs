@@ -4,7 +4,7 @@ namespace SFA.DAS.AODP.Data.Entities;
 
 public partial class Qualification
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
 
     public string Qan { get; set; } = null!;
 

@@ -2,13 +2,13 @@
 
 public partial class Qualifications
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
 
     public DateTime? DateOfOfqualDataSnapshot { get; set; }
 
-    public int? QualificationId { get; set; }
+    public Guid? QualificationId { get; set; }
 
-    public int? AwardingOrganisationId { get; set; }
+    public Guid? AwardingOrganisationId { get; set; }
 
     public string? Level { get; set; }
 
@@ -27,4 +27,6 @@ public partial class Qualifications
     public virtual AwardingOrganisation? Organisation { get; set; }
 
     public virtual Qualification? Qualification { get; set; }
+
+    public virtual ICollection<QualificationOffer> QualificationOffers { get; set; } = new List<QualificationOffer>();
 }
