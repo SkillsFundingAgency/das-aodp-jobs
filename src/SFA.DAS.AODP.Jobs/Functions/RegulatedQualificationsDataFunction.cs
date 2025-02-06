@@ -43,10 +43,10 @@ namespace SFA.DAS.AODP.Functions.Functions
                 stopWatch.Start();
 
                 // STAGE 1 - Import Ofqual Api data to staging area
-                await _ofqualImportService.StageQualificationsDataAsync(req);
+                //await _ofqualImportService.StageQualificationsDataAsync(req);
 
                 // STAGE 2 - Process staging data into AODP database
-                //await _ofqualImportService.ProcessQualificationsDataAsync();
+                await _ofqualImportService.ProcessQualificationsDataAsync();
 
                 stopWatch.Stop();
 

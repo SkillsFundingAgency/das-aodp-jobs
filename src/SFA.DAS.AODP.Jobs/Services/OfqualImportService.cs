@@ -136,8 +136,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                     foreach (var qualificationData in batch)
                     {
                         // Fetch or create Organisation
-                        if (!qualificationData.AwardingOrganisationId.HasValue ||
-                            !existingOrganisations.TryGetValue(qualificationData.AwardingOrganisationId.Value, out var organisation))
+                        if (qualificationData.AwardingOrganisationId.HasValue &&
+                            existingOrganisations.TryGetValue(qualificationData.AwardingOrganisationId.Value, out var organisation))
                         {
                             organisation = new AwardingOrganisation
                             {
@@ -180,6 +180,7 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                             var qualificationVersion = new QualificationVersions
                             {
+                                Id = Guid.NewGuid(),
                                 QualificationId = qualification.Id,
                                 VersionFieldChangesId = versionFieldChanges.Id,
                                 ProcessStatusId = processStatus.Id,
