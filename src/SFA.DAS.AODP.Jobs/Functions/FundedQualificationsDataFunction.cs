@@ -43,7 +43,7 @@ namespace SFA.DAS.AODP.Functions
             var stopWatch = new Stopwatch();
             if (approvedQualifications.Any())
             {
-                await _applicationDbContext.DeleteTable<FundedQualification>();
+                await _applicationDbContext.TruncateTable<FundedQualification>();
 
                 await WriteQualifications(approvedQualifications, stopWatch);
             }
