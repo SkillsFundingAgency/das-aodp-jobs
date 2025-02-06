@@ -5,7 +5,7 @@ namespace SFA.DAS.AODP.Data.Entities;
 [Table("LifecycleStage", Schema = "regulated")]
 public partial class LifecycleStage
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
 
     public string? Name { get; set; }
 
