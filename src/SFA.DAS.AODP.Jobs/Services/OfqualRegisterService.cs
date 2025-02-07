@@ -8,7 +8,6 @@ using SFA.DAS.AODP.Models.Qualification;
 
 namespace SFA.DAS.AODP.Jobs.Services
 {
-
     public class OfqualRegisterService : IOfqualRegisterService
     {
         private readonly ILogger<QualificationsService> _logger;
@@ -54,7 +53,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             return paginatedResult.Results.Select(q => new QualificationDTO
             {
                 QualificationNumber = q.QualificationNumber,
-                QualificationNumberNoObliques = q.QualificationNumberNoObliques ?? "",
+                QualificationNumberNoObliques = q.QualificationNumberNoObliques ?? string.Empty,
                 Title = q.Title,
                 Status = q.Status,
                 OrganisationName = q.OrganisationName,
@@ -115,18 +114,23 @@ namespace SFA.DAS.AODP.Jobs.Services
 
         public QualificationsQueryParameters ParseQueryParameters(NameValueCollection query)
         {
-            int defaultPage = int.Parse(_configuration["DefaultPage"]);
-            int defaultLimit = int.Parse(_configuration["DefaultLimit"]);
+            int defaultPage = int.Parse(_configuration["DefaultPage"] ?? "1");
+            int defaultLimit = int.Parse(_configuration["DefaultLimit"] ?? "10");
 
             if (query == null || query.Count == 0)
             {
                 _logger.LogWarning($"Url parameters are empty. Defaulting Page: {defaultPage} and Limit: {defaultLimit}");
+                return new RegulatedQualificationsQueryParameters
+                {
+                    Page = defaultPage,
+                    Limit = defaultLimit
+                };
             }
 
             return new QualificationsQueryParameters
             {
-                Page = ParseInt(query["page"], defaultPage),
-                Limit = ParseInt(query["limit"], defaultLimit),
+                Page = ParseInt(query["page"] ?? string.Empty, defaultPage),
+                Limit = ParseInt(query["limit"] ?? string.Empty, defaultLimit),
                 Title = query["title"],
                 AssessmentMethods = query["assessmentMethods"],
                 GradingTypes = query["gradingTypes"],
@@ -136,10 +140,10 @@ namespace SFA.DAS.AODP.Jobs.Services
                 QualificationLevels = query["qualificationLevels"],
                 NationalAvailability = query["nationalAvailability"],
                 SectorSubjectAreas = query["sectorSubjectAreas"],
-                MinTotalQualificationTime = ParseNullableInt(query["minTotalQualificationTime"] ?? ""),
-                MaxTotalQualificationTime = ParseNullableInt(query["maxTotalQualificationTime"] ?? ""),
-                MinGuidedLearningHours = ParseNullableInt(query["minGuidedLearninghours"] ?? ""),
-                MaxGuidedLearningHours = ParseNullableInt(query["maxGuidedLearninghours"] ?? "")
+                MinTotalQualificationTime = ParseNullableInt(query["minTotalQualificationTime"] ?? string.Empty),
+                MaxTotalQualificationTime = ParseNullableInt(query["maxTotalQualificationTime"] ?? string.Empty),
+                MinGuidedLearningHours = ParseNullableInt(query["minGuidedLearninghours"] ?? string.Empty),
+                MaxGuidedLearningHours = ParseNullableInt(query["maxGuidedLearninghours"] ?? string.Empty)
             };
         }
 
