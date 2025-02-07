@@ -7,7 +7,6 @@ using SFA.DAS.AODP.Functions.Functions;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using RestEase;
-using Xunit;
 using Microsoft.Azure.Functions.Worker;
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Functions;
