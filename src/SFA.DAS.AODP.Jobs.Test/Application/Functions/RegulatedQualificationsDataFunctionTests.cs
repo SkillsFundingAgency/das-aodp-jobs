@@ -59,7 +59,7 @@ public class RegulatedQualificationsDataFunctionTests
         // Arrange
         var httpRequestMock = new Mock<HttpRequestData>(_functionContext);
         var requestMessage = new HttpRequestMessage(HttpMethod.Get, "https://test.com");
-        var responseMessage = new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest)
+        var responseMessage = new HttpResponseMessage(HttpStatusCode.BadRequest)
         {
             Content = new StringContent("Bad Request")
         };
