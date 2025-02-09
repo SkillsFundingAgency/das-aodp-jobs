@@ -2,7 +2,6 @@
 using Microsoft.Azure.Functions.Worker.Http;
 using SFA.DAS.AODP.Jobs.Test.Application.Mocks;
 using System.Collections.Specialized;
-using System.Net;
 using System.Security.Claims;
 
 namespace SFA.DAS.AODP.Jobs.Test.Mocks

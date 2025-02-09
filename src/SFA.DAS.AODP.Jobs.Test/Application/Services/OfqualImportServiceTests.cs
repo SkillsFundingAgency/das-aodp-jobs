@@ -1,5 +1,4 @@
-﻿using Xunit;
-using Moq;
+﻿using Moq;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using SFA.DAS.AODP.Jobs.Services;
@@ -54,11 +53,11 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         {
             var requestMock = new Mock<HttpRequestData>(_functionContext);
 
-            _dbContextMock.Setup(db => db.DeleteTable<StagedQualifications>()).Returns(Task.CompletedTask);
+            _dbContextMock.Setup(db => db.TruncateTable<QualificationImportStaging>()).Returns(Task.CompletedTask);
 
             await _service.StageQualificationsDataAsync(requestMock.Object);
 
-            _dbContextMock.Verify(db => db.DeleteTable<StagedQualifications>(), Times.Once);
+            _dbContextMock.Verify(db => db.TruncateTable<QualificationImportStaging>(), Times.Once);
         }
 
         [Fact]

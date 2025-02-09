@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net;
 using AutoMapper;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -36,21 +37,21 @@ namespace SFA.DAS.AODP.Functions
             if (string.IsNullOrEmpty(approvedUrlFilePath) || string.IsNullOrEmpty(archivedUrlFilePath))
             {
                 _logger.LogInformation("Environment variable 'ApprovedQualificationsImportUrl' is not set or empty.");
-                var notFoundResponse = req.CreateResponse(System.Net.HttpStatusCode.NotFound);
+                var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
                 return notFoundResponse;
             }
             var approvedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(approvedUrlFilePath);
             var stopWatch = new Stopwatch();
             if (approvedQualifications.Any())
             {
-                await _applicationDbContext.DeleteTable<FundedQualification>();
+                await _applicationDbContext.TruncateTable<FundedQualification>();
 
                 await WriteQualifications(approvedQualifications, stopWatch);
             }
             else
             {
                 _logger.LogInformation("No data found found in approved qualifications csv");
-                var notFoundResponse = req.CreateResponse(System.Net.HttpStatusCode.NotFound);
+                var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
                 return notFoundResponse;
             }
 
@@ -62,12 +63,12 @@ namespace SFA.DAS.AODP.Functions
             else
             {
                 _logger.LogInformation("No data found in archived qualifications csv");
-                var notFoundResponse = req.CreateResponse(System.Net.HttpStatusCode.NotFound);
+                var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
                 return notFoundResponse;
             }
             _logger.LogInformation($"{archivedQualifications.Count()} records imported in {stopWatch.ElapsedMilliseconds / 1000}");
 
-            var successResponse = req.CreateResponse(System.Net.HttpStatusCode.OK);
+            var successResponse = req.CreateResponse(HttpStatusCode.OK);
             _logger.LogInformation($"{archivedQualifications.Count()} archived records imported successfully");
             await successResponse.WriteStringAsync($"{approvedQualifications.Count()} approved qualifications imported \n{archivedQualifications.Count()} archived qualifications imported\n{approvedQualifications.Count() + archivedQualifications.Count()} Total Records");
             return successResponse;

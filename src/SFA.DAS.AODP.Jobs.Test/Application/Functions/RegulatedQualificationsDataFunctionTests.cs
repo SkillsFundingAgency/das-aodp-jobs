@@ -7,7 +7,6 @@ using SFA.DAS.AODP.Functions.Functions;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using RestEase;
-using Xunit;
 using Microsoft.Azure.Functions.Worker;
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Functions;
@@ -45,8 +44,6 @@ public class RegulatedQualificationsDataFunctionTests
 
         _ofqualImportServiceMock.Setup(s => s.StageQualificationsDataAsync(It.IsAny<HttpRequestData>()))
             .Returns(Task.CompletedTask);
-        _ofqualImportServiceMock.Setup(s => s.ProcessQualificationsDataAsync())
-            .Returns(Task.CompletedTask);
 
         // Act
         var result = await _function.Run(httpRequestMock.Object);
@@ -62,7 +59,7 @@ public class RegulatedQualificationsDataFunctionTests
         // Arrange
         var httpRequestMock = new Mock<HttpRequestData>(_functionContext);
         var requestMessage = new HttpRequestMessage(HttpMethod.Get, "https://test.com");
-        var responseMessage = new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest)
+        var responseMessage = new HttpResponseMessage(HttpStatusCode.BadRequest)
         {
             Content = new StringContent("Bad Request")
         };

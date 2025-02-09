@@ -1,8 +1,10 @@
-﻿namespace SFA.DAS.AODP.Data.Entities;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace SFA.DAS.AODP.Data.Entities;
 
 public partial class Qualification
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
 
     public string Qan { get; set; } = null!;
 
@@ -12,5 +14,5 @@ public partial class Qualification
 
     public virtual ICollection<QualificationDiscussionHistory> QualificationDiscussionHistories { get; set; } = new List<QualificationDiscussionHistory>();
 
-    public virtual ICollection<QualificationVersion> QualificationVersions { get; set; } = new List<QualificationVersion>();
+    public virtual ICollection<QualificationVersions> QualificationVersions { get; set; } = new List<QualificationVersions>();
 }

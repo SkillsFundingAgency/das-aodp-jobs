@@ -1,22 +1,25 @@
-﻿namespace SFA.DAS.AODP.Data.Entities;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 
-public partial class QualificationVersion
+namespace SFA.DAS.AODP.Data.Entities;
+
+[Table("QualificationVersions", Schema = "regulated")]
+public partial class QualificationVersions
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
 
-    public int QualificationId { get; set; }
+    public Guid QualificationId { get; set; }
 
-    public int VersionFieldChangesId { get; set; }
+    public Guid VersionFieldChangesId { get; set; }
 
-    public int ProcessStatusId { get; set; }
+    public Guid ProcessStatusId { get; set; }
 
     public int AdditionalKeyChangesReceivedFlag { get; set; }
 
-    public int LifecycleStageId { get; set; }
+    public Guid LifecycleStageId { get; set; }
 
     public string? OutcomeJustificationNotes { get; set; }
 
-    public int OrganisationId { get; set; }
+    public Guid AwardingOrganisationId { get; set; }
 
     public string Status { get; set; } = null!;
 
@@ -116,7 +119,7 @@ public partial class QualificationVersion
 
     public virtual LifecycleStage LifecycleStage { get; set; } = null!;
 
-    public virtual Organisation Organisation { get; set; } = null!;
+    public virtual AwardingOrganisation Organisation { get; set; } = null!;
 
     public virtual ProcessStatus ProcessStatus { get; set; } = null!;
 
