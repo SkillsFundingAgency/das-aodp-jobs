@@ -92,7 +92,7 @@ public class QualificationDTO
 
     public bool? AppearsOnPublicRegister { get; set; }
 
-    public int? OrganisationId { get; set; }
+    public Guid? AwardingOrganisationId { get; set; }
 
     public int? LevelId { get; set; }
 

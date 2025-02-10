@@ -40,9 +40,12 @@ namespace SFA.DAS.AODP.Jobs.Services
 
             try
             {
+                _loopCycleStopWatch.Restart();
+
                 _logger.LogInformation($"Clearing down StageQualifications table...");
 
                 await _applicationDbContext.TruncateTable<QualificationImportStaging>();
+
                 var parameters = _ofqualRegisterService.ParseQueryParameters(request.Query);
 
                 _logger.LogInformation($"Ofqual data import started...");

@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using Microsoft.Azure.Functions.Worker;
+﻿using Microsoft.Azure.Functions.Worker;
 using System.Net;
 using Microsoft.Azure.Functions.Worker.Http;
 
