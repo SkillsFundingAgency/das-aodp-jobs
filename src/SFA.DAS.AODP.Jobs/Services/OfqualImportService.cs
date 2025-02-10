@@ -70,19 +70,19 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                     await _qualificationsService.SaveQualificationsStagingAsync(importedQualificationsJson);
 
-                    totalProcessed += paginatedResult.Results.Count;
+                totalProcessed += paginatedResult.Results.Count;
 
-                    if (paginatedResult.Results?.Count < parameters.Limit)
-                    {
-                        _logger.LogInformation("Reached the end of the results set.");
-                        break;
-                    }
-
-                    _loopCycleStopWatch.Stop();
-                    _logger.LogInformation($"Page {pageCount} import complete. {paginatedResult.Results.Count()} records imported in {_loopCycleStopWatch.Elapsed.TotalSeconds:F2} seconds");
-
-                    pageCount++;
+                if (paginatedResult.Results?.Count < parameters.Limit)
+                {
+                    _logger.LogInformation("Reached the end of the results set.");
+                    break;
                 }
+
+                _loopCycleStopWatch.Stop();
+                _logger.LogInformation($"Page {pageCount} import complete. {paginatedResult.Results.Count()} records imported in {_loopCycleStopWatch.Elapsed.TotalSeconds:F2} seconds");
+
+                pageCount++;
+            }
 
                 _processStopWatch.Stop();
                 _logger.LogInformation($"Successfully imported {totalProcessed} qualifications in {_processStopWatch.Elapsed.TotalSeconds:F2} seconds");
@@ -107,6 +107,9 @@ namespace SFA.DAS.AODP.Jobs.Services
 
             try
             {
+                var organisationCache = new Dictionary<long, AwardingOrganisation>();
+                var qualificationCache = new Dictionary<string, Qualification>();
+
                 var organisationIds = (await _applicationDbContext.AwardingOrganisation
                     .AsNoTracking()
                     .Select(o => o.Ukprn)
@@ -118,9 +121,6 @@ namespace SFA.DAS.AODP.Jobs.Services
                     .Select(o => o.Qan)
                     .ToListAsync())
                     .ToHashSet();
-
-                var organisationCache = new Dictionary<long, AwardingOrganisation>();
-                var qualificationCache = new Dictionary<string, Qualification>();
 
                 var existingVersionsInfo = await _applicationDbContext.QualificationVersions
                     .AsNoTracking()
@@ -143,11 +143,9 @@ namespace SFA.DAS.AODP.Jobs.Services
                     var batch = await _qualificationsService.GetStagedQualificationsBatchAsync(batchSize, processedCount);
                     if (!batch.Any()) break;
 
-                    // Get unique IDs from the current batch
                     var batchOrgIds = batch.Select(q => q.OrganisationId ?? 0).Distinct().ToList();
                     var batchQualNumbers = batch.Select(q => q.QualificationNumberNoObliques).Distinct().ToList();
 
-                    // Fetch only missing organizations and qualifications
                     var missingOrgIds = batchOrgIds.Where(id => !organisationCache.ContainsKey(id)).ToList();
                     var missingQualNumbers = batchQualNumbers.Where(qn => !qualificationCache.ContainsKey(qn)).ToList();
 
@@ -226,73 +224,16 @@ namespace SFA.DAS.AODP.Jobs.Services
                             processStatuses.Add(processStatus);
                             lifecycleStages.Add(lifecycleStage);
 
-                            var qualificationVersion = new QualificationVersions
-                            {
-                                Id = Guid.NewGuid(),
-                                QualificationId = qualification.Id,
-                                VersionFieldChangesId = versionFieldChange.Id,
-                                ProcessStatusId = processStatus.Id,
-                                AdditionalKeyChangesReceivedFlag = 0,
-                                LifecycleStageId = lifecycleStage.Id,
-                                AwardingOrganisationId = organisation.Id,
-                                Status = qualificationData.Status,
-                                Type = qualificationData.Type,
-                                Ssa = qualificationData.Ssa,
-                                Level = qualificationData.Level,
-                                SubLevel = qualificationData.SubLevel,
-                                EqfLevel = qualificationData.EqfLevel,
-                                GradingType = qualificationData.GradingType,
-                                GradingScale = qualificationData.GradingScale,
-                                TotalCredits = qualificationData.TotalCredits,
-                                Tqt = qualificationData.Tqt,
-                                Glh = qualificationData.Glh,
-                                MinimumGlh = qualificationData.MinimumGlh,
-                                MaximumGlh = qualificationData.MaximumGlh,
-                                RegulationStartDate = qualificationData.RegulationStartDate,
-                                OperationalStartDate = qualificationData.OperationalStartDate,
-                                OperationalEndDate = qualificationData.OperationalEndDate,
-                                CertificationEndDate = qualificationData.CertificationEndDate,
-                                ReviewDate = qualificationData.ReviewDate,
-                                OfferedInEngland = qualificationData.OfferedInEngland,
-                                OfferedInNi = qualificationData.OfferedInNorthernIreland,
-                                OfferedInternationally = qualificationData.OfferedInternationally,
-                                Specialism = qualificationData.Specialism,
-                                Pathways = qualificationData.Pathways,
-                                AssessmentMethods = qualificationData.AssessmentMethods != null
-                                                                                ? string.Join(", ", qualificationData.AssessmentMethods)
-                                                                                : string.Empty,
-                                ApprovedForDelFundedProgramme = qualificationData.ApprovedForDelfundedProgramme,
-                                LinkToSpecification = qualificationData.LinkToSpecification,
-                                ApprenticeshipStandardReferenceNumber = qualificationData.ApprenticeshipStandardReferenceNumber,
-                                ApprenticeshipStandardTitle = qualificationData.ApprenticeshipStandardTitle,
-                                RegulatedByNorthernIreland = qualificationData.RegulatedByNorthernIreland,
-                                NiDiscountCode = qualificationData.NiDiscountCode,
-                                GceSizeEquivelence = qualificationData.GceSizeEquivalence,
-                                GcseSizeEquivelence = qualificationData.GcseSizeEquivalence,
-                                EntitlementFrameworkDesign = qualificationData.EntitlementFrameworkDesignation,
-                                LastUpdatedDate = qualificationData.LastUpdatedDate,
-                                UiLastUpdatedDate = qualificationData.UiLastUpdatedDate,
-                                InsertedDate = qualificationData.InsertedDate,
-                                Version = 1,
-                                AppearsOnPublicRegister = qualificationData.AppearsOnPublicRegister,
-                                LevelId = qualificationData.LevelId,
-                                TypeId = qualificationData.TypeId,
-                                SsaId = qualificationData.SsaId,
-                                GradingTypeId = qualificationData.GradingTypeId,
-                                GradingScaleId = qualificationData.GradingScaleId,
-                                PreSixteen = qualificationData.PreSixteen,
-                                SixteenToEighteen = qualificationData.SixteenToEighteen,
-                                EighteenPlus = qualificationData.EighteenPlus,
-                                NineteenPlus = qualificationData.NineteenPlus,
-                                ImportStatus = qualificationData.ImportStatus,
-                                LifecycleStage = lifecycleStage,
-                                Organisation = organisation,
-                                ProcessStatus = processStatus,
-                                Qualification = qualification,
-                                VersionFieldChanges = versionFieldChange
-                            };
+                            var newQualificationVersion = CreateQualificationVersion(
+                                qualification, 
+                                organisation, 
+                                lifecycleStage, 
+                                processStatus, 
+                                qualificationData, 
+                                versionFieldChange, 
+                                1);
 
-                            newQualificationVersions.Add(qualificationVersion);
+                            newQualificationVersions.Add(newQualificationVersion);
                         }
                         else if (!versionInfo.HasChangedFields)
                         {
@@ -307,7 +248,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                             {
                                 Id = Guid.NewGuid(),
                                 QualificationVersionNumber = versionInfo.Version + 1,
-                                ChangedFieldNames = "" // Initialize with empty string or appropriate default value
+                                ChangedFieldNames = null
                             };
                             var processStatus = new ProcessStatus { Id = Guid.NewGuid() };
                             var lifecycleStage = new LifecycleStage { Id = Guid.NewGuid() };
@@ -316,73 +257,16 @@ namespace SFA.DAS.AODP.Jobs.Services
                             processStatuses.Add(processStatus);
                             lifecycleStages.Add(lifecycleStage);
 
-                            var qualificationVersion = new QualificationVersions
-                            {
-                                Id = Guid.NewGuid(),
-                                QualificationId = qualification.Id,
-                                VersionFieldChangesId = versionFieldChange.Id,
-                                ProcessStatusId = processStatus.Id,
-                                AdditionalKeyChangesReceivedFlag = 0,
-                                LifecycleStageId = lifecycleStage.Id,
-                                AwardingOrganisationId = organisation.Id,
-                                Status = qualificationData.Status,
-                                Type = qualificationData.Type,
-                                Ssa = qualificationData.Ssa,
-                                Level = qualificationData.Level,
-                                SubLevel = qualificationData.SubLevel,
-                                EqfLevel = qualificationData.EqfLevel,
-                                GradingType = qualificationData.GradingType,
-                                GradingScale = qualificationData.GradingScale,
-                                TotalCredits = qualificationData.TotalCredits,
-                                Tqt = qualificationData.Tqt,
-                                Glh = qualificationData.Glh,
-                                MinimumGlh = qualificationData.MinimumGlh,
-                                MaximumGlh = qualificationData.MaximumGlh,
-                                RegulationStartDate = qualificationData.RegulationStartDate,
-                                OperationalStartDate = qualificationData.OperationalStartDate,
-                                OperationalEndDate = qualificationData.OperationalEndDate,
-                                CertificationEndDate = qualificationData.CertificationEndDate,
-                                ReviewDate = qualificationData.ReviewDate,
-                                OfferedInEngland = qualificationData.OfferedInEngland,
-                                OfferedInNi = qualificationData.OfferedInNorthernIreland,
-                                OfferedInternationally = qualificationData.OfferedInternationally,
-                                Specialism = qualificationData.Specialism,
-                                Pathways = qualificationData.Pathways,
-                                AssessmentMethods = qualificationData.AssessmentMethods != null
-                                                                                ? string.Join(", ", qualificationData.AssessmentMethods)
-                                                                                : string.Empty,
-                                ApprovedForDelFundedProgramme = qualificationData.ApprovedForDelfundedProgramme,
-                                LinkToSpecification = qualificationData.LinkToSpecification,
-                                ApprenticeshipStandardReferenceNumber = qualificationData.ApprenticeshipStandardReferenceNumber,
-                                ApprenticeshipStandardTitle = qualificationData.ApprenticeshipStandardTitle,
-                                RegulatedByNorthernIreland = qualificationData.RegulatedByNorthernIreland,
-                                NiDiscountCode = qualificationData.NiDiscountCode,
-                                GceSizeEquivelence = qualificationData.GceSizeEquivalence,
-                                GcseSizeEquivelence = qualificationData.GcseSizeEquivalence,
-                                EntitlementFrameworkDesign = qualificationData.EntitlementFrameworkDesignation,
-                                LastUpdatedDate = qualificationData.LastUpdatedDate,
-                                UiLastUpdatedDate = qualificationData.UiLastUpdatedDate,
-                                InsertedDate = qualificationData.InsertedDate,
-                                Version = versionInfo.Version + 1,
-                                AppearsOnPublicRegister = qualificationData.AppearsOnPublicRegister,
-                                LevelId = qualificationData.LevelId,
-                                TypeId = qualificationData.TypeId,
-                                SsaId = qualificationData.SsaId,
-                                GradingTypeId = qualificationData.GradingTypeId,
-                                GradingScaleId = qualificationData.GradingScaleId,
-                                PreSixteen = qualificationData.PreSixteen,
-                                SixteenToEighteen = qualificationData.SixteenToEighteen,
-                                EighteenPlus = qualificationData.EighteenPlus,
-                                NineteenPlus = qualificationData.NineteenPlus,
-                                ImportStatus = qualificationData.ImportStatus,
-                                LifecycleStage = lifecycleStage,
-                                Organisation = organisation,
-                                ProcessStatus = processStatus,
-                                Qualification = qualification,
-                                VersionFieldChanges = versionFieldChange
-                            };
+                            var newQualificationVersion = CreateQualificationVersion(
+                                qualification,
+                                organisation,
+                                lifecycleStage,
+                                processStatus,
+                                qualificationData,
+                                versionFieldChange,
+                                versionInfo.Version + 1);
 
-                            newQualificationVersions.Add(qualificationVersion);
+                            newQualificationVersions.Add(newQualificationVersion);
                         }
                     }
 
@@ -411,6 +295,76 @@ namespace SFA.DAS.AODP.Jobs.Services
                 _logger.LogError(ex, "Error processing qualifications.");
                 throw;
             }
+        }
+
+        private QualificationVersions CreateQualificationVersion(Qualification qualification, AwardingOrganisation organisation, LifecycleStage lifecycleStage,
+            ProcessStatus processStatus, dynamic qualificationData, VersionFieldChange versionFieldChange, int? version)
+        {
+            return new QualificationVersions
+            {
+                Id = Guid.NewGuid(),
+                QualificationId = qualification.Id,
+                VersionFieldChangesId = versionFieldChange.Id,
+                ProcessStatusId = processStatus.Id,
+                AdditionalKeyChangesReceivedFlag = 0,
+                LifecycleStageId = lifecycleStage.Id,
+                AwardingOrganisationId = organisation.Id,
+                Status = qualificationData.Status,
+                Type = qualificationData.Type,
+                Ssa = qualificationData.Ssa,
+                Level = qualificationData.Level,
+                SubLevel = qualificationData.SubLevel,
+                EqfLevel = qualificationData.EqfLevel,
+                GradingType = qualificationData.GradingType,
+                GradingScale = qualificationData.GradingScale,
+                TotalCredits = qualificationData.TotalCredits,
+                Tqt = qualificationData.Tqt,
+                Glh = qualificationData.Glh,
+                MinimumGlh = qualificationData.MinimumGlh,
+                MaximumGlh = qualificationData.MaximumGlh,
+                RegulationStartDate = qualificationData.RegulationStartDate,
+                OperationalStartDate = qualificationData.OperationalStartDate,
+                OperationalEndDate = qualificationData.OperationalEndDate,
+                CertificationEndDate = qualificationData.CertificationEndDate,
+                ReviewDate = qualificationData.ReviewDate,
+                OfferedInEngland = qualificationData.OfferedInEngland,
+                OfferedInNi = qualificationData.OfferedInNorthernIreland,
+                OfferedInternationally = qualificationData.OfferedInternationally,
+                Specialism = qualificationData.Specialism,
+                Pathways = qualificationData.Pathways,
+                AssessmentMethods = qualificationData.AssessmentMethods != null
+                                                    ? string.Join(", ", qualificationData.AssessmentMethods)
+                                                    : string.Empty,
+                ApprovedForDelFundedProgramme = qualificationData.ApprovedForDelfundedProgramme,
+                LinkToSpecification = qualificationData.LinkToSpecification,
+                ApprenticeshipStandardReferenceNumber = qualificationData.ApprenticeshipStandardReferenceNumber,
+                ApprenticeshipStandardTitle = qualificationData.ApprenticeshipStandardTitle,
+                RegulatedByNorthernIreland = qualificationData.RegulatedByNorthernIreland,
+                NiDiscountCode = qualificationData.NiDiscountCode,
+                GceSizeEquivelence = qualificationData.GceSizeEquivalence,
+                GcseSizeEquivelence = qualificationData.GcseSizeEquivalence,
+                EntitlementFrameworkDesign = qualificationData.EntitlementFrameworkDesignation,
+                LastUpdatedDate = qualificationData.LastUpdatedDate,
+                UiLastUpdatedDate = qualificationData.UiLastUpdatedDate,
+                InsertedDate = qualificationData.InsertedDate,
+                Version = version,
+                AppearsOnPublicRegister = qualificationData.AppearsOnPublicRegister,
+                LevelId = qualificationData.LevelId,
+                TypeId = qualificationData.TypeId,
+                SsaId = qualificationData.SsaId,
+                GradingTypeId = qualificationData.GradingTypeId,
+                GradingScaleId = qualificationData.GradingScaleId,
+                PreSixteen = qualificationData.PreSixteen,
+                SixteenToEighteen = qualificationData.SixteenToEighteen,
+                EighteenPlus = qualificationData.EighteenPlus,
+                NineteenPlus = qualificationData.NineteenPlus,
+                ImportStatus = qualificationData.ImportStatus,
+                LifecycleStage = lifecycleStage,
+                Organisation = organisation,
+                ProcessStatus = processStatus,
+                Qualification = qualification,
+                VersionFieldChanges = versionFieldChange
+            };
         }
 
     }
