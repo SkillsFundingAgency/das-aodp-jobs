@@ -3,7 +3,14 @@
     "SFA.DAS.AODP.Jobs": {
       "commandName": "Project",
       "commandLineArgs": "--port 7000",
-      "launchBrowser": false
+      "launchBrowser": false,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
     }
+  },
+  "environmentVariables": {
+    "ConfigNames": "SFA.DAS.AODP.Jobs",
+    "ConfigurationStorageConnectionString": "UseDevelopmentStorage=true"
   }
 }

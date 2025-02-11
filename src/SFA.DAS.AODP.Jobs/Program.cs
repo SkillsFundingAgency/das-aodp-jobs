@@ -1,45 +1,15 @@
-using Microsoft.Azure.Functions.Worker.Builder;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using RestEase;
-using SFA.DAS.AODP.Jobs.Services;
-using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Infrastructure.Context;
-using SFA.DAS.AODP.Jobs.Services.CSV;
-using SFA.DAS.AODP.Jobs.Client;
+using SFA.DAS.AODP.Jobs.StartupExtensions;
 
+var builder = Host.CreateApplicationBuilder();
 
-var host = new HostBuilder()
+var configuration = builder.Configuration
+    .LoadConfiguration(builder.Services, builder.Environment.IsDevelopment());
 
-    .ConfigureFunctionsWebApplication()
+builder.Services.AddServiceRegistrations(configuration);
+builder.Services.AddLogging();
 
-    .ConfigureServices((context, services) =>
-    {
-        var connectionString = Environment.GetEnvironmentVariable("DefaultConnection");
+var app = builder.Build();
 
-        services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseSqlServer(connectionString));
-
-        services.AddHttpClient();
-        services.AddScoped<IApplicationDbContext, ApplicationDbContext>();
-        services.AddScoped<IQualificationsService, QualificationsService>();
-        services.AddTransient<IOfqualRegisterService, OfqualRegisterService>();
-        services.AddTransient<IOfqualImportService, OfqualImportService>();
-        services.AddScoped<ICsvReaderService, CsvReaderService>();
-        services.AddScoped<IOfqualRegisterApi>(provider =>
-        {
-            const string baseUrl = "https://register-api.ofqual.gov.uk";
-            var config = provider.GetRequiredService<IConfiguration>();
-            var api = RestClient.For<IOfqualRegisterApi>(baseUrl);
-            api.SubscriptionKey = config["OcpApimSubscriptionKey"];
-            return api;
-        });
-
-        services.AddAutoMapper(typeof(MapperProfile));
-
-    })
-    .Build();
-
-host.Run();
+app.Run();
