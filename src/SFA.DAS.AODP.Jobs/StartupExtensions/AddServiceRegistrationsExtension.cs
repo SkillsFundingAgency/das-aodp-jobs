@@ -9,6 +9,7 @@ using SFA.DAS.AODP.Jobs.Services;
 using Microsoft.EntityFrameworkCore;
 using SFA.DAS.AODP.Configuration.Config;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace SFA.DAS.AODP.Jobs.StartupExtensions;
 
@@ -22,7 +23,7 @@ public static class AddServiceRegistrationsExtension
             throw new ArgumentException(
                 "Cannot find AodpJobsConfiguration in configuration. Please add a section called AodpJobsConfiguration with connection, default page and default limit properties.");
         }
-
+        services.Replace(ServiceDescriptor.Singleton(typeof(IConfiguration), configuration));
         services.Configure<AodpJobsConfiguration>(configuration.GetSection(nameof(AodpJobsConfiguration)));
 
         services.AddSingleton(cfg => cfg.GetService<IOptions<AodpJobsConfiguration>>().Value);

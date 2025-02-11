@@ -13,25 +13,28 @@ public static class ConfigurationExtensions
         var configBuilder = new ConfigurationBuilder()
             .AddConfiguration(configuration)
             .SetBasePath(Directory.GetCurrentDirectory())
-            .AddEnvironmentVariables();
+            .AddEnvironmentVariables()
+            .AddJsonFile("local.settings.json", true);
 
-        var mergedConfig = configBuilder
+        configBuilder
             .AddAzureTableStorage(options =>
             {
                 options.ConfigurationKeys = configuration["ConfigNames"]?.Split(",");
                 options.StorageConnectionString = configuration["ConfigurationStorageConnectionString"];
                 options.EnvironmentName = configuration["EnvironmentName"];
                 options.PreFixConfigurationKeys = false;
-            })
-            .Build();
+            });
 
-        return new ConfigurationBuilder()
-            .AddConfiguration(mergedConfig)
-            .AddAzureTableStorageConfiguration(
-                "UseDevelopmentStorage=true",
-                "SFA.DAS.AODP.Jobs",
-                "LOCAL",
-                "1.0")
-            .Build();
+        var configurationRoot = configBuilder.Build();
+        return configurationRoot;
+
+        //return new ConfigurationBuilder()
+        //    .AddConfiguration(mergedConfig)
+        //    .AddAzureTableStorageConfiguration(
+        //        "UseDevelopmentStorage=true",
+        //        "SFA.DAS.AODP.Jobs",
+        //        "LOCAL",
+        //        "1.0")
+        //    .Build();
     }
 }
