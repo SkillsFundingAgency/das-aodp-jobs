@@ -10,9 +10,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using SFA.DAS.AODP.Models.Config;
+using System.Diagnostics.CodeAnalysis;
 
 namespace SFA.DAS.AODP.Jobs.StartupExtensions;
 
+[ExcludeFromCodeCoverage]
 public static class AddServiceRegistrationsExtension
 {
     public static IServiceCollection AddServiceRegistrations(this IServiceCollection services, IConfiguration configuration)

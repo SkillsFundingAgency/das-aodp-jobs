@@ -1,6 +1,7 @@
 ﻿using System.Collections.Specialized;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using RestEase;
 using SFA.DAS.AODP.Data;
 using SFA.DAS.AODP.Jobs.Client;
 using SFA.DAS.AODP.Jobs.Interfaces;
@@ -25,28 +26,36 @@ namespace SFA.DAS.AODP.Jobs.Services
 
         public async Task<PaginatedResult<QualificationDTO>> SearchPrivateQualificationsAsync(QualificationsQueryParameters parameters)
         {
-            if (parameters == null)
+            try
             {
-                throw new ArgumentNullException(nameof(parameters), "Parameters cannot be null.");
+                if (parameters == null)
+                {
+                    throw new ArgumentNullException(nameof(parameters), "Parameters cannot be null.");
+                }
+
+                return await _apiClient.SearchPrivateQualificationsAsync(
+                    parameters.Title,
+                    parameters.Page,
+                    parameters.Limit,
+                    parameters.AssessmentMethods,
+                    parameters.GradingTypes,
+                    parameters.AwardingOrganisations,
+                    parameters.Availability,
+                    parameters.QualificationTypes,
+                    parameters.QualificationLevels,
+                    parameters.NationalAvailability,
+                    parameters.SectorSubjectAreas,
+                    parameters.MinTotalQualificationTime,
+                    parameters.MaxTotalQualificationTime,
+                    parameters.MinGuidedLearningHours,
+                    parameters.MaxGuidedLearningHours
+                );
+            }
+            catch (ApiException ex)
+            {
+                throw;
             }
 
-            return await _apiClient.SearchPrivateQualificationsAsync(
-                parameters.Title,
-                parameters.Page,
-                parameters.Limit,
-                parameters.AssessmentMethods,
-                parameters.GradingTypes,
-                parameters.AwardingOrganisations,
-                parameters.Availability,
-                parameters.QualificationTypes,
-                parameters.QualificationLevels,
-                parameters.NationalAvailability,
-                parameters.SectorSubjectAreas,
-                parameters.MinTotalQualificationTime,
-                parameters.MaxTotalQualificationTime,
-                parameters.MinGuidedLearningHours,
-                parameters.MaxGuidedLearningHours
-            );
         }
 
         public List<QualificationDTO> ExtractQualificationsList(PaginatedResult<QualificationDTO> paginatedResult)

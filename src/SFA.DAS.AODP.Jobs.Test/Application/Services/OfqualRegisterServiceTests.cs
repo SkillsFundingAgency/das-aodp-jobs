@@ -10,7 +10,7 @@ using AutoFixture;
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 {
-    public class QualificationsApiServiceTests
+    public class OfqualRegisterServiceTests
     {
         private readonly Mock<ILogger<QualificationsService>> _mockLogger;
         private readonly Mock<IOfqualRegisterApi> _mockApiClient;
@@ -19,7 +19,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         private readonly OfqualRegisterService _service;
         private Fixture _fixture;
 
-        public QualificationsApiServiceTests()
+        public OfqualRegisterServiceTests()
         {
             _mockApiClient = new Mock<IOfqualRegisterApi>();
             _mockLogger = new Mock<ILogger<QualificationsService>>();
