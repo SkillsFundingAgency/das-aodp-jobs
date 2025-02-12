@@ -7,9 +7,9 @@ using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Jobs.Services.CSV;
 using SFA.DAS.AODP.Jobs.Services;
 using Microsoft.EntityFrameworkCore;
-using SFA.DAS.AODP.Configuration.Config;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using SFA.DAS.AODP.Models.Config;
 
 namespace SFA.DAS.AODP.Jobs.StartupExtensions;
 
@@ -24,13 +24,10 @@ public static class AddServiceRegistrationsExtension
                 "Cannot find AodpJobsConfiguration in configuration. Please add a section called AodpJobsConfiguration with connection, default page and default limit properties.");
         }
         services.Replace(ServiceDescriptor.Singleton(typeof(IConfiguration), configuration));
+
         services.Configure<AodpJobsConfiguration>(configuration.GetSection(nameof(AodpJobsConfiguration)));
-
-        services.AddSingleton(cfg => cfg.GetService<IOptions<AodpJobsConfiguration>>().Value);
-
-        services.Configure<AodpJobsConfiguration>(configuration.GetSection("AodpJobsConfiguration"));
-        var serviceProvider = services.BuildServiceProvider();
-        var config = serviceProvider.GetService<IOptions<AodpJobsConfiguration>>();
+        services.AddSingleton<AodpJobsConfiguration>(sp =>
+            sp.GetRequiredService<IOptions<AodpJobsConfiguration>>().Value);
 
         services.AddHttpClient();
         services.AddScoped<IApplicationDbContext, ApplicationDbContext>();

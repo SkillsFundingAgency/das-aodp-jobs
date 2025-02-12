@@ -115,8 +115,8 @@ namespace SFA.DAS.AODP.Jobs.Services
 
         public QualificationsQueryParameters ParseQueryParameters(NameValueCollection query)
         {
-            int defaultPage = int.Parse(_configuration["DefaultPage"]);
-            int defaultLimit = int.Parse(_configuration["DefaultLimit"]);
+            int defaultPage = int.Parse(_configuration["DefaultImportPage"]);
+            int defaultLimit = int.Parse(_configuration["DefaultImportLimit"]);
 
             if (query == null || query.Count == 0)
             {
