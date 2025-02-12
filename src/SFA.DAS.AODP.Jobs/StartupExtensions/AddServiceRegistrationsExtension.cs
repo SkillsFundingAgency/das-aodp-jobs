@@ -45,11 +45,11 @@ public static class AddServiceRegistrationsExtension
 
         var connection = configuration.GetSection(nameof(AodpJobsConfiguration)).Get<AodpJobsConfiguration>();
 
-        var connectionString = connection.DefaultConnection;
+        var connectionString = connection.DbConnectionString;
 
         if (string.IsNullOrEmpty(connectionString))
         {
-            throw new ArgumentException("DefaultConnection string is missing in configuration.");
+            throw new ArgumentException("DbConnectionString is missing in configuration.");
         }
 
         services.AddDbContext<ApplicationDbContext>(options =>

@@ -27,14 +27,5 @@ public static class ConfigurationExtensions
 
         var configurationRoot = configBuilder.Build();
         return configurationRoot;
-
-        //return new ConfigurationBuilder()
-        //    .AddConfiguration(mergedConfig)
-        //    .AddAzureTableStorageConfiguration(
-        //        "UseDevelopmentStorage=true",
-        //        "SFA.DAS.AODP.Jobs",
-        //        "LOCAL",
-        //        "1.0")
-        //    .Build();
     }
 }

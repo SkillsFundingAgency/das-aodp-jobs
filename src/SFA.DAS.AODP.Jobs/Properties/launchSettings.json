@@ -8,9 +8,4 @@
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     }
-  },
-  "environmentVariables": {
-    "ConfigNames": "SFA.DAS.AODP.Jobs",
-    "ConfigurationStorageConnectionString": "UseDevelopmentStorage=true"
-  }
 }

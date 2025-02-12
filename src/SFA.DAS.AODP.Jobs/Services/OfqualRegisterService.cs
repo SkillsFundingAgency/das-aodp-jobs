@@ -115,18 +115,18 @@ namespace SFA.DAS.AODP.Jobs.Services
 
         public QualificationsQueryParameters ParseQueryParameters(NameValueCollection query)
         {
-            int defaultPage = int.Parse(_configuration["DefaultImportPage"]);
-            int defaultLimit = int.Parse(_configuration["DefaultImportLimit"]);
+            var defaultImportPage = int.Parse(_configuration["AodpJobsConfiguration:DefaultImportPage"]);
+            var defaultImportLimit = int.Parse(_configuration["AodpJobsConfiguration:DefaultImportLimit"]);
 
             if (query == null || query.Count == 0)
             {
-                _logger.LogWarning($"Url parameters are empty. Defaulting Page: {defaultPage} and Limit: {defaultLimit}");
+                _logger.LogWarning($"Url parameters are empty. Defaulting Page: {defaultImportPage} and Limit: {defaultImportLimit}");
             }
 
             return new QualificationsQueryParameters
             {
-                Page = ParseInt(query["page"], defaultPage),
-                Limit = ParseInt(query["limit"], defaultLimit),
+                Page = ParseInt(query["page"], defaultImportPage),
+                Limit = ParseInt(query["limit"], defaultImportLimit),
                 Title = query["title"],
                 AssessmentMethods = query["assessmentMethods"],
                 GradingTypes = query["gradingTypes"],
