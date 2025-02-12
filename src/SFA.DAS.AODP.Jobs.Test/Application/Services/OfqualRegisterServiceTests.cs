@@ -30,6 +30,21 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         }
 
         [Fact]
+        public void Constructor_ShouldInitializeDependencies()
+        {
+            // Arrange
+            var mockLogger = new Mock<ILogger<QualificationsService>>();
+            var mockApiClient = new Mock<IOfqualRegisterApi>();
+            var mockConfiguration = new Mock<IConfiguration>();
+
+            // Act
+            var service = new OfqualRegisterService(mockLogger.Object, mockApiClient.Object, mockConfiguration.Object);
+
+            // Assert
+            Assert.NotNull(service);
+        }
+
+        [Fact]
         public async Task SearchPrivateQualificationsAsync_CallsApiClient_WithCorrectParameters()
         {
             // Arrange
