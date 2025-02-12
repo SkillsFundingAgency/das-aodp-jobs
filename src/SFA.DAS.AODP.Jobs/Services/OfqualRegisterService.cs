@@ -1,23 +1,23 @@
 ﻿using System.Collections.Specialized;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using RestEase;
 using SFA.DAS.AODP.Data;
 using SFA.DAS.AODP.Jobs.Client;
 using SFA.DAS.AODP.Jobs.Interfaces;
+using SFA.DAS.AODP.Models.Config;
 using SFA.DAS.AODP.Models.Qualification;
 
 namespace SFA.DAS.AODP.Jobs.Services
 {
-
     public class OfqualRegisterService : IOfqualRegisterService
     {
         private readonly ILogger<QualificationsService> _logger;
         private readonly IOfqualRegisterApi _apiClient;
-        private readonly IConfiguration _configuration;
+        private readonly IOptions<AodpJobsConfiguration> _configuration;
 
         public OfqualRegisterService(ILogger<QualificationsService> logger, IOfqualRegisterApi apiClient,
-            IConfiguration configuration)
+             IOptions<AodpJobsConfiguration> configuration)
         {
             _logger = logger;
             _apiClient = apiClient;
@@ -53,9 +53,9 @@ namespace SFA.DAS.AODP.Jobs.Services
             }
             catch (ApiException ex)
             {
+                _logger.LogError(ex, $"[{nameof(OfqualRegisterService)}] -> [{nameof(SearchPrivateQualificationsAsync)}] -> An error occurred while retrieving qualification records.");
                 throw;
             }
-
         }
 
         public List<QualificationDTO> ExtractQualificationsList(PaginatedResult<QualificationDTO> paginatedResult)
@@ -124,12 +124,17 @@ namespace SFA.DAS.AODP.Jobs.Services
 
         public QualificationsQueryParameters ParseQueryParameters(NameValueCollection query)
         {
-            var defaultImportPage = int.Parse(_configuration["AodpJobsConfiguration:DefaultImportPage"]);
-            var defaultImportLimit = int.Parse(_configuration["AodpJobsConfiguration:DefaultImportLimit"]);
+            var defaultImportPage = _configuration.Value.DefaultImportPage;
+            var defaultImportLimit = _configuration.Value.DefaultImportLimit;
 
             if (query == null || query.Count == 0)
             {
-                _logger.LogWarning($"Url parameters are empty. Defaulting Page: {defaultImportPage} and Limit: {defaultImportLimit}");
+                _logger.LogInformation($"Url parameters are empty. Defaulting Page: {defaultImportPage} and Limit: {defaultImportLimit}");
+                return new QualificationsQueryParameters
+                {
+                    Page = defaultImportPage,
+                    Limit = defaultImportLimit
+                };
             }
 
             return new QualificationsQueryParameters
