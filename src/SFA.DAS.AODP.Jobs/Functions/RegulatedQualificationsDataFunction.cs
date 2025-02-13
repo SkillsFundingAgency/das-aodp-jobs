@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using RestEase;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Jobs.Interfaces;
+using SFA.DAS.AODP.Jobs.Services;
 
 namespace SFA.DAS.AODP.Functions.Functions
 {
@@ -34,7 +35,7 @@ namespace SFA.DAS.AODP.Functions.Functions
         public async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = "gov/regulatedQualificationsImport")] HttpRequestData req)
         {
-            _logger.LogInformation($"Processing {nameof(RegulatedQualificationsDataFunction)} request...");
+            _logger.LogInformation($"[{nameof(RegulatedQualificationsDataFunction)}] -> Processing request...");
 
             var stopWatch = new Stopwatch();
             
@@ -52,16 +53,16 @@ namespace SFA.DAS.AODP.Functions.Functions
 
                 _logger.LogInformation($"RegulatedQualificationsDataFunction completed in {stopWatch.Elapsed.TotalSeconds:F2} seconds");
 
-                return new OkObjectResult($"Successfully Imported Ofqual Data.");
+                return new OkObjectResult($"[{nameof(RegulatedQualificationsDataFunction)}] -> Successfully Imported Ofqual Data.");
             }
             catch (ApiException ex)
             {
-                _logger.LogError($"Unexpected api exception occurred: {ex.Message}");
+                _logger.LogError($"[{nameof(RegulatedQualificationsDataFunction)}] -> Unexpected api exception occurred: {ex.Message}");
                 return new StatusCodeResult((int)ex.StatusCode);
             }
             catch (SystemException ex)
             {
-                _logger.LogError($"Unexpected system exception occurred: {ex.Message}");
+                _logger.LogError($"[{nameof(RegulatedQualificationsDataFunction)}] -> Unexpected system exception occurred: {ex.Message}");
                 return new StatusCodeResult(500);
             }
         }

@@ -27,7 +27,7 @@ namespace SFA.DAS.AODP.Jobs.Services
         {
             try
             {
-                _logger.LogInformation("Saving regulated qualification records...");
+                _logger.LogInformation($"[{nameof(QualificationsService)}] -> [{nameof(SaveQualificationsStagingAsync)}] -> Saving regulated qualification records...");
 
                 var qualificationsJsonEntities = qualificationsJson
                     .Select(json => new QualificationImportStaging
@@ -38,9 +38,6 @@ namespace SFA.DAS.AODP.Jobs.Services
                     }).ToList();
 
                 await _applicationDbContext.BulkInsertAsync(qualificationsJsonEntities);
-                
-                //_applicationDbContext.QualificationsImportStaging.AddRange(qualificationsJsonEntities);
-                //await _applicationDbContext.SaveChangesAsync();
 
                 _logger.LogInformation("Successfully saved regulated qualification records.");
             }
@@ -55,7 +52,7 @@ namespace SFA.DAS.AODP.Jobs.Services
         {
             try
             {
-                _logger.LogInformation($"Retrieving next batch of {batchSize} staged qualifications from record {processedCount}...");
+                _logger.LogInformation($"[{nameof(QualificationsService)}] -> [{nameof(SaveQualificationsStagingAsync)}] -> Retrieving next batch of {batchSize} staged qualifications from record {processedCount}...");
 
                 var stagedQualifications = await _applicationDbContext.QualificationImportStaging
                     .OrderBy(q => q.Id)
@@ -72,7 +69,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An error occurred while retrieving qualification records.");
+                _logger.LogError(ex, $"[{nameof(QualificationsService)}] -> [{nameof(SaveQualificationsStagingAsync)}] -> An error occurred while retrieving batch of qualification records.");
                 throw;
             }
         }

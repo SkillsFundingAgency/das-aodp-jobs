@@ -21,6 +21,8 @@ namespace SFA.DAS.AODP.Jobs.Services
 
         public Guid GetActionTypeId(ActionTypeEnum actionType)
         {
+            _logger.LogInformation($"[{nameof(ActionTypeService)}] -> [{nameof(GetActionTypeId)}] -> Retrieving action type id for action type {actionType}...");
+
             return _actionTypeMap.TryGetValue(actionType, out var id)
                 ? id
                 : throw new KeyNotFoundException($"ActionTypeEnum {actionType} not found in the database.");

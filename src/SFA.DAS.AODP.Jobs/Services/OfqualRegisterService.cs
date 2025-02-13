@@ -26,10 +26,13 @@ namespace SFA.DAS.AODP.Jobs.Services
 
         public async Task<PaginatedResult<QualificationDTO>> SearchPrivateQualificationsAsync(QualificationsQueryParameters parameters)
         {
+            _logger.LogInformation($"[{nameof(OfqualRegisterService)}] -> [{nameof(SearchPrivateQualificationsAsync)}] -> Starting search for qualifications using ofqual api...");
+
             try
             {
                 if (parameters == null)
                 {
+                    _logger.LogError($"[{nameof(OfqualRegisterService)}] -> [{nameof(SearchPrivateQualificationsAsync)}] -> Parameters cannot be null...");
                     throw new ArgumentNullException(nameof(parameters), "Parameters cannot be null.");
                 }
 
@@ -60,6 +63,8 @@ namespace SFA.DAS.AODP.Jobs.Services
 
         public List<QualificationDTO> ExtractQualificationsList(PaginatedResult<QualificationDTO> paginatedResult)
         {
+            _logger.LogInformation($"[{nameof(OfqualRegisterService)}] -> [{nameof(ExtractQualificationsList)}] -> Extracting qualifications from ofqual api response data...");
+
             return paginatedResult.Results.Select(q => new QualificationDTO
             {
                 QualificationNumber = q.QualificationNumber,
@@ -124,12 +129,15 @@ namespace SFA.DAS.AODP.Jobs.Services
 
         public QualificationsQueryParameters ParseQueryParameters(NameValueCollection query)
         {
+            _logger.LogInformation($"[{nameof(OfqualRegisterService)}] -> [{nameof(ParseQueryParameters)}] -> Parsing function query parameters...");
+
             var defaultImportPage = _configuration.Value.DefaultImportPage;
             var defaultImportLimit = _configuration.Value.DefaultImportLimit;
 
             if (query == null || query.Count == 0)
             {
-                _logger.LogInformation($"Url parameters are empty. Defaulting Page: {defaultImportPage} and Limit: {defaultImportLimit}");
+                _logger.LogInformation($"[{nameof(OfqualRegisterService)}] -> [{nameof(ParseQueryParameters)}] -> Url parameters are empty. Defaulting Page to {defaultImportPage} and Limit to {defaultImportLimit}");
+
                 return new QualificationsQueryParameters
                 {
                     Page = defaultImportPage,
