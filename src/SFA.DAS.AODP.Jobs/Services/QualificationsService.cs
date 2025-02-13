@@ -15,7 +15,7 @@ namespace SFA.DAS.AODP.Jobs.Services
         private readonly IApplicationDbContext _applicationDbContext;
         private readonly IMapper _mapper;
 
-        public QualificationsService(ILogger<QualificationsService> logger, IApplicationDbContext applicationDbContext, IMapper mapper, 
+        public QualificationsService(ILogger<QualificationsService> logger, IMapper mapper, 
             IApplicationDbContext appDbContext)
         {
             _logger = logger;

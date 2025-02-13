@@ -24,6 +24,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         private readonly Mock<IOfqualRegisterApi> _apiClientMock;
         private readonly Mock<IOfqualRegisterService> _ofqualRegisterServiceMock;
         private readonly Mock<IQualificationsService> _qualificationsServiceMock;
+        private readonly Mock<IActionTypeService> _actionTypeServiceMock;
         private readonly FunctionContext _functionContext;
         private readonly OfqualImportService _service;
         private Fixture _fixture;
@@ -36,6 +37,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             _apiClientMock = new Mock<IOfqualRegisterApi>();
             _ofqualRegisterServiceMock = new Mock<IOfqualRegisterService>();
             _qualificationsServiceMock = new Mock<IQualificationsService>();
+            _actionTypeServiceMock = new Mock<IActionTypeService>();
             _functionContext = new Mock<FunctionContext>().Object;
             _fixture = new Fixture();
 
@@ -45,7 +47,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 _dbContextMock.Object,
                 _apiClientMock.Object,
                 _ofqualRegisterServiceMock.Object,
-                _qualificationsServiceMock.Object
+                _qualificationsServiceMock.Object,
+                _actionTypeServiceMock.Object
             );
         }
 
