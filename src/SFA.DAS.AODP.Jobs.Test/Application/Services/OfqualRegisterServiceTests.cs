@@ -45,10 +45,10 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             // Arrange
             var mockLogger = new Mock<ILogger<QualificationsService>>();
             var mockApiClient = new Mock<IOfqualRegisterApi>();
-            var mockConfiguration = new Mock<IConfiguration>();
+            var mockConfiguration = new Mock<IOptions<AodpJobsConfiguration>>();
 
             // Act
-            var service = new OfqualRegisterService(mockLogger.Object, mockApiClient.Object, _mockConfiguration.Object);
+            var service = new OfqualRegisterService(mockLogger.Object, mockApiClient.Object, mockConfiguration.Object);
 
             // Assert
             Assert.NotNull(service);
