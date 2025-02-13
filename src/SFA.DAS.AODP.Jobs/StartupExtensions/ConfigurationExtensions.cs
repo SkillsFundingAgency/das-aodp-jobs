@@ -1,25 +1,31 @@
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection;
 using SFA.DAS.Configuration.AzureTableStorage;
+using System.Diagnostics.CodeAnalysis;
 
 namespace SFA.DAS.AODP.Jobs.StartupExtensions;
 
+[ExcludeFromCodeCoverage]
 public static class ConfigurationExtensions
 {
-    public static void AddConfiguration(this IConfigurationBuilder builder)
+    public static IConfigurationRoot LoadConfiguration(this IConfiguration configuration, IServiceCollection services, bool isDevelopment)
     {
-        builder
+        var configBuilder = new ConfigurationBuilder()
+            .AddConfiguration(configuration)
             .SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("local.settings.json", optional: true);
+            .AddEnvironmentVariables()
+            .AddJsonFile("local.settings.json", true);
 
-        var configuration = builder.Build();
+        configBuilder
+            .AddAzureTableStorage(options =>
+            {
+                options.ConfigurationKeys = configuration["ConfigNames"]?.Split(",");
+                options.StorageConnectionString = configuration["ConfigurationStorageConnectionString"];
+                options.EnvironmentName = configuration["EnvironmentName"];
+                options.PreFixConfigurationKeys = false;
+            });
 
-        builder.AddAzureTableStorage(options =>
-        {
-            options.ConfigurationKeys = configuration["ConfigNames"]!.Split(",");
-            options.StorageConnectionString = configuration["ConfigurationStorageConnectionString"];
-            options.EnvironmentName = configuration["EnvironmentName"];
-            options.PreFixConfigurationKeys = false;
-        });
+        var configurationRoot = configBuilder.Build();
+        return configurationRoot;
     }
 }

@@ -7,26 +7,51 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using SFA.DAS.AODP.Jobs.Client;
 using AutoFixture;
+using System.Collections.Specialized;
+using Microsoft.Extensions.Options;
+using SFA.DAS.AODP.Models.Config;
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 {
-    public class QualificationsApiServiceTests
+    public class OfqualRegisterServiceTests
     {
         private readonly Mock<ILogger<QualificationsService>> _mockLogger;
         private readonly Mock<IOfqualRegisterApi> _mockApiClient;
         private readonly Mock<IApplicationDbContext> _mockDbContext;
-        private readonly Mock<IConfiguration> _mockConfiguration;
+        private readonly Mock<IOptions<AodpJobsConfiguration>> _mockConfiguration;
         private readonly OfqualRegisterService _service;
         private Fixture _fixture;
+        private AodpJobsConfiguration mockConfig;
 
-        public QualificationsApiServiceTests()
+        public OfqualRegisterServiceTests()
         {
             _mockApiClient = new Mock<IOfqualRegisterApi>();
             _mockLogger = new Mock<ILogger<QualificationsService>>();
             _mockDbContext = new Mock<IApplicationDbContext>();
-            _mockConfiguration = new Mock<IConfiguration>();
+            _mockConfiguration = new Mock<IOptions<AodpJobsConfiguration>>();
             _fixture = new Fixture();
             _service = new OfqualRegisterService(_mockLogger.Object, _mockApiClient.Object, _mockConfiguration.Object);
+
+            mockConfig = new AodpJobsConfiguration
+            {
+                DefaultImportPage = 1,
+                DefaultImportLimit = 100
+            };
+        }
+
+        [Fact]
+        public void Constructor_ShouldInitializeDependencies()
+        {
+            // Arrange
+            var mockLogger = new Mock<ILogger<QualificationsService>>();
+            var mockApiClient = new Mock<IOfqualRegisterApi>();
+            var mockConfiguration = new Mock<IOptions<AodpJobsConfiguration>>();
+
+            // Act
+            var service = new OfqualRegisterService(mockLogger.Object, mockApiClient.Object, mockConfiguration.Object);
+
+            // Assert
+            Assert.NotNull(service);
         }
 
         [Fact]
@@ -234,5 +259,139 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             Assert.Equal(1000, result.Results.Count);
         }
 
+        [Fact]
+        public void ParseQueryParameters_NullQuery_ReturnsDefaults()
+        {
+            // Arange
+            _mockConfiguration.Setup(opt => opt.Value).Returns(mockConfig);
+
+            // Act
+            var result = _service.ParseQueryParameters(null);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(1, result.Page);
+            Assert.Equal(100, result.Limit);
+        }
+
+        [Fact]
+        public void ParseQueryParameters_EmptyQuery_ReturnsDefaults()
+        {
+            // Arrange
+            var query = new NameValueCollection();
+
+            _mockConfiguration.Setup(opt => opt.Value).Returns(mockConfig);
+
+            // Act
+            var result = _service.ParseQueryParameters(query);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(1, result.Page);
+            Assert.Equal(100, result.Limit);
+        }
+
+        [Fact]
+        public void ParseQueryParameters_ValidQuery_ReturnsCorrectValues()
+        {
+            // Arrange
+            var query = new NameValueCollection
+            {
+                { "page", "5" },
+                { "limit", "50" },
+                { "title", "Test Title" },
+                { "availability", "Available" }
+            };
+
+            _mockConfiguration.Setup(opt => opt.Value).Returns(mockConfig);
+
+            // Act
+            var result = _service.ParseQueryParameters(query);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(5, result.Page);
+            Assert.Equal(50, result.Limit);
+            Assert.Equal("Test Title", result.Title);
+            Assert.Equal("Available", result.Availability);
+        }
+
+        [Fact]
+        public void ParseQueryParameters_MissingOptionalValues_ReturnsNullForStrings()
+        {
+            // Arrange
+            var query = new NameValueCollection();
+
+            _mockConfiguration.Setup(opt => opt.Value).Returns(mockConfig);
+
+            // Act
+            var result = _service.ParseQueryParameters(query);
+
+            // Assert
+            Assert.Null(result.Title);
+            Assert.Null(result.AssessmentMethods);
+            Assert.Null(result.Availability);
+        }
+
+        [Fact]
+        public void ExtractQualificationsList_ShouldMapCorrectly()
+        {
+            // Arrange
+            var paginatedResult = new PaginatedResult<QualificationDTO>
+            {
+                Results = new List<QualificationDTO>
+                {
+                    _fixture.Create<QualificationDTO>()
+                }
+            };
+            var service = new OfqualRegisterService(null, null, null);
+
+            // Act
+            var result = service.ExtractQualificationsList(paginatedResult);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Single(result);
+        }
+
+        [Fact]
+        public void ExtractQualificationsList_EmptyResults_ReturnsEmptyList()
+        {
+            // Arrange
+            var paginatedResult = new PaginatedResult<QualificationDTO>
+            {
+                Results = new List<QualificationDTO>()
+            };
+
+            // Act
+            var result = _service.ExtractQualificationsList(paginatedResult);
+
+            // Assert
+            Assert.Empty(result);
+        }
+
+        [Fact]
+        public void ExtractQualificationsList_MultipleResults_ReturnsCorrectCount()
+        {
+            // Arrange
+            var inputDtos = new List<QualificationDTO>
+            {
+                new QualificationDTO { QualificationNumber = "QN123" },
+                new QualificationDTO { QualificationNumber = "QN456" },
+                new QualificationDTO { QualificationNumber = "QN789" }
+            };
+
+            var paginatedResult = new PaginatedResult<QualificationDTO>
+            {
+                Results = inputDtos
+            };
+
+            // Act
+            var result = _service.ExtractQualificationsList(paginatedResult);
+
+            // Assert
+            Assert.Equal(3, result.Count);
+            Assert.Equal(inputDtos.Select(x => x.QualificationNumber), result.Select(x => x.QualificationNumber));
+        }
     }
 }

@@ -90,10 +90,12 @@ namespace SFA.DAS.AODP.Jobs.Services
             catch (ApiException ex)
             {
                 _logger.LogError(ex, "Unexpected API exception occurred.");
+                throw;
             }
             catch (SystemException ex)
             {
                 _logger.LogError(ex, "Unexpected system exception occurred.");
+                throw;
             }
         }
 

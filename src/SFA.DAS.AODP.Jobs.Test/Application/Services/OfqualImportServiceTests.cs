@@ -12,6 +12,7 @@ using SFA.DAS.AODP.Data;
 using System.Collections.Specialized;
 using Microsoft.Azure.Functions.Worker;
 using AutoFixture;
+using RestEase;
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 {
@@ -52,6 +53,21 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         public async Task StageQualificationsDataAsync_Should_Clear_StagedQualifications()
         {
             var requestMock = new Mock<HttpRequestData>(_functionContext);
+            var searchResult = new PaginatedResult<QualificationDTO>
+            {
+                Results = new List<QualificationDTO>
+                {
+                    _fixture.Create<QualificationDTO>()
+                }
+            };
+
+            _ofqualRegisterServiceMock.Setup(s => s.ParseQueryParameters(It.IsAny<NameValueCollection>()))
+                .Returns(new QualificationsQueryParameters { Limit = 10 });
+            _ofqualRegisterServiceMock.Setup(s => s.SearchPrivateQualificationsAsync(It.IsAny<QualificationsQueryParameters>()))
+                .ReturnsAsync(searchResult);
+            _qualificationsServiceMock.Setup(s => s.SaveQualificationsStagingAsync(It.IsAny<List<string>>()))
+                .Returns(Task.CompletedTask);
+
 
             _dbContextMock.Setup(db => db.TruncateTable<QualificationImportStaging>()).Returns(Task.CompletedTask);
 
@@ -83,6 +99,69 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             await _service.StageQualificationsDataAsync(requestMock.Object);
 
             _qualificationsServiceMock.Verify(s => s.SaveQualificationsStagingAsync(It.IsAny<List<string>>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task StageQualificationsDataAsync_ShouldThrowApiException_WhenApiExceptionOccurs()
+        {
+            // Arrange
+            var requestMock = new Mock<HttpRequestData>(_functionContext);
+            var searchResult = new PaginatedResult<QualificationDTO>
+            {
+                Results = new List<QualificationDTO>
+                {
+                    _fixture.Create<QualificationDTO>()
+                }
+            };
+            var requestMessage = new HttpRequestMessage(HttpMethod.Get, "https://test.com");
+            var responseMessage = new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest)
+            {
+                Content = new StringContent("Bad Request")
+            };
+            var apiException = new ApiException(requestMessage, responseMessage, "API error");
+
+            _ofqualRegisterServiceMock.Setup(s => s.ParseQueryParameters(It.IsAny<NameValueCollection>()))
+                .Returns(new QualificationsQueryParameters { Limit = 10 });
+
+            _ofqualRegisterServiceMock.Setup(s => s.SearchPrivateQualificationsAsync(It.IsAny<QualificationsQueryParameters>()))
+                .ReturnsAsync(searchResult);
+
+            _qualificationsServiceMock.Setup(s => s.SaveQualificationsStagingAsync(It.IsAny<List<string>>()))
+                .Returns(Task.CompletedTask);
+
+            _ofqualRegisterServiceMock.Setup(s => s.SearchPrivateQualificationsAsync(It.IsAny<QualificationsQueryParameters>()))
+                .ThrowsAsync(apiException);
+
+            // Act & Assert
+            await Assert.ThrowsAsync<ApiException>(() => _service.StageQualificationsDataAsync(requestMock.Object));
+        }
+
+        [Fact]
+        public async Task StageQualificationsDataAsync_ShouldThrowSystemException_WhenSystemExceptionOccurs()
+        {
+            // Arrange
+            var requestMock = new Mock<HttpRequestData>(_functionContext);
+            var searchResult = new PaginatedResult<QualificationDTO>
+            {
+                Results = new List<QualificationDTO>
+                {
+                    _fixture.Create<QualificationDTO>()
+                }
+            };
+            _ofqualRegisterServiceMock.Setup(s => s.ParseQueryParameters(It.IsAny<NameValueCollection>()))
+                .Returns(new QualificationsQueryParameters { Limit = 10 });
+
+            _ofqualRegisterServiceMock.Setup(s => s.SearchPrivateQualificationsAsync(It.IsAny<QualificationsQueryParameters>()))
+                .ReturnsAsync(searchResult);
+
+            _qualificationsServiceMock.Setup(s => s.SaveQualificationsStagingAsync(It.IsAny<List<string>>()))
+                .Returns(Task.CompletedTask);
+
+            _ofqualRegisterServiceMock.Setup(s => s.SearchPrivateQualificationsAsync(It.IsAny<QualificationsQueryParameters>()))
+                .ThrowsAsync(new SystemException("System error"));
+
+            // Act & Assert
+            await Assert.ThrowsAsync<SystemException>(() => _service.StageQualificationsDataAsync(requestMock.Object));
         }
     }
 
