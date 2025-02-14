@@ -4,16 +4,17 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SFA.DAS.AODP.Jobs.StartupExtensions;
 
-var host = new HostBuilder()
-    .ConfigureFunctionsWebApplication()
-    .ConfigureAppConfiguration(builder => builder.AddConfiguration())
-    .ConfigureServices((context, services) =>
-    {
-        services
-            .AddApplicationInsightsTelemetryWorkerService()
-            .ConfigureFunctionsApplicationInsights()
-            .AddServiceRegistrations(context.Configuration);
-    })
-    .Build();
+var builder = FunctionsApplication.CreateBuilder(args);
 
-host.Run();
+var configuration = builder.Configuration
+    .LoadConfiguration(builder.Services, builder.Environment.IsDevelopment());
+
+builder.Services
+    .AddApplicationInsightsTelemetryWorkerService()
+    .ConfigureFunctionsApplicationInsights();
+builder.Services.AddServiceRegistrations(configuration);
+builder.Services.AddLogging();
+
+var app = builder.Build();
+
+app.Run();
