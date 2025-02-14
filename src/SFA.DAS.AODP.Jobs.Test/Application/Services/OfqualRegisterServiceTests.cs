@@ -4,7 +4,6 @@ using SFA.DAS.AODP.Models.Qualification;
 using SFA.DAS.AODP.Data;
 using SFA.DAS.AODP.Infrastructure.Context;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration;
 using SFA.DAS.AODP.Jobs.Client;
 using AutoFixture;
 using System.Collections.Specialized;
@@ -344,10 +343,9 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                     _fixture.Create<QualificationDTO>()
                 }
             };
-            var service = new OfqualRegisterService(null, null, null);
 
             // Act
-            var result = service.ExtractQualificationsList(paginatedResult);
+            var result = _service.ExtractQualificationsList(paginatedResult);
 
             // Assert
             Assert.NotNull(result);

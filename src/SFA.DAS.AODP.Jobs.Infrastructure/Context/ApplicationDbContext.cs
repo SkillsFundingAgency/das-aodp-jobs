@@ -11,7 +11,7 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options) { }
 
-        public virtual DbSet<ActionType> ActionTypes { get; set; }
+        public virtual DbSet<ActionType> ActionType { get; set; }
 
         public virtual DbSet<LifecycleStage> LifecycleStages { get; set; }
 
@@ -23,7 +23,7 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public virtual DbSet<Qualifications> FundedQualifications { get; set; }
 
-        public virtual DbSet<QualificationDiscussionHistory> QualificationDiscussionHistories { get; set; }
+        public virtual DbSet<QualificationDiscussionHistory> QualificationDiscussionHistory { get; set; }
 
         public virtual DbSet<QualificationOffer> QualificationOffers { get; set; }
 
@@ -56,4 +56,3 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         }
     }
 }
-

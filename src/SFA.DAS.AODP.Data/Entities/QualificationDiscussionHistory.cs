@@ -18,4 +18,3 @@ public partial class QualificationDiscussionHistory
 
     public virtual Qualification Qualification { get; set; } = null!;
 }
-

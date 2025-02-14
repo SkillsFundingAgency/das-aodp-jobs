@@ -13,4 +13,3 @@ public partial class ProcessStatus
 
     public virtual ICollection<QualificationVersions> QualificationVersions { get; set; } = new List<QualificationVersions>();
 }
-

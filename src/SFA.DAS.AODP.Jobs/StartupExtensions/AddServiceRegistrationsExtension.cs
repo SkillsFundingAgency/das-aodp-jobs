@@ -36,18 +36,21 @@ public static class AddServiceRegistrationsExtension
         services.AddScoped<IQualificationsService, QualificationsService>();
         services.AddTransient<IOfqualRegisterService, OfqualRegisterService>();
         services.AddTransient<IOfqualImportService, OfqualImportService>();
+        services.AddTransient<IActionTypeService, ActionTypeService>();
+        services.AddTransient<IFundingEligibilityService, FundingEligibilityService>();
         services.AddScoped<ICsvReaderService, CsvReaderService>();
+
+        var aodpJobsConfiguration = configuration.GetSection(nameof(AodpJobsConfiguration)).Get<AodpJobsConfiguration>();
+
         services.AddScoped<IOfqualRegisterApi>(provider =>
         {
             const string baseUrl = "https://register-api.ofqual.gov.uk";
             var api = RestClient.For<IOfqualRegisterApi>(baseUrl);
-            api.SubscriptionKey = configuration["OcpApimSubscriptionKey"];
+            api.SubscriptionKey = aodpJobsConfiguration.OcpApimSubscriptionKey;
             return api;
         });
 
-        var connection = configuration.GetSection(nameof(AodpJobsConfiguration)).Get<AodpJobsConfiguration>();
-
-        var connectionString = connection.DbConnectionString;
+        var connectionString = aodpJobsConfiguration.DbConnectionString;
 
         if (string.IsNullOrEmpty(connectionString))
         {

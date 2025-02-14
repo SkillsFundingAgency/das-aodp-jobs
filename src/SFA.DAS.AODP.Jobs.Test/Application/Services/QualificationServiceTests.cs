@@ -22,7 +22,6 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
             _service = new QualificationsService(
                 _mockLogger.Object,
-                _mockDbContext.Object,
                 _mockMapper.Object,
                 _mockDbContext.Object
             );
