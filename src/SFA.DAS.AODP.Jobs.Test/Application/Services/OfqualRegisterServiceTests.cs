@@ -343,10 +343,9 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                     _fixture.Create<QualificationDTO>()
                 }
             };
-            var service = new OfqualRegisterService(null, null, null);
 
             // Act
-            var result = service.ExtractQualificationsList(paginatedResult);
+            var result = _service.ExtractQualificationsList(paginatedResult);
 
             // Assert
             Assert.NotNull(result);

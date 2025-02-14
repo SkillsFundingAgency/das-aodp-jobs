@@ -50,7 +50,7 @@ public class RegulatedQualificationsDataFunctionTests
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal("Successfully Imported Ofqual Data.", okResult.Value);
+        Assert.Equal("[RegulatedQualificationsDataFunction] -> Successfully Imported Ofqual Data.", okResult.Value);
     }
 
     [Fact]
