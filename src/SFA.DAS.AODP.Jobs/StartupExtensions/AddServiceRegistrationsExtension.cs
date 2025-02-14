@@ -37,6 +37,7 @@ public static class AddServiceRegistrationsExtension
         services.AddTransient<IOfqualRegisterService, OfqualRegisterService>();
         services.AddTransient<IOfqualImportService, OfqualImportService>();
         services.AddTransient<IActionTypeService, ActionTypeService>();
+        services.AddTransient<IFundingEligibilityService, FundingEligibilityService>();
         services.AddScoped<ICsvReaderService, CsvReaderService>();
 
         var aodpJobsConfiguration = configuration.GetSection(nameof(AodpJobsConfiguration)).Get<AodpJobsConfiguration>();

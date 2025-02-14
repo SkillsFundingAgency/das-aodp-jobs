@@ -21,17 +21,20 @@ namespace SFA.DAS.AODP.Jobs.Services
         private readonly IOfqualRegisterService _ofqualRegisterService;
         private readonly IQualificationsService _qualificationsService;
         private readonly IActionTypeService _actionTypeService;
+        private readonly IFundingEligibilityService _fundingEligibilityService;
         private Stopwatch _loopCycleStopWatch = new Stopwatch();
         private Stopwatch _processStopWatch = new Stopwatch();
 
         public OfqualImportService(ILogger<OfqualImportService> logger, IConfiguration configuration, IApplicationDbContext applicationDbContext,
-            IOfqualRegisterApi apiClient, IOfqualRegisterService ofqualRegisterService, IQualificationsService qualificationsService, IActionTypeService actionTypeService)
+            IOfqualRegisterApi apiClient, IOfqualRegisterService ofqualRegisterService, IQualificationsService qualificationsService, 
+            IActionTypeService actionTypeService, IFundingEligibilityService fundingEligibilityService)
         {
             _logger = logger;
             _applicationDbContext = applicationDbContext;
             _ofqualRegisterService = ofqualRegisterService;
             _qualificationsService = qualificationsService;
             _actionTypeService = actionTypeService;
+            _fundingEligibilityService = fundingEligibilityService;
         }
 
         public async Task StageQualificationsDataAsync(HttpRequestData request)
@@ -215,9 +218,9 @@ namespace SFA.DAS.AODP.Jobs.Services
                         }
 
                         // Check if qualification version exists
-                        if (!existingVersionsInfo.TryGetValue(qualification.Id, out var versionInfo))
-                            // No existing version - create intial qualification version
+                        if (!existingVersionsInfo.TryGetValue(qualification.Id, out var versionInfo) && !_fundingEligibilityService.EligibleForFunding(qualificationData))
                         {
+                            // No existing version - create intial qualification version
                             var versionFieldChange = new VersionFieldChange
                             {
                                 Id = Guid.NewGuid(),
