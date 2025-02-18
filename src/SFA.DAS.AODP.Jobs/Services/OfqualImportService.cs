@@ -37,7 +37,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             _fundingEligibilityService = fundingEligibilityService;
         }
 
-        public async Task StageQualificationsDataAsync(HttpRequestData request)
+        public async Task<int> StageQualificationsDataAsync(HttpRequestData request)
         {
             _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(StageQualificationsDataAsync)}] -> Import Ofqual qualifications to staging area...");
 
@@ -104,6 +104,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                 _logger.LogError(ex, "Unexpected system exception occurred.");
                 throw;
             }
+
+            return totalProcessed;
         }
 
         public async Task ProcessQualificationsDataAsync()

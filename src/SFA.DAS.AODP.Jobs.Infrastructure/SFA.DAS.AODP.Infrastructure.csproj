@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SFA.DAS.AODP.Data\SFA.DAS.AODP.Data.csproj" />
+    <ProjectReference Include="..\SFA.DAS.AODP.Jobs.Common\SFA.DAS.AODP.Common.csproj" />
   </ItemGroup>
 
 </Project>
