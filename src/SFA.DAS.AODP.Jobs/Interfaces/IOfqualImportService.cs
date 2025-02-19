@@ -6,6 +6,6 @@ namespace SFA.DAS.AODP.Jobs.Interfaces
     {
         Task StageQualificationsDataAsync(HttpRequestData request);
 
-        Task ProcessQualificationsDataAsync();
+        //Task ProcessQualificationsDataAsync();
     }
 }
