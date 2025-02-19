@@ -46,19 +46,21 @@ namespace SFA.DAS.AODP.Jobs.Services
             // DBO
             try
             {
-                var qualVersions = _applicationDbContext.QualificationImportStaging?.ToList();
+                var qual = _applicationDbContext.QualificationImportStaging?.ToList();
 
-                if (qualVersions == null || !qualVersions.Any())
+                if (qual == null || !qual.Any())
                 {
                     _logger.LogInformation("No QualificationImportStaging found.");
                     return;
                 }
 
-                _logger.LogInformation($"Total QualificationImportStaging retrieved: {qualVersions.Count}");
+                _logger.LogInformation($"Total QualificationImportStaging retrieved: {qual.Count}");
 
-                foreach (var qualVersion in qualVersions)
+                foreach (var qualImport in qual)
                 {
-                    _logger.LogInformation($"QualificationImportStaging: {qualVersion}");
+                    _logger.LogInformation($"QualificationImportStaging record:");
+                    _logger.LogInformation($"ID: {qualImport.Id}");
+                    _logger.LogInformation($"Data: {qualImport.JsonData}");
                 }
             }
             catch (Exception ex)
@@ -69,19 +71,21 @@ namespace SFA.DAS.AODP.Jobs.Services
             // REGULATED
             try
             {
-                var qualVersions = _applicationDbContext.QualificationVersions?.ToList();
+                var qual = _applicationDbContext.QualificationVersions?.ToList();
 
-                if (qualVersions == null || !qualVersions.Any())
+                if (qual == null || !qual.Any())
                 {
                     _logger.LogInformation("No QualificationVersions found.");
                     return;
                 }
 
-                _logger.LogInformation($"Total QualificationVersions retrieved: {qualVersions.Count}");
+                _logger.LogInformation($"Total QualificationVersions retrieved: {qual.Count}");
 
-                foreach (var qualVersion in qualVersions)
+                foreach (var fundedQual in qual)
                 {
-                    _logger.LogInformation($"QualificationVersion: {qualVersion}");
+                    _logger.LogInformation($"QualificationVersion record:");
+                    _logger.LogInformation($"ID: {fundedQual.QualificationId}");
+                    _logger.LogInformation($"OfferedInEngland: {fundedQual.OfferedInEngland}");
                 }
             }
             catch (Exception ex)
@@ -90,27 +94,27 @@ namespace SFA.DAS.AODP.Jobs.Services
             }
 
             // FUNDED
-            try
-            {
-                var qualVersions = _applicationDbContext.FundedQualifications?.ToList();
+            //try
+            //{
+            //    var qualVersions = _applicationDbContext.Qualifications?.ToList();
 
-                if (qualVersions == null || !qualVersions.Any())
-                {
-                    _logger.LogInformation("No FundedQualifications found.");
-                    return;
-                }
+            //    if (qualVersions == null || !qualVersions.Any())
+            //    {
+            //        _logger.LogInformation("No FundedQualifications found.");
+            //        return;
+            //    }
 
-                _logger.LogInformation($"Total FundedQualifications retrieved: {qualVersions.Count}");
+            //    _logger.LogInformation($"Total FundedQualifications retrieved: {qualVersions.Count}");
 
-                foreach (var qualVersion in qualVersions)
-                {
-                    _logger.LogInformation($"FundedQualification: {qualVersion}");
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Unexpected API exception occurred.");
-            }
+            //    foreach (var qualVersion in qualVersions)
+            //    {
+            //        _logger.LogInformation($"FundedQualification: {qualVersion}");
+            //    }
+            //}
+            //catch (Exception ex)
+            //{
+            //    _logger.LogError(ex, "Unexpected API exception occurred.");
+            //}
         }
 
     }
