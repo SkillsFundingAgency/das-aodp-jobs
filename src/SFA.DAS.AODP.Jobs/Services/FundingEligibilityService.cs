@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
+using SFA.DAS.AODP.Jobs.Enum;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Models.Qualification;
+using System.Linq;
 
 namespace SFA.DAS.AODP.Jobs.Services
 {
@@ -14,10 +16,44 @@ namespace SFA.DAS.AODP.Jobs.Services
         }
 
         public bool EligibleForFunding(QualificationDTO qualification)
-        {
-            _logger.LogInformation($"[{nameof(FundingEligibilityService)}] -> [{nameof(EligibleForFunding)}] -> Running eligibility test for qualifcation with qan {qualification.QualificationNumberNoObliques}...");
+        {            
+            var eligibleForFunding = qualification.OfferedInEngland
+                                      //  && qualification.FundedInEngland
+                                      && qualification.Type != QualificationReference.EndPointAssessment                                     
+                                      && !QualificationReference.IneligibleQualifications.Any(s => qualification.Title.Contains(s, StringComparison.OrdinalIgnoreCase))
+                                      && !QualificationReference.IneligibleQualificationsShortForms.Any(s => qualification.Title.Contains(s, StringComparison.OrdinalIgnoreCase))
+                                      && qualification.Glh.HasValue && qualification.Tqt.HasValue
+                                      && qualification.Glh.Value > 0 && qualification.Tqt.Value > 0
+                                      && qualification.Glh < qualification.Tqt
+                                      && qualification.OperationalStartDate >= QualificationReference.MinOperationalDate;
 
-            return false;
+            if (eligibleForFunding)
+            {
+                _logger.LogInformation($"[{nameof(FundingEligibilityService)}] -> [{nameof(EligibleForFunding)}] -> Qualification {qualification.QualificationNumberNoObliques} eligible for funding");
+            }
+            else
+            {
+                _logger.LogInformation($"[{nameof(FundingEligibilityService)}] -> [{nameof(EligibleForFunding)}] -> Qualification {qualification.QualificationNumberNoObliques} NOT eligible for funding");
+            }
+
+            return eligibleForFunding;
+        }
+
+        public string DetermineFailureReason(QualificationDTO qualification)
+        {
+            var reason = ImportReason.NoAction;
+
+            var noGlhOrTqt = !qualification.Glh.HasValue 
+                            || !qualification.Tqt.HasValue
+                            || (qualification.Glh.Value <= 0 && qualification.Tqt.Value <= 0);
+
+            if (noGlhOrTqt)
+            {
+                _logger.LogInformation($"[{nameof(FundingEligibilityService)}] -> [{nameof(EligibleForFunding)}] -> Qualification {qualification.QualificationNumberNoObliques} has no GLH/TQT");
+                reason = ImportReason.NoGLHOrTQT;
+            }            
+
+            return reason;
         }
     }
 }

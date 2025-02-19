@@ -55,10 +55,10 @@ public class RegulatedQualificationsDataFunctionTests
         var jobControl = new JobControl() { JobId = Guid.NewGuid(), JobRunId = Guid.NewGuid(), JobEnabled = true, ProcessStagingData = true, RunApiImport = true };
 
         _jobConfigurationService.Setup(s => s.ReadJobConfiguration()).ReturnsAsync(jobControl).Verifiable();
-        _jobConfigurationService.Setup(s => s.InsertJobRunAsync(jobControl.JobId, userName, Enum.JobStatus.Started)).ReturnsAsync(jobControl.JobRunId).Verifiable();
+        _jobConfigurationService.Setup(s => s.InsertJobRunAsync(jobControl.JobId, userName, Enum.JobStatus.Running)).ReturnsAsync(jobControl.JobRunId).Verifiable();
         _jobConfigurationService.Setup(s => s.UpdateJobRun(userName, jobControl.JobId, jobControl.JobRunId, totalRecords, Enum.JobStatus.Completed)).Verifiable();
 
-        _ofqualImportServiceMock.Setup(s => s.StageQualificationsDataAsync(It.IsAny<HttpRequestData>()))
+        _ofqualImportServiceMock.Setup(s => s.ImportApiData(It.IsAny<HttpRequestData>()))
             .Returns(Task.FromResult(totalRecords));
 
         // Act
@@ -81,7 +81,7 @@ public class RegulatedQualificationsDataFunctionTests
 
         _jobConfigurationService.Setup(s => s.ReadJobConfiguration()).ReturnsAsync(jobControl).Verifiable();       
 
-        _ofqualImportServiceMock.Setup(s => s.StageQualificationsDataAsync(It.IsAny<HttpRequestData>()))
+        _ofqualImportServiceMock.Setup(s => s.ImportApiData(It.IsAny<HttpRequestData>()))
             .Returns(Task.FromResult(totalRecords));
 
         // Act
@@ -103,7 +103,7 @@ public class RegulatedQualificationsDataFunctionTests
         var jobControl = new JobControl() { JobId = Guid.NewGuid(), JobRunId = Guid.NewGuid(), JobEnabled = true, ProcessStagingData = true, RunApiImport = false };
 
         _jobConfigurationService.Setup(s => s.ReadJobConfiguration()).ReturnsAsync(jobControl).Verifiable();
-        _jobConfigurationService.Setup(s => s.InsertJobRunAsync(jobControl.JobId, userName, Enum.JobStatus.Started)).ReturnsAsync(jobControl.JobRunId).Verifiable();
+        _jobConfigurationService.Setup(s => s.InsertJobRunAsync(jobControl.JobId, userName, Enum.JobStatus.Running)).ReturnsAsync(jobControl.JobRunId).Verifiable();
         _jobConfigurationService.Setup(s => s.UpdateJobRun(userName, jobControl.JobId, jobControl.JobRunId, totalRecords, Enum.JobStatus.Completed)).Verifiable();        
 
         // Act
@@ -113,7 +113,7 @@ public class RegulatedQualificationsDataFunctionTests
         var okResult = Assert.IsType<OkObjectResult>(result);
         _jobConfigurationService.VerifyAll();
         
-        _ofqualImportServiceMock.Verify(s => s.StageQualificationsDataAsync(It.IsAny<HttpRequestData>()), Times.Never());
+        _ofqualImportServiceMock.Verify(s => s.ImportApiData(It.IsAny<HttpRequestData>()), Times.Never());
         Assert.Equal("[RegulatedQualificationsDataFunction] -> Successfully Imported Ofqual Data.", okResult.Value);
     }
 
@@ -126,10 +126,10 @@ public class RegulatedQualificationsDataFunctionTests
         var totalRecords = 1000;
         var jobControl = new JobControl() { JobId = Guid.NewGuid(), JobRunId = Guid.NewGuid(), JobEnabled = true, ProcessStagingData = false, RunApiImport = true };
 
-        _ofqualImportServiceMock.Setup(s => s.StageQualificationsDataAsync(It.IsAny<HttpRequestData>()))
+        _ofqualImportServiceMock.Setup(s => s.ImportApiData(It.IsAny<HttpRequestData>()))
             .Returns(Task.FromResult(totalRecords));
         _jobConfigurationService.Setup(s => s.ReadJobConfiguration()).ReturnsAsync(jobControl).Verifiable();
-        _jobConfigurationService.Setup(s => s.InsertJobRunAsync(jobControl.JobId, userName, Enum.JobStatus.Started)).ReturnsAsync(jobControl.JobRunId).Verifiable();
+        _jobConfigurationService.Setup(s => s.InsertJobRunAsync(jobControl.JobId, userName, Enum.JobStatus.Running)).ReturnsAsync(jobControl.JobRunId).Verifiable();
         _jobConfigurationService.Setup(s => s.UpdateJobRun(userName, jobControl.JobId, jobControl.JobRunId, totalRecords, Enum.JobStatus.Completed)).Verifiable();       
 
         // Act
@@ -152,7 +152,7 @@ public class RegulatedQualificationsDataFunctionTests
         var jobControl = new JobControl() { JobId = Guid.NewGuid(), JobRunId = Guid.NewGuid(), JobEnabled = true, ProcessStagingData = true, RunApiImport = true };
 
         _jobConfigurationService.Setup(s => s.ReadJobConfiguration()).ReturnsAsync(jobControl).Verifiable();
-        _jobConfigurationService.Setup(s => s.InsertJobRunAsync(jobControl.JobId, userName, Enum.JobStatus.Started)).ReturnsAsync(jobControl.JobRunId).Verifiable();
+        _jobConfigurationService.Setup(s => s.InsertJobRunAsync(jobControl.JobId, userName, Enum.JobStatus.Running)).ReturnsAsync(jobControl.JobRunId).Verifiable();
         _jobConfigurationService.Setup(s => s.UpdateJobRun(userName, jobControl.JobId, jobControl.JobRunId, totalRecords, Enum.JobStatus.Completed)).Verifiable();
         var requestMessage = new HttpRequestMessage(HttpMethod.Get, "https://test.com");
         var responseMessage = new HttpResponseMessage(HttpStatusCode.BadRequest)
@@ -161,7 +161,7 @@ public class RegulatedQualificationsDataFunctionTests
         };
         var apiException = new ApiException(requestMessage, responseMessage, "Bad Request");
 
-        _ofqualImportServiceMock.Setup(s => s.StageQualificationsDataAsync(It.IsAny<HttpRequestData>()))
+        _ofqualImportServiceMock.Setup(s => s.ImportApiData(It.IsAny<HttpRequestData>()))
             .ThrowsAsync(apiException);
 
         // Act
@@ -182,9 +182,9 @@ public class RegulatedQualificationsDataFunctionTests
         var jobControl = new JobControl() { JobId = Guid.NewGuid(), JobRunId = Guid.NewGuid(), JobEnabled = true, ProcessStagingData = true, RunApiImport = true };
 
         _jobConfigurationService.Setup(s => s.ReadJobConfiguration()).ReturnsAsync(jobControl).Verifiable();
-        _jobConfigurationService.Setup(s => s.InsertJobRunAsync(jobControl.JobId, userName, Enum.JobStatus.Started)).ReturnsAsync(jobControl.JobRunId).Verifiable();
+        _jobConfigurationService.Setup(s => s.InsertJobRunAsync(jobControl.JobId, userName, Enum.JobStatus.Running)).ReturnsAsync(jobControl.JobRunId).Verifiable();
         _jobConfigurationService.Setup(s => s.UpdateJobRun(userName, jobControl.JobId, jobControl.JobRunId, totalRecords, Enum.JobStatus.Completed)).Verifiable();
-        _ofqualImportServiceMock.Setup(s => s.StageQualificationsDataAsync(It.IsAny<HttpRequestData>()))
+        _ofqualImportServiceMock.Setup(s => s.ImportApiData(It.IsAny<HttpRequestData>()))
             .ThrowsAsync(new SystemException("System error"));
 
         // Act

@@ -39,10 +39,11 @@ public static class AddServiceRegistrationsExtension
         services.AddScoped<IQualificationsService, QualificationsService>();
         services.AddTransient<IOfqualRegisterService, OfqualRegisterService>();
         services.AddTransient<IOfqualImportService, OfqualImportService>();
-        services.AddTransient<IActionTypeService, ActionTypeService>();
+        services.AddTransient<IReferenceDataService, ReferenceDataService>();
         services.AddTransient<IFundingEligibilityService, FundingEligibilityService>();
         services.AddScoped<ICsvReaderService, CsvReaderService>();
         services.AddScoped<ISystemClockService, SystemClockService>();
+        services.AddScoped<IJobConfigurationService, JobConfigurationService>();
 
         var aodpJobsConfiguration = configuration.GetSection(nameof(AodpJobsConfiguration)).Get<AodpJobsConfiguration>();
 

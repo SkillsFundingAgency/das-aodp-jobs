@@ -2,8 +2,10 @@
 
 namespace SFA.DAS.AODP.Jobs.Interfaces
 {
-    public interface IActionTypeService
+    public interface IReferenceDataService
     {
         Guid GetActionTypeId(ActionTypeEnum actionType);
+        Guid GetProcessStatusId(string processStatus);
+        Guid GetLifecycleStageId(string stage);
     }
 }

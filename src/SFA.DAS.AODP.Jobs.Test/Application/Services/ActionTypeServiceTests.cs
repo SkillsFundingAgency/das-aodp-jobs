@@ -10,14 +10,14 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 {
     public class ActionTypeServiceTests
     {
-        private readonly Mock<ILogger<ActionTypeService>> _mockLogger;
+        private readonly Mock<ILogger<ReferenceDataService>> _mockLogger;
         private readonly Mock<IApplicationDbContext> _mockDbContext;
         private readonly List<ActionType> _actionTypes;
         private readonly Mock<DbSet<ActionType>> _mockDbSet;
 
         public ActionTypeServiceTests()
         {
-            _mockLogger = new Mock<ILogger<ActionTypeService>>();
+            _mockLogger = new Mock<ILogger<ReferenceDataService>>();
             _mockDbContext = new Mock<IApplicationDbContext>();
 
             // Setup test data
@@ -44,7 +44,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         public void Constructor_ShouldInitializeActionTypeMap()
         {
             // Act
-            var service = new ActionTypeService(_mockLogger.Object, _mockDbContext.Object);
+            var service = new ReferenceDataService(_mockLogger.Object, _mockDbContext.Object);
 
             // Assert
             _mockDbContext.Verify(x => x.ActionType, Times.Once);
@@ -70,7 +70,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
             // Act & Assert
             var exception = Assert.Throws<ArgumentException>(
-                () => new ActionTypeService(_mockLogger.Object, _mockDbContext.Object));
+                () => new ReferenceDataService(_mockLogger.Object, _mockDbContext.Object));
             Assert.Equal("Invalid action type description", exception.Message);
         }
 
@@ -82,7 +82,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         {
             // Arrange
             var expectedId = _actionTypes.First(x => x.Description == description).Id;
-            var service = new ActionTypeService(_mockLogger.Object, _mockDbContext.Object);
+            var service = new ReferenceDataService(_mockLogger.Object, _mockDbContext.Object);
 
             // Act
             var result = service.GetActionTypeId(actionType);
@@ -95,7 +95,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         public void GetActionTypeId_WithInvalidEnum_ThrowsKeyNotFoundException()
         {
             // Arrange
-            var service = new ActionTypeService(_mockLogger.Object, _mockDbContext.Object);
+            var service = new ReferenceDataService(_mockLogger.Object, _mockDbContext.Object);
             var invalidEnum = (ActionTypeEnum)999;
 
             // Act & Assert
