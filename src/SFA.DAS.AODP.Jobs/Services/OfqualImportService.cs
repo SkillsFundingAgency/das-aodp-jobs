@@ -1,17 +1,16 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using RestEase;
 using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Jobs.Interfaces;
-using Microsoft.Azure.Functions.Worker.Http;
-using SFA.DAS.AODP.Jobs.Client;
 using SFA.DAS.AODP.Infrastructure.Context;
-using Newtonsoft.Json;
-using System.Diagnostics;
-using Microsoft.EntityFrameworkCore;
+using SFA.DAS.AODP.Jobs.Client;
 using SFA.DAS.AODP.Jobs.Enum;
+using SFA.DAS.AODP.Jobs.Interfaces;
+using System.Diagnostics;
 using System.Text.Json;
-using System.Linq;
 
 namespace SFA.DAS.AODP.Jobs.Services
 {
