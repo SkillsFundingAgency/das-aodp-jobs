@@ -1,12 +1,13 @@
-using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using RestEase;
 using SFA.DAS.AODP.Infrastructure.Context;
+using SFA.DAS.AODP.Jobs.Enum;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Jobs.Services;
+using System.Diagnostics;
 
 namespace SFA.DAS.AODP.Functions.Functions
 {
@@ -16,38 +17,61 @@ namespace SFA.DAS.AODP.Functions.Functions
         private readonly ILogger<RegulatedQualificationsDataFunction> _logger;
         private readonly IQualificationsService _qualificationsService;
         private readonly IOfqualImportService _ofqualImportService;
-
+        private readonly IJobConfigurationService _jobConfigurationService;
 
         public RegulatedQualificationsDataFunction(
             ILogger<RegulatedQualificationsDataFunction> logger, 
             IApplicationDbContext appDbContext, 
             IQualificationsService qualificationsService,
-            IOfqualImportService ofqualImportService
+            IOfqualImportService ofqualImportService,
+            IJobConfigurationService jobConfigurationService
             )
         {
             _logger = logger;
             _applicationDbContext = appDbContext;
             _qualificationsService = qualificationsService;
             _ofqualImportService = ofqualImportService;
+            _jobConfigurationService = jobConfigurationService;          
         }
 
         [Function("RegulatedQualificationsDataFunction")]
         public async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Function, "get", Route = "gov/regulatedQualificationsImport")] HttpRequestData req)
+            [HttpTrigger(AuthorizationLevel.Function, "get", Route = "gov/regulatedQualificationsImport/{username}")] HttpRequestData req, string username = "")
         {
-            _logger.LogInformation($"[{nameof(RegulatedQualificationsDataFunction)}] -> Processing request...");
+            _logger.LogInformation($"[{nameof(RegulatedQualificationsDataFunction)}] -> Processing request by user {username}");
 
             var stopWatch = new Stopwatch();
-            
+
+            _logger.LogInformation($"[{nameof(RegulatedQualificationsDataFunction)}] -> Reading Configuration");
+            var jobControl = await _jobConfigurationService.ReadJobConfiguration();           
+            var totalRecords = 0;
+
+            if (!jobControl.JobEnabled)
+            {
+                return new OkObjectResult($"[{nameof(RegulatedQualificationsDataFunction)}] -> Job disabled");
+            }            
+
+            _logger.LogInformation($"[{nameof(RegulatedQualificationsDataFunction)}] -> Configuration set to Run Api Import = {jobControl.RunApiImport}, Process Staging Data = {jobControl.ProcessStagingData}");
+
             try
             {
                 stopWatch.Start();
 
-                // STAGE 1 - Import Ofqual Api data to staging area
-                await _ofqualImportService.StageQualificationsDataAsync(req);
+                jobControl.JobRunId = await _jobConfigurationService.InsertJobRunAsync(jobControl.JobId, username, JobStatus.Running);
 
-                // STAGE 2 - Process staging data into AODP database
-                await _ofqualImportService.ProcessQualificationsDataAsync();
+                if (jobControl.RunApiImport)
+                {
+                    // STAGE 1 - Import Ofqual Api data to staging area
+                    totalRecords = await _ofqualImportService.ImportApiData(req);
+                }
+
+                if (jobControl.ProcessStagingData)
+                {
+                    // STAGE 2 - Process staging data into AODP database
+                    await _ofqualImportService.ProcessQualificationsDataAsync();
+                }
+
+                await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, totalRecords, JobStatus.Completed);
 
                 stopWatch.Stop();
 
@@ -58,13 +82,15 @@ namespace SFA.DAS.AODP.Functions.Functions
             catch (ApiException ex)
             {
                 _logger.LogError($"[{nameof(RegulatedQualificationsDataFunction)}] -> Unexpected api exception occurred: {ex.Message}");
+                await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, totalRecords, JobStatus.Error);
                 return new StatusCodeResult((int)ex.StatusCode);
             }
             catch (SystemException ex)
             {
                 _logger.LogError($"[{nameof(RegulatedQualificationsDataFunction)}] -> Unexpected system exception occurred: {ex.Message}");
+                await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, totalRecords, JobStatus.Error);
                 return new StatusCodeResult(500);
             }
-        }
+        }        
     }
 }

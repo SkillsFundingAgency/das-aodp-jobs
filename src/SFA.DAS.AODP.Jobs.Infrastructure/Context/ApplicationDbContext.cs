@@ -33,6 +33,12 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public virtual DbSet<VersionFieldChange> VersionFieldChanges { get; set; }
 
+        public virtual DbSet<Job> Jobs { get; set; }
+
+        public virtual DbSet<JobConfiguration> JobConfigurations { get; set; }
+
+        public virtual DbSet<JobRun> JobRuns { get; set; }
+
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             return base.SaveChangesAsync(cancellationToken);

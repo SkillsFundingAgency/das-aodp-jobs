@@ -4,7 +4,7 @@ namespace SFA.DAS.AODP.Jobs.Interfaces
 {
     public interface IOfqualImportService
     {
-        Task StageQualificationsDataAsync(HttpRequestData request);
+        Task<int> ImportApiData(HttpRequestData request);
 
         Task ProcessQualificationsDataAsync();
     }

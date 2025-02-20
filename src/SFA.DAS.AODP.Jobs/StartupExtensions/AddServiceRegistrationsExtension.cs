@@ -11,6 +11,8 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using SFA.DAS.AODP.Models.Config;
 using System.Diagnostics.CodeAnalysis;
+using SFA.DAS.AODP.Data.Repositories.Jobs;
+using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
 
 namespace SFA.DAS.AODP.Jobs.StartupExtensions;
 
@@ -33,12 +35,15 @@ public static class AddServiceRegistrationsExtension
 
         services.AddHttpClient();
         services.AddScoped<IApplicationDbContext, ApplicationDbContext>();
+        services.AddScoped<IJobsRepository, JobsRepository>();
         services.AddScoped<IQualificationsService, QualificationsService>();
         services.AddTransient<IOfqualRegisterService, OfqualRegisterService>();
         services.AddTransient<IOfqualImportService, OfqualImportService>();
-        services.AddTransient<IActionTypeService, ActionTypeService>();
+        services.AddTransient<IReferenceDataService, ReferenceDataService>();
         services.AddTransient<IFundingEligibilityService, FundingEligibilityService>();
         services.AddScoped<ICsvReaderService, CsvReaderService>();
+        services.AddScoped<ISystemClockService, SystemClockService>();
+        services.AddScoped<IJobConfigurationService, JobConfigurationService>();
 
         var aodpJobsConfiguration = configuration.GetSection(nameof(AodpJobsConfiguration)).Get<AodpJobsConfiguration>();
 
