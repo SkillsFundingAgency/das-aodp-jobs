@@ -6,7 +6,6 @@ using RestEase;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Jobs.Enum;
 using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Jobs.Services;
 using System.Diagnostics;
 
 namespace SFA.DAS.AODP.Functions.Functions

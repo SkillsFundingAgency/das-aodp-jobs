@@ -1,5 +1,6 @@
 ﻿using SFA.DAS.AODP.Data.Repositories.Jobs;
 using SFA.DAS.AODP.Jobs.Enum;
+using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
 
 namespace SFA.DAS.AODP.Jobs.Services
