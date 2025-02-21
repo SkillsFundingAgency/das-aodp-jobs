@@ -30,7 +30,7 @@ jobs:
             TemplateSecrets:
               LoggingRedisConnectionString: $(LoggingRedisConnectionString)
               ConfigurationStorageConnectionString: $(ConfigurationStorageConnectionString)
-              SharedStorageAccountConnectionString: $(SharedStorageAccountConnectionString)
+              SharedStorageAccountConnectionString: $(SharedStorageAccountConnectionString)      
         - template: azure-pipelines-templates/deploy/step/generate-config.yml@das-platform-building-blocks
           parameters:
             EnvironmentName: $(EnvironmentName)
@@ -40,6 +40,8 @@ jobs:
             StorageAccountResourceGroup: $(SharedEnvResourceGroup)
             TargetFileName: '*.schema.json'
             TableName: Configuration
+            ConfigurationSecrets:
+               OfqualApiSecret: $(OfqualApiSecret)
         - template: azure-pipelines-templates/deploy/step/function-deploy.yml@das-platform-building-blocks
           parameters:
             ServiceConnection: ${{ parameters.ServiceConnection }}
