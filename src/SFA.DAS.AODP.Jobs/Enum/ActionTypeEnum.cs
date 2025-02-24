@@ -1,9 +1,9 @@
 ﻿namespace SFA.DAS.AODP.Jobs.Enum
 {
-    public enum ActionTypeEnum
+    public static class ActionTypeEnum
     {
-        NoActionRequired,
-        ActionRequired,
-        Ignore
+        public const string NoActionRequired = "No Action Required";
+        public const string ActionRequired = "Action Required";
     }
+
 }
