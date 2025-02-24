@@ -44,6 +44,7 @@ public static class AddServiceRegistrationsExtension
         services.AddScoped<ICsvReaderService, CsvReaderService>();
         services.AddScoped<ISystemClockService, SystemClockService>();
         services.AddScoped<IJobConfigurationService, JobConfigurationService>();
+        services.AddScoped<IChangeDetectionService, ChangeDetectionService>();
 
         var aodpJobsConfiguration = configuration.GetSection(nameof(AodpJobsConfiguration)).Get<AodpJobsConfiguration>();
 

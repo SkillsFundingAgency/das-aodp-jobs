@@ -24,8 +24,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             // Could use Reflection here, but records being compared have mismatched names, different field types, or information located in other structures
 
             var fields = new List<string>();
-
-            fields = fields.AppendIf(newRecord.Id != qualification.Id, "Id");
+            
             fields = fields.AppendIf(newRecord.Ssa != qualificationVersion.Ssa, "Ssa");
             fields = fields.AppendIf(newRecord.Pathways != qualificationVersion.Pathways, "Pathways");
             fields = fields.AppendIf(newRecord.Status != qualificationVersion.Status, "Status");
@@ -59,7 +58,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             fields = fields.AppendIf(newRecord.OperationalStartDate != qualificationVersion.OperationalStartDate, "OperationalStartDate");
 
             fields = fields.AppendIf(newRecord.OrganisationAcronym != awardingOrganisation.Acronym, "OrganisationAcronym");
-            fields = fields.AppendIf(newRecord.OrganisationName != awardingOrganisation.NameLegal, "OrganisationName");
+            fields = fields.AppendIf(newRecord.OrganisationName != awardingOrganisation.NameOfqual, "OrganisationName");
             fields = fields.AppendIf(newRecord.OrganisationId != awardingOrganisation.Ukprn, "OrganisationId");
             fields = fields.AppendIf(newRecord.OrganisationRecognitionNumber != awardingOrganisation.RecognitionNumber, "OrganisationRecognitionNumber");
 
@@ -80,8 +79,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             fields = fields.AppendIf(newRecord.Tqt != qualificationVersion.Tqt, "Tqt");
             fields = fields.AppendIf(newRecord.Type != qualificationVersion.Type, "Type");
             fields = fields.AppendIf(newRecord.TypeId != qualificationVersion.TypeId, "Type");
-            fields = fields.AppendIf(newRecord.UiLastUpdatedDate != qualificationVersion.UiLastUpdatedDate, "UiLastUpdatedDate");
-            fields = fields.AppendIf(newRecord.Version != qualificationVersion.Version, "Version");
+            fields = fields.AppendIf(newRecord.UiLastUpdatedDate != qualificationVersion.UiLastUpdatedDate, "UiLastUpdatedDate");            
 
             return new DetectionResults() { Fields = fields, ChangesPresent = fields.Any() };
         }
