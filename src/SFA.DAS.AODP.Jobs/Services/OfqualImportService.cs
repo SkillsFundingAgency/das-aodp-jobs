@@ -294,6 +294,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                             if (currentQualificationVersion != null)
                             {
                                 detectionResults = _changeDetectionService.DetectChanges(importRecord, currentQualificationVersion, currentQualificationVersion.Organisation, currentQualificationVersion.Qualification);
+                                if (!detectionResults.ChangesPresent) continue;
                             }
 
                             if (!_fundingEligibilityService.EligibleForFunding(importRecord))
