@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
 using SFA.DAS.AODP.Infrastructure.Context;
-using SFA.DAS.AODP.Jobs.Enum;
 using SFA.DAS.AODP.Jobs.Interfaces;
 
 namespace SFA.DAS.AODP.Jobs.Services
@@ -9,7 +8,7 @@ namespace SFA.DAS.AODP.Jobs.Services
     {
         private readonly ILogger<ReferenceDataService> _logger;
         private readonly IApplicationDbContext _applicationDbContext;
-        private readonly Dictionary<ActionTypeEnum, Guid> _actionTypeMap;
+        private readonly Dictionary<string?, Guid> _actionTypeMap;
         private readonly Dictionary<string?, Guid> _processStatusMap;
         private readonly Dictionary<string?, Guid> _lifecycleStageMap;
 
@@ -19,7 +18,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             _applicationDbContext = applicationDbContext ?? throw new ArgumentNullException(nameof(applicationDbContext));
 
             _actionTypeMap = _applicationDbContext.ActionType
-                .ToDictionary(a => MapToEnum(a.Description), a => a.Id);
+                .ToDictionary(a => a.Description, a => a.Id);
 
             _processStatusMap = _applicationDbContext.ProcessStatus
                                     .ToDictionary(a => a.Name, a => a.Id);
@@ -28,7 +27,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                 .ToDictionary(a => a.Name, a => a.Id);
         }
 
-        public Guid GetActionTypeId(ActionTypeEnum actionType)
+        public Guid GetActionTypeId(string actionType)
         {
             _logger.LogInformation($"[{nameof(ReferenceDataService)}] -> [{nameof(GetActionTypeId)}] -> Retrieving action type id for action type {actionType}...");
 
@@ -53,17 +52,6 @@ namespace SFA.DAS.AODP.Jobs.Services
             return _lifecycleStageMap.TryGetValue(stage, out var id)
                 ? id
                 : throw new KeyNotFoundException($"Lifecycle Stage {stage} not found in the database.");
-        }
-
-        private static ActionTypeEnum MapToEnum(string description)
-        {
-            return description switch
-            {
-                "No Action Required" => ActionTypeEnum.NoActionRequired,
-                "Action Required" => ActionTypeEnum.ActionRequired,
-                "Ignore" => ActionTypeEnum.Ignore,
-                _ => throw new ArgumentException("Invalid action type description")
-            };
         }
 
     }

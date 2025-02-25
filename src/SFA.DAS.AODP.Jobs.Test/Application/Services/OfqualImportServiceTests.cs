@@ -454,6 +454,63 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .First();
             Assert.NotNull(discussionHistory);
         }
+        [Fact]
+        public async Task OfqualImportService_ProcessQualificationsDataAsync_ExistingRecord_NoChangesDetected()
+        {
+            //Arrange
+            var organisationId1 = 10001;
+            var qualificationNumber1 = "qan1";
+            var qualificationName1 = "Qual1";
+
+            await PopulateDbWithReferenceData();
+            await CreateQualificationRecordSet(organisationId1, qualificationNumber1, qualificationName1);
+            var _service = CreateImportServiceWithDb();
+
+            var importRecord = this.CreateImportRecord(organisationId1, qualificationNumber1, qualificationName1);
+            var importRecords = new List<QualificationDTO>() { importRecord };
+            
+            _qualificationsServiceMock.Setup(s => s.GetStagedQualificationsBatchAsync(It.IsAny<int>(), 0)).ReturnsAsync(importRecords);
+            _qualificationsServiceMock.Setup(s => s.GetStagedQualificationsBatchAsync(It.IsAny<int>(), 1)).ReturnsAsync(new List<QualificationDTO>());
+            _fundingEligibilityService.Setup(s => s.EligibleForFunding(It.Is<QualificationDTO>(q => q.QualificationNumberNoObliques == importRecord.QualificationNumberNoObliques)))
+                                        .Returns(false);
+            _fundingEligibilityService.Setup(s => s.DetermineFailureReason(It.Is<QualificationDTO>(q => q.QualificationNumberNoObliques == importRecord.QualificationNumberNoObliques)))
+                                        .Returns(ImportReason.NoAction);
+            _changeDetectionServiceMock.Setup(s => s.DetectChanges(It.IsAny<QualificationDTO>(), It.IsAny<QualificationVersions>(), It.IsAny<AwardingOrganisation>(), It.IsAny<Qualification>()))
+                                        .Returns(new ChangeDetectionService.DetectionResults() { ChangesPresent = false, Fields = new List<string>() });
+
+            var initialVersionCount = await _dbContext.QualificationVersions.CountAsync();
+            var initialDiscussionCount = await _dbContext.QualificationDiscussionHistory.CountAsync();
+
+            //Act
+            await _service.ProcessQualificationsDataAsync();
+
+            //Assert
+            // Existing qualification should remain unchanged
+            var qualification = await _dbContext.Qualification.Where(w => w.Qan == qualificationNumber1).SingleAsync();
+            Assert.Equal(qualificationNumber1, qualification.Qan);
+            Assert.Equal(qualificationName1, qualification.QualificationName);
+
+            // No new organisations
+            var awardingOrganisations = await _dbContext.AwardingOrganisation.Where(w => w.Ukprn == organisationId1).ToListAsync();
+            Assert.Single(awardingOrganisations);
+
+            // No new qualification versions should be created
+            var finalVersionCount = await _dbContext.QualificationVersions.CountAsync();
+            Assert.Equal(initialVersionCount, finalVersionCount);
+
+            // No new discussion entries should be created
+            var finalDiscussionCount = await _dbContext.QualificationDiscussionHistory.CountAsync();
+            Assert.Equal(initialDiscussionCount, finalDiscussionCount);
+
+            // The original version should still be the latest
+            var latestVersion = await _dbContext.QualificationVersions
+                                    .Include(i => i.ProcessStatus)
+                                    .OrderByDescending(o => o.Version)
+                                    .Where(w => w.QualificationId == qualification.Id)
+                                    .FirstAsync();
+            Assert.Equal(1, latestVersion.Version);
+        }
+
         private OfqualImportService CreateImportServiceWithMocks()
         {            
             _actionTypeServiceMock = new Mock<IReferenceDataService>().Object;
