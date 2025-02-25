@@ -24,7 +24,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             // Could use Reflection here, but records being compared have mismatched names, different field types, or information located in other structures
 
             var fields = new List<string>();
-
+            
             fields = fields.AppendIf(newRecord.Ssa != qualificationVersion.Ssa, "Ssa");
             fields = fields.AppendIf(newRecord.Pathways != qualificationVersion.Pathways, "Pathways");
             fields = fields.AppendIf(newRecord.Status != qualificationVersion.Status, "Status");
