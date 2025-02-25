@@ -58,18 +58,18 @@ namespace SFA.DAS.AODP.Jobs.Services
                     .OrderBy(q => q.Id)
                     .Skip(processedCount)
                     .Take(batchSize)
-                    .ToListAsync();
+                    .ToListAsync();              
 
                 return stagedQualifications
                     .Select(q => JsonSerializer.Deserialize<QualificationDTO>(
-                        q.JsonData,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }))
+                        q.JsonData ?? "",
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? throw new Exception($"Unable to serialize import json into dto for id {q.Id}"))
                     .Where(dto => dto != null)
                     .ToList();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"[{nameof(QualificationsService)}] -> [{nameof(SaveQualificationsStagingAsync)}] -> An error occurred while retrieving batch of qualification records.");
+                _logger.LogError(ex, $"[{nameof(QualificationsService)}] -> [{nameof(SaveQualificationsStagingAsync)}] -> An error occurred while retrieving batch of import records.");
                 throw;
             }
         }

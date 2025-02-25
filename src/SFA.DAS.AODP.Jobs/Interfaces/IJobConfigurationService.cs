@@ -1,6 +1,7 @@
 ﻿using SFA.DAS.AODP.Jobs.Enum;
+using SFA.DAS.AODP.Jobs.Services;
 
-namespace SFA.DAS.AODP.Jobs.Services
+namespace SFA.DAS.AODP.Jobs.Interfaces
 {
     public interface IJobConfigurationService
     {
