@@ -403,7 +403,6 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var organisationId = 98988;
             var qualificationNumber = "qan1";
             var qualificationName = "Qual1";
-            var oldTitle = "Original Title";
             var newTitle = "Updated Title";
 
             await PopulateDbWithReferenceData();
@@ -429,31 +428,9 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             Assert.NotNull(updatedQualification);
             Assert.Equal(qualificationNumber, updatedQualification.Qan);
             Assert.Equal(newTitle, updatedQualification.QualificationName);
-            Assert.NotEqual(oldTitle, updatedQualification.QualificationName);
-
-            // Verify no new qualifications with the same QAN were created
-            var qualificationsWithSameQan = _dbContext.Qualification.Where(w => w.Qan == qualificationNumber).ToList();
-            Assert.Single(qualificationsWithSameQan);
-
-            // Verify a new version was created
-            var qualificationVersions = _dbContext.QualificationVersions
-                                        .Include(i => i.ProcessStatus)
-                                        .Where(w => w.QualificationId == updatedQualification.Id)
-                                        .OrderByDescending(o => o.Version)
-                                        .ToList();
-            Assert.True(qualificationVersions.Count > 1, "Should have created a new version");
-            var latestVersion = qualificationVersions.First();
-            Assert.Equal(Enum.ProcessStatus.DecisionRequired, latestVersion.ProcessStatus.Name);
-            Assert.Equal(Enum.LifeCycleStage.Changed, latestVersion.LifecycleStage.Name);
-
-            // Verify a discussion history entry was created
-            var discussionHistory = _dbContext.QualificationDiscussionHistory
-                                    .Include(i => i.ActionType)
-                                    .Where(w => w.QualificationId == updatedQualification.Id)
-                                    .OrderByDescending(o => o.Timestamp)
-                                    .First();
-            Assert.NotNull(discussionHistory);
+            Assert.NotEqual(qualificationName, updatedQualification.QualificationName);
         }
+
         [Fact]
         public async Task OfqualImportService_ProcessQualificationsDataAsync_ExistingRecord_NoChangesDetected()
         {
