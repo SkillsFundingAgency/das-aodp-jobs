@@ -396,6 +396,64 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             Assert.Equal("No Action required - Changed Qualification (Funding Criteria)", insertedDiscussion.Notes);
         }
 
+        [Fact]
+        public async Task OfqualImportService_ProcessQualificationsDataAsync_UpdatesExistingQualificationTitle()
+        {
+            // Arrange
+            var organisationId = 98988;
+            var qualificationNumber = "qan1";
+            var qualificationName = "Qual1";
+            var oldTitle = "Original Title";
+            var newTitle = "Updated Title";
+
+            await PopulateDbWithReferenceData();
+            await CreateQualificationRecordSet(organisationId, qualificationNumber, qualificationName);
+
+            var _service = CreateImportServiceWithDb();
+
+            var importRecord = this.CreateImportRecord(organisationId, qualificationNumber, newTitle);
+            var importRecords = new List<QualificationDTO>() { importRecord };
+
+            _qualificationsServiceMock.Setup(s => s.GetStagedQualificationsBatchAsync(It.IsAny<int>(), 0)).ReturnsAsync(importRecords);
+            _qualificationsServiceMock.Setup(s => s.GetStagedQualificationsBatchAsync(It.IsAny<int>(), 1)).ReturnsAsync(new List<QualificationDTO>());
+
+            _fundingEligibilityService.Setup(s => s.EligibleForFunding(It.Is<QualificationDTO>(q => q.QualificationNumberNoObliques == importRecord.QualificationNumberNoObliques)))
+                                        .Returns(true);
+
+            // Act
+            await _service.ProcessQualificationsDataAsync();
+
+            // Assert
+            // Verify qualification title updated
+            var updatedQualification = _dbContext.Qualification.Where(w => w.Qan == qualificationNumber).First();
+            Assert.NotNull(updatedQualification);
+            Assert.Equal(qualificationNumber, updatedQualification.Qan);
+            Assert.Equal(newTitle, updatedQualification.QualificationName);
+            Assert.NotEqual(oldTitle, updatedQualification.QualificationName);
+
+            // Verify no new qualifications with the same QAN were created
+            var qualificationsWithSameQan = _dbContext.Qualification.Where(w => w.Qan == qualificationNumber).ToList();
+            Assert.Single(qualificationsWithSameQan);
+
+            // Verify a new version was created
+            var qualificationVersions = _dbContext.QualificationVersions
+                                        .Include(i => i.ProcessStatus)
+                                        .Where(w => w.QualificationId == updatedQualification.Id)
+                                        .OrderByDescending(o => o.Version)
+                                        .ToList();
+            Assert.True(qualificationVersions.Count > 1, "Should have created a new version");
+            var latestVersion = qualificationVersions.First();
+            Assert.Equal(Enum.ProcessStatus.DecisionRequired, latestVersion.ProcessStatus.Name);
+            Assert.Equal(Enum.LifeCycleStage.Changed, latestVersion.LifecycleStage.Name);
+
+            // Verify a discussion history entry was created
+            var discussionHistory = _dbContext.QualificationDiscussionHistory
+                                    .Include(i => i.ActionType)
+                                    .Where(w => w.QualificationId == updatedQualification.Id)
+                                    .OrderByDescending(o => o.Timestamp)
+                                    .First();
+            Assert.NotNull(discussionHistory);
+        }
         private OfqualImportService CreateImportServiceWithMocks()
         {            
             _actionTypeServiceMock = new Mock<IReferenceDataService>().Object;

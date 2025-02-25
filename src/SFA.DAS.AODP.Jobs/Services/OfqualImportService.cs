@@ -129,10 +129,10 @@ namespace SFA.DAS.AODP.Jobs.Services
                     .ToDictionary(a => a.Ukprn, a => a.Id);
 
                 var qualificationCache = (await _applicationDbContext.Qualification
-                    .AsNoTracking()                    
-                    .Select(o => new { Qan = o.Qan, Id = o.Id })
+                    .AsNoTracking()
+                    .Select(o => new { Qan = o.Qan, Id = o.Id, Title = o.QualificationName })
                     .ToListAsync())
-                    .ToDictionary(a => a.Qan, a => a.Id);
+                    .ToDictionary(a => a.Qan, a => new { Id = a.Id, Title = a.Title });
 
                 var existingVersionsCache = (await _applicationDbContext.QualificationVersions
                     .Include(qv => qv.VersionFieldChanges)
@@ -197,7 +197,9 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                         // Check Qualification
                         var qualificationId = Guid.Empty;
-                        if (!qualificationCache.ContainsKey(importRecord.QualificationNumberNoObliques ?? ""))
+                        var qan = importRecord.QualificationNumberNoObliques ?? "";
+
+                        if (!qualificationCache.ContainsKey(qan))
                         {
                             qualificationId = Guid.NewGuid();
                             var qualification = new Qualification
@@ -207,11 +209,24 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 QualificationName = importRecord.Title
                             };
                             newQualifications.Add(qualification);
-                            qualificationCache[importRecord.QualificationNumberNoObliques ?? ""] = qualificationId;
+                            qualificationCache[qan] = new { Id = qualificationId, Title = importRecord.Title };
                         }
                         else
                         {
-                            qualificationId = qualificationCache[importRecord.QualificationNumberNoObliques ?? ""];
+                            var cachedQualification = qualificationCache[qan];
+                            qualificationId = cachedQualification.Id;
+
+                            // Check if the title needs updating
+                            if (cachedQualification.Title != importRecord.Title)
+                            {
+                                var qualificationToUpdate = await _applicationDbContext.Qualification
+                                    .FirstOrDefaultAsync(q => q.Id == qualificationId);
+
+                                if (qualificationToUpdate != null)
+                                {
+                                    qualificationToUpdate.QualificationName = importRecord.Title;
+                                }
+                            }
                         }
 
                         // Check if qualification version exists
