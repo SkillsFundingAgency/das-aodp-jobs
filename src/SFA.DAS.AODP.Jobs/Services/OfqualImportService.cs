@@ -1,16 +1,18 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using RestEase;
 using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Jobs.Interfaces;
-using Microsoft.Azure.Functions.Worker.Http;
-using SFA.DAS.AODP.Jobs.Client;
 using SFA.DAS.AODP.Infrastructure.Context;
-using Newtonsoft.Json;
-using System.Diagnostics;
-using Microsoft.EntityFrameworkCore;
+using SFA.DAS.AODP.Jobs.Client;
 using SFA.DAS.AODP.Jobs.Enum;
+using SFA.DAS.AODP.Jobs.Interfaces;
+using SFA.DAS.AODP.Models.Qualification;
+using System.Diagnostics;
 using System.Text.Json;
+using static SFA.DAS.AODP.Jobs.Services.ChangeDetectionService;
 
 namespace SFA.DAS.AODP.Jobs.Services
 {
@@ -20,14 +22,16 @@ namespace SFA.DAS.AODP.Jobs.Services
         private readonly IApplicationDbContext _applicationDbContext;
         private readonly IOfqualRegisterService _ofqualRegisterService;
         private readonly IQualificationsService _qualificationsService;
-        private readonly IActionTypeService _actionTypeService;
+        private readonly IReferenceDataService _actionTypeService;
         private readonly IFundingEligibilityService _fundingEligibilityService;
+        private readonly IChangeDetectionService _changeDetectionService;
         private Stopwatch _loopCycleStopWatch = new Stopwatch();
         private Stopwatch _processStopWatch = new Stopwatch();
 
         public OfqualImportService(ILogger<OfqualImportService> logger, IConfiguration configuration, IApplicationDbContext applicationDbContext,
             IOfqualRegisterApi apiClient, IOfqualRegisterService ofqualRegisterService, IQualificationsService qualificationsService, 
-            IActionTypeService actionTypeService, IFundingEligibilityService fundingEligibilityService)
+            IReferenceDataService actionTypeService, IFundingEligibilityService fundingEligibilityService,
+            IChangeDetectionService changeDetectionService)
         {
             _logger = logger;
             _applicationDbContext = applicationDbContext;
@@ -35,20 +39,19 @@ namespace SFA.DAS.AODP.Jobs.Services
             _qualificationsService = qualificationsService;
             _actionTypeService = actionTypeService;
             _fundingEligibilityService = fundingEligibilityService;
+            _changeDetectionService = changeDetectionService;
         }
 
-        public async Task StageQualificationsDataAsync(HttpRequestData request)
+        public async Task<int> ImportApiData(HttpRequestData request)
         {
-            _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(StageQualificationsDataAsync)}] -> Import Ofqual qualifications to staging area...");
+            _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ImportApiData)}] -> Import Ofqual qualifications to staging area...");
 
             int totalProcessed = 0;
             int pageCount = 1;
             _processStopWatch.Start();
-
+            _loopCycleStopWatch.Start();
             try
-            {
-                _loopCycleStopWatch.Restart();
-
+            {                
                 _logger.LogInformation($"Clearing down StageQualifications table...");
 
                 await _applicationDbContext.TruncateTable<QualificationImportStaging>();
@@ -87,7 +90,7 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                     _loopCycleStopWatch.Stop();
                     _logger.LogInformation($"Page {pageCount} import complete. {paginatedResult.Results.Count()} records imported in {_loopCycleStopWatch.Elapsed.TotalSeconds:F2} seconds");
-
+                    _loopCycleStopWatch.Restart();
                     pageCount++;
                 }
 
@@ -104,6 +107,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                 _logger.LogError(ex, "Unexpected system exception occurred.");
                 throw;
             }
+
+            return totalProcessed;
         }
 
         public async Task ProcessQualificationsDataAsync()
@@ -115,68 +120,48 @@ namespace SFA.DAS.AODP.Jobs.Services
             _processStopWatch.Restart();
 
             try
-            {
-                var organisationCache = new Dictionary<long, AwardingOrganisation>();
-                var qualificationCache = new Dictionary<string, Qualification>();
-
-                var organisationIds = (await _applicationDbContext.AwardingOrganisation
+            {                                
+                var organisationCache = (await _applicationDbContext.AwardingOrganisation
                     .AsNoTracking()
-                    .Select(o => o.Ukprn)
+                    .Where(w => w.Ukprn.HasValue)
+                    .Select(o => new { Ukprn = o.Ukprn ?? 0, o.Id })
                     .ToListAsync())
-                    .ToHashSet();
+                    .ToDictionary(a => a.Ukprn, a => a.Id);
 
-                var qualificationNumbers = (await _applicationDbContext.Qualification
+                var qualificationCache = (await _applicationDbContext.Qualification
                     .AsNoTracking()
-                    .Select(o => o.Qan)
+                    .Select(o => new { Qan = o.Qan, Id = o.Id, Title = o.QualificationName })
                     .ToListAsync())
-                    .ToHashSet();
+                    .ToDictionary(a => a.Qan, a => new { Id = a.Id, Title = a.Title });
 
-                var existingVersionsInfo = await _applicationDbContext.QualificationVersions
-                    .AsNoTracking()
+                var existingVersionsCache = (await _applicationDbContext.QualificationVersions
                     .Include(qv => qv.VersionFieldChanges)
+                    .GroupBy(g => g.QualificationId)
+                    .AsNoTracking()
                     .Select(qv => new
                     {
-                        QualificationId = qv.QualificationId,
-                        HasChangedFields = qv.VersionFieldChanges.ChangedFieldNames != null &&
-                                         qv.VersionFieldChanges.ChangedFieldNames.Length > 0,
-                        Version = qv.Version
+                        QualificationId = qv.Key,
+                        LatestVersion = qv.OrderByDescending(o => o.Version).First(),
                     })
-                    .ToDictionaryAsync(x => x.QualificationId, x => new
+                    .ToListAsync())
+                    .Select(s => new
+                    {
+                        QualificationId = s.QualificationId,
+                        Version = s.LatestVersion.Version,
+                        HasChangedFields = s.LatestVersion != null && s.LatestVersion.VersionFieldChanges != null && !string.IsNullOrEmpty(s.LatestVersion.VersionFieldChanges.ChangedFieldNames),
+                        ChangedFields = s.LatestVersion?.VersionFieldChanges?.ChangedFieldNames
+                    })                    
+                    .ToDictionary(x => x.QualificationId, x => new
                     {
                         x.HasChangedFields,
-                        x.Version
+                        x.Version,
+                        x.ChangedFields
                     });
 
                 while (processedCount < 1000000)
                 {
-                    var batch = await _qualificationsService.GetStagedQualificationsBatchAsync(batchSize, processedCount);
-                    if (!batch.Any()) break;
-
-                    var batchOrgIds = batch.Select(q => q.OrganisationId ?? 0).Distinct().ToList();
-                    var batchQualNumbers = batch.Select(q => q.QualificationNumberNoObliques).Distinct().ToList();
-
-                    var missingOrgIds = batchOrgIds.Where(id => !organisationCache.ContainsKey(id)).ToList();
-                    var missingQualNumbers = batchQualNumbers.Where(qn => !qualificationCache.ContainsKey(qn)).ToList();
-
-                    if (missingOrgIds.Any())
-                    {
-                        var newOrgs = await _applicationDbContext.AwardingOrganisation
-                            .Where(o => missingOrgIds.Contains((int)o.Ukprn))
-                            .ToDictionaryAsync(o => o.Ukprn);
-
-                        foreach (var org in newOrgs)
-                            organisationCache[Convert.ToInt64(org.Key)] = org.Value;
-                    }
-
-                    if (missingQualNumbers.Any())
-                    {
-                        var newQuals = await _applicationDbContext.Qualification
-                            .Where(q => missingQualNumbers.Contains(q.Qan))
-                            .ToDictionaryAsync(q => q.Qan);
-
-                        foreach (var qual in newQuals)
-                            qualificationCache[qual.Key] = qual.Value;
-                    }
+                    var importRecords = await _qualificationsService.GetStagedQualificationsBatchAsync(batchSize, processedCount);
+                    if (!importRecords.Any()) break;                                  
 
                     var newOrganisations = new List<AwardingOrganisation>();
                     var newQualifications = new List<Qualification>();
@@ -184,138 +169,244 @@ namespace SFA.DAS.AODP.Jobs.Services
                     var newQualificationDiscussions = new List<QualificationDiscussionHistory>();
 
                     var versionFieldChanges = new List<VersionFieldChange>();
-                    var processStatuses = new List<ProcessStatus>();
+                    var processStatuses = new List<Data.Entities.ProcessStatus>();
                     var lifecycleStages = new List<LifecycleStage>();
 
-                    foreach (var qualificationData in batch)
+                    foreach (var importRecord in importRecords)
                     {
                         // Check Organization
-                        if (!organisationCache.TryGetValue(qualificationData.OrganisationId ?? 0, out var organisation))
+                        var organisationId = Guid.Empty;
+                        if (!organisationCache.ContainsKey(importRecord.OrganisationId ?? 0))
                         {
-                            organisation = new AwardingOrganisation
+                            organisationId = Guid.NewGuid();
+                            var organisation = new AwardingOrganisation
                             {
-                                Id = Guid.NewGuid(),
-                                Ukprn = qualificationData.OrganisationId,
-                                RecognitionNumber = qualificationData.OrganisationRecognitionNumber,
-                                NameOfqual = qualificationData.OrganisationName,
-                                Acronym = qualificationData.OrganisationAcronym
+                                Id = organisationId,
+                                Ukprn = importRecord.OrganisationId,
+                                RecognitionNumber = importRecord.OrganisationRecognitionNumber,
+                                NameOfqual = importRecord.OrganisationName,
+                                Acronym = importRecord.OrganisationAcronym
                             };
                             newOrganisations.Add(organisation);
-                            organisationCache[qualificationData.OrganisationId ?? 0] = organisation;
+                            organisationCache[importRecord.OrganisationId ?? 0] = organisationId;
+                        }
+                        else
+                        { 
+                            organisationId = organisationCache[importRecord.OrganisationId ?? 0]; 
                         }
 
                         // Check Qualification
-                        if (!qualificationCache.TryGetValue(qualificationData.QualificationNumberNoObliques, out var qualification))
+                        var qualificationId = Guid.Empty;
+                        var qan = importRecord.QualificationNumberNoObliques ?? "";
+
+                        if (!qualificationCache.ContainsKey(qan))
                         {
-                            qualification = new Qualification
+                            qualificationId = Guid.NewGuid();
+                            var qualification = new Qualification
                             {
-                                Id = Guid.NewGuid(),
-                                Qan = qualificationData.QualificationNumberNoObliques,
-                                QualificationName = qualificationData.Title
+                                Id = qualificationId,
+                                Qan = importRecord.QualificationNumberNoObliques ?? "",
+                                QualificationName = importRecord.Title
                             };
                             newQualifications.Add(qualification);
-                            qualificationCache[qualificationData.QualificationNumberNoObliques] = qualification;
+                            qualificationCache[qan] = new { Id = qualificationId, Title = importRecord.Title };
+                        }
+                        else
+                        {
+                            var cachedQualification = qualificationCache[qan];
+                            qualificationId = cachedQualification.Id;
                         }
 
                         // Check if qualification version exists
-                        if (!existingVersionsInfo.TryGetValue(qualification.Id, out var versionInfo) && !_fundingEligibilityService.EligibleForFunding(qualificationData))
+                        if (!existingVersionsCache.TryGetValue(qualificationId, out var existingVersion))
                         {
-                            // No existing version - create intial qualification version
+                            #region New Qualification
+
+                            var notes = "";
+                            var processStatusName = "";                       
+                            var actionTypeId = Guid.Empty;
+                            
+                            if (_fundingEligibilityService.EligibleForFunding(importRecord))
+                            {
+                                // Eligible for funding - needs decision
+
+                                processStatusName = Enum.ProcessStatus.DecisionRequired;
+                                actionTypeId = _actionTypeService.GetActionTypeId(ActionTypeEnum.ActionRequired);
+                                notes = ImportReason.DecisionRequired;                                
+                            }
+                            else
+                            {
+                                // Ineligible for funding - No Action Required                                
+
+                                processStatusName = Enum.ProcessStatus.NoActionRequired;
+                                actionTypeId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired);
+                                notes = _fundingEligibilityService.DetermineFailureReason(importRecord);                                
+                            }
+
                             var versionFieldChange = new VersionFieldChange
                             {
                                 Id = Guid.NewGuid(),
                                 QualificationVersionNumber = 1,
                                 ChangedFieldNames = null
                             };
-                            var processStatus = new ProcessStatus { Id = Guid.NewGuid(), Name = "No Action Required" };
-                            var lifecycleStage = new LifecycleStage { Id = Guid.NewGuid(), Name = "New" };
+                            
+                            var lifecycleStage = LifeCycleStage.New;
 
                             var discussionHistory = new QualificationDiscussionHistory
                             {
                                 Id = Guid.NewGuid(),
-                                QualificationId = qualification.Id,
-                                ActionTypeId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired),
+                                QualificationId = qualificationId,
+                                ActionTypeId = actionTypeId,
                                 UserDisplayName = "OFQUAL Import",
-                                Notes = "No Action Required - New Qualification",
+                                Notes = notes,
                                 Timestamp = DateTime.Now
                             };
                             newQualificationDiscussions.Add(discussionHistory);
 
-                            versionFieldChanges.Add(versionFieldChange);
-                            processStatuses.Add(processStatus);
-                            lifecycleStages.Add(lifecycleStage);
+                            versionFieldChanges.Add(versionFieldChange);                            
 
                             var newQualificationVersion = CreateQualificationVersion(
-                                qualification, 
-                                organisation, 
-                                lifecycleStage, 
-                                processStatus, 
-                                qualificationData, 
-                                versionFieldChange, 
+                                qualificationId,
+                                organisationId,
+                                lifecycleStage,
+                                processStatusName,
+                                importRecord,
+                                versionFieldChange,
                                 1);
 
                             newQualificationVersions.Add(newQualificationVersion);
-                        }
-                        else if (!versionInfo.HasChangedFields)
-                        {
-                            // Existing version without changed fields 
+
+                            #endregion
+
                         }
                         else
                         {
-                            // Existing version with changed fields - create new version
-                            var versionFieldChange = new VersionFieldChange
+                            // We have a previous version
+
+                            // check for changed fields
+                            var currentQualificationDto = new QualificationDTO();
+                            var currentQualificationVersion = _applicationDbContext.QualificationVersions
+                                                                .Include(i => i.Qualification)
+                                                                .Include(i => i.Organisation)
+                                                                .OrderByDescending(o => o.Version)
+                                                                .AsNoTracking()
+                                                                .Where(w => w.QualificationId == qualificationId)
+                                                                .FirstOrDefault() ?? throw new Exception($"Unable to location qualification with id {qualificationId} while processing changes");
+
+                            var detectionResults = new DetectionResults();
+                            if (currentQualificationVersion != null)
                             {
-                                Id = Guid.NewGuid(),
-                                QualificationVersionNumber = versionInfo.Version + 1,
-                                ChangedFieldNames = null
-                            };
-                            var processStatus = new ProcessStatus { Id = Guid.NewGuid() };
-                            var lifecycleStage = new LifecycleStage { Id = Guid.NewGuid() };
+                                detectionResults = _changeDetectionService.DetectChanges(importRecord, currentQualificationVersion, currentQualificationVersion.Organisation, currentQualificationVersion.Qualification);
+                                if (!detectionResults.ChangesPresent) continue;
+                            }
 
-                            var discussionHistory = new QualificationDiscussionHistory
+                            #region New Version of Existing Qualification
+
+                            if (!_fundingEligibilityService.EligibleForFunding(importRecord))
                             {
-                                Id = Guid.NewGuid(),
-                                QualificationId = qualification.Id,
-                                ActionTypeId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired),
-                                UserDisplayName = "",
-                                Notes = "",
-                                Timestamp = DateTime.Now
-                            };
-                            newQualificationDiscussions.Add(discussionHistory);
+                                // Not eligible for funding 
+                                
+                                var versionFieldChange = new VersionFieldChange
+                                {
+                                    Id = Guid.NewGuid(),
+                                    QualificationVersionNumber = existingVersion.Version + 1,
+                                    ChangedFieldNames = detectionResults.ChangesPresent ? string.Join(", ", detectionResults.Fields) : ""
+                                };
+                                var processStatusName = Enum.ProcessStatus.NoActionRequired;
+                                var lifecycleStageName = LifeCycleStage.Changed;
 
-                            versionFieldChanges.Add(versionFieldChange);
-                            processStatuses.Add(processStatus);
-                            lifecycleStages.Add(lifecycleStage);
+                                var discussionHistory = new QualificationDiscussionHistory
+                                {
+                                    Id = Guid.NewGuid(),
+                                    QualificationId = qualificationId,
+                                    ActionTypeId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired),
+                                    UserDisplayName = "OFQUAL Import",
+                                    Notes = "No Action required - Changed Qualification (Funding Criteria)",
+                                    Timestamp = DateTime.Now
+                                };
+                                newQualificationDiscussions.Add(discussionHistory);
 
-                            var newQualificationVersion = CreateQualificationVersion(
-                                qualification,
-                                organisation,
-                                lifecycleStage,
-                                processStatus,
-                                qualificationData,
-                                versionFieldChange,
-                                versionInfo.Version + 1);
+                                versionFieldChanges.Add(versionFieldChange);
 
-                            newQualificationVersions.Add(newQualificationVersion);
+                                var newQualificationVersion = CreateQualificationVersion(
+                                    qualificationId,
+                                    organisationId,
+                                    lifecycleStageName,
+                                    processStatusName,
+                                    importRecord,
+                                    versionFieldChange,
+                                    existingVersion.Version + 1);
+
+                                newQualificationVersions.Add(newQualificationVersion);
+                            }
+                            else
+                            {
+                                // Eligable for funding 
+
+                                var versionFieldChange = new VersionFieldChange
+                                {
+                                    Id = Guid.NewGuid(),
+                                    QualificationVersionNumber = existingVersion.Version + 1,
+                                    ChangedFieldNames = detectionResults.ChangesPresent ? string.Join(", ", detectionResults.Fields) : ""
+                                };
+                                var processStatusName = Enum.ProcessStatus.DecisionRequired;
+                                var lifecycleStageName = LifeCycleStage.Changed;
+
+                                var discussionHistory = new QualificationDiscussionHistory
+                                {
+                                    Id = Guid.NewGuid(),
+                                    QualificationId = qualificationId,
+                                    ActionTypeId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired),
+                                    UserDisplayName = "",
+                                    Notes = "",
+                                    Timestamp = DateTime.Now
+                                };
+                                newQualificationDiscussions.Add(discussionHistory);
+
+                                versionFieldChanges.Add(versionFieldChange);
+
+                                var newQualificationVersion = CreateQualificationVersion(
+                                    qualificationId,
+                                    organisationId,
+                                    lifecycleStageName,
+                                    processStatusName,
+                                    importRecord,
+                                    versionFieldChange,
+                                    existingVersion.Version + 1);
+
+                                newQualificationVersions.Add(newQualificationVersion);
+                            }
+
+                            if (detectionResults.Fields.Contains("Title"))
+                            {
+                                // update qualification title
+                                var qualificationToUpdate = await _applicationDbContext.Qualification
+                                    .FirstOrDefaultAsync(q => q.Id == qualificationId);
+
+                                if (qualificationToUpdate != null)
+                                {
+                                    qualificationToUpdate.QualificationName = importRecord.Title;
+                                }
+
+                            }
+
+                            #endregion  
                         }
-                    }
-
-                    if (versionFieldChanges.Any())
-                    {
-                        await _applicationDbContext.VersionFieldChanges.AddRangeAsync(versionFieldChanges);
-                        await _applicationDbContext.ProcessStatus.AddRangeAsync(processStatuses);
-                        await _applicationDbContext.LifecycleStages.AddRangeAsync(lifecycleStages);
-                        await _applicationDbContext.SaveChangesAsync();
-                    }
+                    }                    
 
                     if (newOrganisations.Any()) await _applicationDbContext.AwardingOrganisation.AddRangeAsync(newOrganisations);
                     if (newQualifications.Any()) await _applicationDbContext.Qualification.AddRangeAsync(newQualifications);
                     if (newQualificationVersions.Any()) await _applicationDbContext.QualificationVersions.AddRangeAsync(newQualificationVersions);
                     if (newQualificationDiscussions.Any()) await _applicationDbContext.QualificationDiscussionHistory.AddRangeAsync(newQualificationDiscussions);
+                    if (versionFieldChanges.Any())
+                    {
+                        await _applicationDbContext.VersionFieldChanges.AddRangeAsync(versionFieldChanges);
+                        //await _applicationDbContext.SaveChangesAsync();
+                    }
 
                     await _applicationDbContext.SaveChangesAsync();
 
-                    processedCount += batch.Count;
+                    processedCount += importRecords.Count;
                 }
 
                 _processStopWatch.Stop();
@@ -328,8 +419,8 @@ namespace SFA.DAS.AODP.Jobs.Services
             }
         }
 
-        private QualificationVersions CreateQualificationVersion(Qualification qualification, AwardingOrganisation organisation, LifecycleStage lifecycleStage,
-            ProcessStatus processStatus, dynamic qualificationData, VersionFieldChange versionFieldChange, int? version)
+        private QualificationVersions CreateQualificationVersion(Guid qualificationId, Guid organisationId, string lifecycleStage,
+            string processStatus, QualificationDTO qualificationData, VersionFieldChange versionFieldChange, int? version)
         {
             string GetJoinedArrayOrEmpty(JsonElement? value)
             {
@@ -355,15 +446,18 @@ namespace SFA.DAS.AODP.Jobs.Services
                 }
             }
 
+            var processStatusId = _actionTypeService.GetProcessStatusId(processStatus);
+            var lifecycleStageId = _actionTypeService.GetLifecycleStageId(lifecycleStage);
+
             return new QualificationVersions
             {
                 Id = Guid.NewGuid(),
-                QualificationId = qualification.Id,
+                QualificationId = qualificationId,
                 VersionFieldChangesId = versionFieldChange.Id,
-                ProcessStatusId = processStatus.Id,
+                ProcessStatusId = processStatusId,
                 AdditionalKeyChangesReceivedFlag = 0,
-                LifecycleStageId = lifecycleStage.Id,
-                AwardingOrganisationId = organisation.Id,
+                LifecycleStageId = lifecycleStageId,
+                AwardingOrganisationId = organisationId,
                 Status = qualificationData.Status,
                 Type = qualificationData.Type,
                 Ssa = qualificationData.Ssa,
@@ -411,11 +505,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                 SixteenToEighteen = qualificationData.SixteenToEighteen,
                 EighteenPlus = qualificationData.EighteenPlus,
                 NineteenPlus = qualificationData.NineteenPlus,
-                ImportStatus = qualificationData.ImportStatus,
-                LifecycleStage = lifecycleStage,
-                Organisation = organisation,
-                ProcessStatus = processStatus,
-                Qualification = qualification,
+                ImportStatus = qualificationData.ImportStatus,                           
                 VersionFieldChanges = versionFieldChange
             };
         }

@@ -5,5 +5,7 @@ namespace SFA.DAS.AODP.Jobs.Interfaces
     public interface IFundingEligibilityService
     {
         public bool EligibleForFunding(QualificationDTO qualification);
+
+        public string DetermineFailureReason(QualificationDTO qualification);
     }
 }
