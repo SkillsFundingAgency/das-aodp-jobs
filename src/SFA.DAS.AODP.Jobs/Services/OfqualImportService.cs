@@ -215,18 +215,6 @@ namespace SFA.DAS.AODP.Jobs.Services
                         {
                             var cachedQualification = qualificationCache[qan];
                             qualificationId = cachedQualification.Id;
-
-                            // Check if the title needs updating
-                            if (cachedQualification.Title != importRecord.Title)
-                            {
-                                var qualificationToUpdate = await _applicationDbContext.Qualification
-                                    .FirstOrDefaultAsync(q => q.Id == qualificationId);
-
-                                if (qualificationToUpdate != null)
-                                {
-                                    qualificationToUpdate.QualificationName = importRecord.Title;
-                                }
-                            }
                         }
 
                         // Check if qualification version exists
@@ -248,7 +236,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                             }
                             else
                             {
-                                //New Qualification ineligible for funding - No Action Required                                
+                                // Ineligible for funding - No Action Required                                
 
                                 processStatusName = Enum.ProcessStatus.NoActionRequired;
                                 actionTypeId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired);
@@ -293,7 +281,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                         }
                         else
                         {
-                            // We have a previous version                           
+                            // We have a previous version
 
                             // check for changed fields
                             var currentQualificationDto = new QualificationDTO();
@@ -311,6 +299,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 detectionResults = _changeDetectionService.DetectChanges(importRecord, currentQualificationVersion, currentQualificationVersion.Organisation, currentQualificationVersion.Qualification);
                                 if (!detectionResults.ChangesPresent) continue;
                             }
+
+                            #region New Version of Existing Qualification
 
                             if (!_fundingEligibilityService.EligibleForFunding(importRecord))
                             {
@@ -351,12 +341,13 @@ namespace SFA.DAS.AODP.Jobs.Services
                             }
                             else
                             {
-                                // Existing version with changed fields
+                                // Eligable for funding 
+
                                 var versionFieldChange = new VersionFieldChange
                                 {
                                     Id = Guid.NewGuid(),
                                     QualificationVersionNumber = existingVersion.Version + 1,
-                                    ChangedFieldNames = string.Join(", ", detectionResults.Fields)
+                                    ChangedFieldNames = detectionResults.ChangesPresent ? string.Join(", ", detectionResults.Fields) : ""
                                 };
                                 var processStatusName = Enum.ProcessStatus.DecisionRequired;
                                 var lifecycleStageName = LifeCycleStage.Changed;
@@ -385,6 +376,21 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                                 newQualificationVersions.Add(newQualificationVersion);
                             }
+
+                            if (detectionResults.Fields.Contains("Title"))
+                            {
+                                // update qualification title
+                                var qualificationToUpdate = await _applicationDbContext.Qualification
+                                    .FirstOrDefaultAsync(q => q.Id == qualificationId);
+
+                                if (qualificationToUpdate != null)
+                                {
+                                    qualificationToUpdate.QualificationName = importRecord.Title;
+                                }
+
+                            }
+
+                            #endregion  
                         }
                     }                    
 
