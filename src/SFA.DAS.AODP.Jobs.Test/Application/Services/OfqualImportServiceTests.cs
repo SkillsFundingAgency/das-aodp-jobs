@@ -397,6 +397,76 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         }
 
         [Fact]
+        public async Task OfqualImportService_ProcessQualificationsDataAsync_UpdatesQualificationTitle_WhenTitleChanged()
+        {
+            //Arrange
+            var organisationId = 10001;
+            var qualificationNumber = "qan1";
+            var originalTitle = "Original Qualification Title";
+            var updatedTitle = "Updated Qualification Title";
+
+            await PopulateDbWithReferenceData();
+            await CreateQualificationRecordSet(organisationId, qualificationNumber, originalTitle);
+            var _service = CreateImportServiceWithDb();
+
+            // Create import record with the updated title
+            var importRecord = this.CreateImportRecord(organisationId, qualificationNumber, updatedTitle);
+            var importRecords = new List<QualificationDTO>() { importRecord };
+
+            _qualificationsServiceMock.Setup(s => s.GetStagedQualificationsBatchAsync(It.IsAny<int>(), 0))
+                                       .ReturnsAsync(importRecords);
+            _qualificationsServiceMock.Setup(s => s.GetStagedQualificationsBatchAsync(It.IsAny<int>(), 1))
+                                       .ReturnsAsync(new List<QualificationDTO>());
+
+            // Set up funding eligibility (can be either eligible or not eligible)
+            _fundingEligibilityService.Setup(s => s.EligibleForFunding(It.Is<QualificationDTO>(q =>
+                                            q.QualificationNumberNoObliques == importRecord.QualificationNumberNoObliques)))
+                                      .Returns(false);
+
+            _fundingEligibilityService.Setup(s => s.DetermineFailureReason(It.Is<QualificationDTO>(q =>
+                                            q.QualificationNumberNoObliques == importRecord.QualificationNumberNoObliques)))
+                                      .Returns(ImportReason.NoAction);
+
+            // Important: Setup change detection to include "Title" in the changed fields
+            _changeDetectionServiceMock.Setup(s => s.DetectChanges(
+                                            It.IsAny<QualificationDTO>(),
+                                            It.IsAny<QualificationVersions>(),
+                                            It.IsAny<AwardingOrganisation>(),
+                                            It.IsAny<Qualification>()))
+                                      .Returns(new ChangeDetectionService.DetectionResults()
+                                      {
+                                          ChangesPresent = true,
+                                          Fields = new List<string>() { "Title", "Glh", "Status" }
+                                      });
+
+            //Act
+            await _service.ProcessQualificationsDataAsync();
+
+            //Assert
+            // Check that qualification title was updated
+            var updatedQualification = await _dbContext.Qualification.Where(w => w.Qan == qualificationNumber).SingleAsync();
+            Assert.Equal(qualificationNumber, updatedQualification.Qan);
+            Assert.Equal(updatedTitle, updatedQualification.QualificationName);
+            Assert.NotEqual(originalTitle, updatedQualification.QualificationName);
+
+            // Verify a new qualification version was created
+            var insertedVersion = await _dbContext.QualificationVersions
+                                    .Include(i => i.ProcessStatus)
+                                    .OrderByDescending(o => o.Version)
+                                    .Where(w => w.QualificationId == updatedQualification.Id)
+                                    .FirstAsync();
+            Assert.NotNull(insertedVersion);
+            Assert.Equal(2, insertedVersion.Version);
+
+            // Verify version field changes contain Title
+            var versionFieldChange = await _dbContext.VersionFieldChanges
+                                    .Where(w => w.QualificationVersionNumber == insertedVersion.Version)
+                                    .FirstAsync();
+            Assert.NotNull(versionFieldChange);
+            Assert.Contains("Title", versionFieldChange.ChangedFieldNames);
+        }
+
+        [Fact]
         public async Task OfqualImportService_ProcessQualificationsDataAsync_ExistingRecord_NoChangesDetected()
         {
             //Arrange

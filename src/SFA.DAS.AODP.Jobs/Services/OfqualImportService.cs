@@ -129,10 +129,10 @@ namespace SFA.DAS.AODP.Jobs.Services
                     .ToDictionary(a => a.Ukprn, a => a.Id);
 
                 var qualificationCache = (await _applicationDbContext.Qualification
-                    .AsNoTracking()                    
-                    .Select(o => new { Qan = o.Qan, Id = o.Id })
+                    .AsNoTracking()
+                    .Select(o => new { Qan = o.Qan, Id = o.Id, Title = o.QualificationName })
                     .ToListAsync())
-                    .ToDictionary(a => a.Qan, a => a.Id);
+                    .ToDictionary(a => a.Qan, a => new { Id = a.Id, Title = a.Title });
 
                 var existingVersionsCache = (await _applicationDbContext.QualificationVersions
                     .Include(qv => qv.VersionFieldChanges)
@@ -197,7 +197,9 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                         // Check Qualification
                         var qualificationId = Guid.Empty;
-                        if (!qualificationCache.ContainsKey(importRecord.QualificationNumberNoObliques ?? ""))
+                        var qan = importRecord.QualificationNumberNoObliques ?? "";
+
+                        if (!qualificationCache.ContainsKey(qan))
                         {
                             qualificationId = Guid.NewGuid();
                             var qualification = new Qualification
@@ -207,11 +209,12 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 QualificationName = importRecord.Title
                             };
                             newQualifications.Add(qualification);
-                            qualificationCache[importRecord.QualificationNumberNoObliques ?? ""] = qualificationId;
+                            qualificationCache[qan] = new { Id = qualificationId, Title = importRecord.Title };
                         }
                         else
                         {
-                            qualificationId = qualificationCache[importRecord.QualificationNumberNoObliques ?? ""];
+                            var cachedQualification = qualificationCache[qan];
+                            qualificationId = cachedQualification.Id;
                         }
 
                         // Check if qualification version exists
@@ -233,7 +236,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                             }
                             else
                             {
-                                //New Qualification ineligible for funding - No Action Required                                
+                                // Ineligible for funding - No Action Required                                
 
                                 processStatusName = Enum.ProcessStatus.NoActionRequired;
                                 actionTypeId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired);
@@ -278,7 +281,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                         }
                         else
                         {
-                            // We have a previous version                           
+                            // We have a previous version
 
                             // check for changed fields
                             var currentQualificationDto = new QualificationDTO();
@@ -296,6 +299,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 detectionResults = _changeDetectionService.DetectChanges(importRecord, currentQualificationVersion, currentQualificationVersion.Organisation, currentQualificationVersion.Qualification);
                                 if (!detectionResults.ChangesPresent) continue;
                             }
+
+                            #region New Version of Existing Qualification
 
                             if (!_fundingEligibilityService.EligibleForFunding(importRecord))
                             {
@@ -336,12 +341,13 @@ namespace SFA.DAS.AODP.Jobs.Services
                             }
                             else
                             {
-                                // Existing version with changed fields
+                                // Eligable for funding 
+
                                 var versionFieldChange = new VersionFieldChange
                                 {
                                     Id = Guid.NewGuid(),
                                     QualificationVersionNumber = existingVersion.Version + 1,
-                                    ChangedFieldNames = string.Join(", ", detectionResults.Fields)
+                                    ChangedFieldNames = detectionResults.ChangesPresent ? string.Join(", ", detectionResults.Fields) : ""
                                 };
                                 var processStatusName = Enum.ProcessStatus.DecisionRequired;
                                 var lifecycleStageName = LifeCycleStage.Changed;
@@ -370,6 +376,21 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                                 newQualificationVersions.Add(newQualificationVersion);
                             }
+
+                            if (detectionResults.Fields.Contains("Title"))
+                            {
+                                // update qualification title
+                                var qualificationToUpdate = await _applicationDbContext.Qualification
+                                    .FirstOrDefaultAsync(q => q.Id == qualificationId);
+
+                                if (qualificationToUpdate != null)
+                                {
+                                    qualificationToUpdate.QualificationName = importRecord.Title;
+                                }
+
+                            }
+
+                            #endregion  
                         }
                     }                    
 
