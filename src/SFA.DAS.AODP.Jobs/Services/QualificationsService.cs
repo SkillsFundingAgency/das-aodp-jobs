@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Reflection.Metadata.Ecma335;
+using System.Text.Json;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -52,7 +53,7 @@ namespace SFA.DAS.AODP.Jobs.Services
         {
             try
             {
-                _logger.LogInformation($"[{nameof(QualificationsService)}] -> [{nameof(SaveQualificationsStagingAsync)}] -> Retrieving next batch of {batchSize} staged qualifications from record {processedCount}...");
+                _logger.LogInformation($"[{nameof(QualificationsService)}] -> [{nameof(GetStagedQualificationsBatchAsync)}] -> Retrieving next batch of {batchSize} staged qualifications from record {processedCount}...");
 
                 var stagedQualifications = await _applicationDbContext.QualificationImportStaging
                     .OrderBy(q => q.Id)
@@ -69,7 +70,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"[{nameof(QualificationsService)}] -> [{nameof(SaveQualificationsStagingAsync)}] -> An error occurred while retrieving batch of import records.");
+                _logger.LogError(ex, $"[{nameof(QualificationsService)}] -> [{nameof(GetStagedQualificationsBatchAsync)}] -> An error occurred while retrieving batch of import records.");
                 throw;
             }
         }

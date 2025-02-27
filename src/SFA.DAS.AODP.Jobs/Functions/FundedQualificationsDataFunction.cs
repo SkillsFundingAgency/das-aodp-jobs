@@ -4,11 +4,12 @@ using AutoMapper;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
-using SAF.DAS.AODP.Models.Qualification;
+using SFA.DAS.AODP.Models.Qualification;
 using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Jobs.Services.CSV;
+using Microsoft.EntityFrameworkCore;
 
 namespace SFA.DAS.AODP.Functions
 {
@@ -17,14 +18,17 @@ namespace SFA.DAS.AODP.Functions
         private readonly ILogger<FundedQualificationsDataFunction> _logger;
         private readonly IApplicationDbContext _applicationDbContext;
         private readonly ICsvReaderService _csvReaderService;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly IMapper _mapper;
 
-        public FundedQualificationsDataFunction(ILogger<FundedQualificationsDataFunction> logger, IApplicationDbContext applicationDbContext, ICsvReaderService csvReaderService, IMapper mapper)
+        public FundedQualificationsDataFunction(ILogger<FundedQualificationsDataFunction> logger, IApplicationDbContext applicationDbContext, ICsvReaderService csvReaderService, 
+            IMapper mapper, ILoggerFactory loggerFactory)
         {
             _logger = logger;
             _applicationDbContext = applicationDbContext;
             _csvReaderService = csvReaderService;
             _mapper = mapper;
+            _loggerFactory = loggerFactory;
         }
 
         [Function("ApprovedQualificationsDataFunction")]
@@ -40,11 +44,29 @@ namespace SFA.DAS.AODP.Functions
                 var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
                 return notFoundResponse;
             }
-            var approvedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(approvedUrlFilePath);
+
+            var qualifications = await _applicationDbContext.Qualification
+                .AsNoTracking()
+                .ToListAsync();
+            //var organisations = await _applicationDbContext.AwardingOrganisation
+            //    .AsNoTracking()
+            //    .ToListAsync();
+
+            // order orgs by rec number and select org with highest rec number!!
+            var organisations = await _applicationDbContext.AwardingOrganisation
+                .AsNoTracking()
+                .OrderByDescending(o => o.RecognitionNumber)
+                .GroupBy(o => o.NameOfqual)
+                .Select(g => g.First())
+                .ToListAsync();
+
+            var fundedQualificationsImportClassMaplogger = _loggerFactory.CreateLogger<FundedQualificationsImportClassMap>();
+            var approvedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(approvedUrlFilePath, qualifications, organisations, fundedQualificationsImportClassMaplogger);
+
             var stopWatch = new Stopwatch();
             if (approvedQualifications.Any())
             {
-                await _applicationDbContext.TruncateTable<FundedQualification>();
+                //await _applicationDbContext.TruncateTable<Qualifications>();
 
                 await WriteQualifications(approvedQualifications, stopWatch);
             }
@@ -77,7 +99,9 @@ namespace SFA.DAS.AODP.Functions
         private async Task WriteQualifications(List<FundedQualificationDTO> approvedQualifications, Stopwatch stopWatch)
         {
             stopWatch.Restart();
-            await _applicationDbContext.BulkInsertAsync(_mapper.Map<List<FundedQualification>>(approvedQualifications));
+
+            var test = _mapper.Map<List<Qualifications>>(approvedQualifications);
+            await _applicationDbContext.BulkInsertAsync(test);
             stopWatch.Stop();
         }
     }

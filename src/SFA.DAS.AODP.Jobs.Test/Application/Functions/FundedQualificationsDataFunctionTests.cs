@@ -3,13 +3,13 @@ using AutoMapper;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Moq;
-using SAF.DAS.AODP.Models.Qualification;
 using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Functions;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Jobs.Services.CSV;
 using SFA.DAS.AODP.Jobs.Test.Mocks;
+using SFA.DAS.AODP.Models.Qualification;
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
 {
@@ -20,6 +20,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
         private readonly Mock<ICsvReaderService> _csvReaderServiceMock;
         private readonly FunctionContext _functionContext;
         private readonly FundedQualificationsDataFunction _function;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly IMapper _mapper;
 
         public FundedQualificationsDataFunctionTests()
@@ -28,6 +29,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
             _applicationDbContextMock = new Mock<IApplicationDbContext>();
             _csvReaderServiceMock = new Mock<ICsvReaderService>();
             _functionContext = new Mock<FunctionContext>().Object;
+            _loggerFactory = new Mock<ILoggerFactory>().Object;
 
             var configuration = new MapperConfiguration(cfg => cfg.AddProfile(new MapperProfile()));
             _mapper = new Mapper(configuration);
@@ -36,7 +38,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
                 _loggerMock.Object,
                 _applicationDbContextMock.Object,
                 _csvReaderServiceMock.Object,
-                _mapper);
+                _mapper,
+                _loggerFactory);
         }
 
         [Fact]
@@ -60,7 +63,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
 
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            _applicationDbContextMock.Verify(db => db.BulkInsertAsync(It.IsAny<IEnumerable<FundedQualification>>(), default), Times.Exactly(2));
+            _applicationDbContextMock.Verify(db => db.BulkInsertAsync(It.IsAny<IEnumerable<Qualifications>>(), default), Times.Exactly(2));
         }
 
         [Fact]
@@ -79,7 +82,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
 
             // Assert
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-            _applicationDbContextMock.Verify(db => db.BulkInsertAsync(It.IsAny<IEnumerable<FundedQualification>>(), default), Times.Never);
+            _applicationDbContextMock.Verify(db => db.BulkInsertAsync(It.IsAny<IEnumerable<Qualifications>>(), default), Times.Never);
         }
 
         [Fact]
