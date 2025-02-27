@@ -65,6 +65,12 @@
         "sharedManagementResourceGroup": {
             "type": "string"
         },
+        "archivedFundedQualificationsImportUrl": {
+            "type": "string"
+        },
+        "fundedQualificationsImportUrl": {
+            "type": "string"
+        },
         "utcValue": {
             "type": "string",
             "defaultValue": "[utcNow()]"
@@ -247,6 +253,14 @@
                                 {
                                     "name": "WEBSITE_RUN_FROM_PACKAGE",
                                     "value": "1"
+                                },
+                                {
+                                    "name": "ArchivedFundedQualificationsImportUrl",
+                                    "value": "[parameters('archivedFundedQualificationsImportUrl')]"
+                                },
+                                {
+                                    "name": "FundedQualificationsImportUrl",
+                                    "value": "[parameters('fundedQualificationsImportUrl')]"
                                 }
                             ]
                         }
