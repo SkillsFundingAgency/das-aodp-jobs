@@ -77,7 +77,7 @@ namespace SFA.DAS.AODP.Functions
                 return notFoundResponse;
             }
 
-            var archivedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(archivedUrlFilePath);
+            var archivedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(archivedUrlFilePath, qualifications, organisations, fundedQualificationsImportClassMaplogger);
             if (archivedQualifications.Any())
             {
                 await WriteQualifications(archivedQualifications, stopWatch);
@@ -101,6 +101,7 @@ namespace SFA.DAS.AODP.Functions
             stopWatch.Restart();
 
             var test = _mapper.Map<List<Qualifications>>(approvedQualifications);
+          
             await _applicationDbContext.BulkInsertAsync(test);
             stopWatch.Stop();
         }

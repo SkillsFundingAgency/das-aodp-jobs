@@ -10,6 +10,7 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
         private readonly Dictionary<string, Guid> _qualificationNumberToIdCache;
         private readonly Dictionary<string, Guid> _organsationNameToIdCache;
         private readonly ILogger<FundedQualificationsImportClassMap> _logger;
+        private Guid _currentQualificationId;
 
         public FundedQualificationsImportClassMap(
             List<string> headers,
@@ -21,11 +22,13 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
             _qualificationNumberToIdCache = qualifications.ToDictionary(q => q.Qan, q => q.Id);
             _organsationNameToIdCache = organisations.ToDictionary(q => q.NameOfqual, q => q.Id);
 
+            Map(m => m.Id).Convert(row => {
+                return Guid.NewGuid();
+            });
+
             Map(m => m.DateOfOfqualDataSnapshot)
                 .Name("DateOfOfqualDataSnapshot")
                 .TypeConverterOption.Format("dd/MM/yyyy");
-
-            Map(m => m.QualificationName).Name("QualificationName");
 
             // Map QualificationId by looking up qualification number in the cache
             Map(m => m.QualificationId).Convert(row => {
@@ -34,16 +37,19 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
                 if (string.IsNullOrEmpty(qualificationNumber))
                 {
                     _logger.LogWarning("Empty qualification number found in CSV data");
+                    _currentQualificationId = default;
                     return default;
                 }
 
                 if (_qualificationNumberToIdCache.TryGetValue(qualificationNumber, out Guid qualificationId))
                 {
-                    return qualificationId;
+                    _currentQualificationId = qualificationId;
+                    return _currentQualificationId;
                 }
                 else
                 {
                     _logger.LogWarning($"No matching qualification found for qan: '{qualificationNumber}'");
+                    _currentQualificationId = default;
                     return default;
                 }
             });
@@ -69,11 +75,6 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
                 }
             });
 
-            //Map(m => m.AwardingOrganisation)
-            //    .TypeConverterOption.NullValues(string.Empty);
-            Map(m => m.AwardingOrganisation).Name("AwardingOrganisation");
-
-            Map(m => m.QualificationNumber).Name("QualificationNumber");
             Map(m => m.Level).Name("Level");
             Map(m => m.QualificationType).Name("QualificationType");
             Map(m => m.Subcategory).Name("Subcategory");
@@ -102,12 +103,13 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
 
                     offers.Add(new FundedQualificationOfferDTO()
                     {
+                        Id = Guid.NewGuid(),
+                        QualificationId = _currentQualificationId,
                         Name = offerName,
-                        FundingAvailable = r.Row.GetField($"{offerName}_FundingAvailable"),
                         Notes = r.Row.GetField($"{offerName}_Notes"),
+                        FundingAvailable = r.Row.GetField($"{offerName}_FundingAvailable"),
                         FundingApprovalEndDate = endDate,
                         FundingApprovalStartDate = startDate,
-                        QualificationId = //set qualificaitonId here!!
                     });
                 };
                 return offers;
