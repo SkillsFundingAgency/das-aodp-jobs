@@ -78,7 +78,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 .Returns(new QualificationsQueryParameters { Limit = 10 });
             _ofqualRegisterServiceMock.Setup(s => s.SearchPrivateQualificationsAsync(It.IsAny<QualificationsQueryParameters>()))
                 .ReturnsAsync(searchResult);
-            _qualificationsServiceMock.Setup(s => s.SaveQualificationsStagingAsync(It.IsAny<List<string>>()))
+            _qualificationsServiceMock.Setup(s => s.SaveQualificationsStagingAsync())
                 .Returns(Task.CompletedTask);
 
 
@@ -107,12 +107,12 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 .Returns(new QualificationsQueryParameters { Limit = 10 });
             _ofqualRegisterServiceMock.Setup(s => s.SearchPrivateQualificationsAsync(It.IsAny<QualificationsQueryParameters>()))
                 .ReturnsAsync(searchResult);
-            _qualificationsServiceMock.Setup(s => s.SaveQualificationsStagingAsync(It.IsAny<List<string>>()))
+            _qualificationsServiceMock.Setup(s => s.SaveQualificationsStagingAsync())
                 .Returns(Task.CompletedTask);
 
             await _service.ImportApiData(requestMock.Object);
 
-            _qualificationsServiceMock.Verify(s => s.SaveQualificationsStagingAsync(It.IsAny<List<string>>()), Times.Once);
+            _qualificationsServiceMock.Verify(s => s.SaveQualificationsStagingAsync(), Times.Once);
         }
 
         [Fact]
@@ -141,7 +141,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             _ofqualRegisterServiceMock.Setup(s => s.SearchPrivateQualificationsAsync(It.IsAny<QualificationsQueryParameters>()))
                 .ReturnsAsync(searchResult);
 
-            _qualificationsServiceMock.Setup(s => s.SaveQualificationsStagingAsync(It.IsAny<List<string>>()))
+            _qualificationsServiceMock.Setup(s => s.SaveQualificationsStagingAsync())
                 .Returns(Task.CompletedTask);
 
             _ofqualRegisterServiceMock.Setup(s => s.SearchPrivateQualificationsAsync(It.IsAny<QualificationsQueryParameters>()))
@@ -170,7 +170,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             _ofqualRegisterServiceMock.Setup(s => s.SearchPrivateQualificationsAsync(It.IsAny<QualificationsQueryParameters>()))
                 .ReturnsAsync(searchResult);
 
-            _qualificationsServiceMock.Setup(s => s.SaveQualificationsStagingAsync(It.IsAny<List<string>>()))
+            _qualificationsServiceMock.Setup(s => s.SaveQualificationsStagingAsync())
                 .Returns(Task.CompletedTask);
 
             _ofqualRegisterServiceMock.Setup(s => s.SearchPrivateQualificationsAsync(It.IsAny<QualificationsQueryParameters>()))

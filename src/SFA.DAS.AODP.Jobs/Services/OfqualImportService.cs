@@ -78,7 +78,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                         .Select(JsonConvert.SerializeObject)
                         .ToList();
 
-                    await _qualificationsService.SaveQualificationsStagingAsync(importedQualificationsJson);
+                    await _qualificationsService.AddQualificationsStagingRecords(importedQualificationsJson);
 
                     totalProcessed += paginatedResult.Results.Count;
 
@@ -93,6 +93,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                     _loopCycleStopWatch.Restart();
                     pageCount++;
                 }
+
+                await _qualificationsService.SaveQualificationsStagingAsync();
 
                 _processStopWatch.Stop();
                 _logger.LogInformation($"Successfully imported {totalProcessed} qualifications in {_processStopWatch.Elapsed.TotalSeconds:F2} seconds");
@@ -115,7 +117,7 @@ namespace SFA.DAS.AODP.Jobs.Services
         {
             _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ProcessQualificationsDataAsync)}] -> Processing Ofqual Qualifications Staging Data...");
 
-            const int batchSize = 500;
+            const int batchSize = 1000;
             int processedCount = 0;
             _processStopWatch.Restart();
 
