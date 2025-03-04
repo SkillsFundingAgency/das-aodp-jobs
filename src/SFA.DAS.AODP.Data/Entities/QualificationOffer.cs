@@ -2,7 +2,7 @@
 
 namespace SFA.DAS.AODP.Data.Entities;
 
-[Table("QualificationOffer", Schema = "funded")]
+[Table("QualificationOffers", Schema = "funded")]
 
 public partial class QualificationOffer
 {

@@ -48,11 +48,8 @@ namespace SFA.DAS.AODP.Functions
             var qualifications = await _applicationDbContext.Qualification
                 .AsNoTracking()
                 .ToListAsync();
-            //var organisations = await _applicationDbContext.AwardingOrganisation
-            //    .AsNoTracking()
-            //    .ToListAsync();
 
-            // order orgs by rec number and select org with highest rec number!!
+            // order orgs by rec number and select org with highest rec number
             var organisations = await _applicationDbContext.AwardingOrganisation
                 .AsNoTracking()
                 .OrderByDescending(o => o.RecognitionNumber)
@@ -96,20 +93,20 @@ namespace SFA.DAS.AODP.Functions
             return successResponse;
         }
 
-        private async Task WriteQualifications(List<FundedQualificationDTO> approvedQualifications, Stopwatch stopWatch)
+        private async Task WriteQualifications(List<FundedQualificationDTO> qualifications, Stopwatch stopWatch)
         {
             stopWatch.Restart();
 
             const int _batchSize = 1000;
 
-            for (int i = 0; i < approvedQualifications.Count; i += _batchSize)
+            for (int i = 0; i < qualifications.Count; i += _batchSize)
             {
-                var batch = approvedQualifications
+                var batch = qualifications
                     .Skip(i)
                     .Take(_batchSize)
                     .ToList();
 
-                var entities = _mapper.Map<List<Qualifications>>(approvedQualifications);
+                var entities = _mapper.Map<List<Qualifications>>(batch);
 
                 await _applicationDbContext.Qualifications.AddRangeAsync(entities);
             }
