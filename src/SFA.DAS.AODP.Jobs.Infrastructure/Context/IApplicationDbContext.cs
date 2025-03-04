@@ -10,7 +10,7 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         DbSet<AwardingOrganisation> AwardingOrganisation { get; set; }
         DbSet<ProcessStatus> ProcessStatus { get; set; }
         DbSet<Qualification> Qualification { get; set; }
-        DbSet<Qualifications> FundedQualifications { get; set; }
+        DbSet<Qualifications> Qualifications { get; set; }
         DbSet<QualificationDiscussionHistory> QualificationDiscussionHistory { get; set; }
         DbSet<QualificationOffer> QualificationOffers { get; set; }
         DbSet<QualificationVersions> QualificationVersions { get; set; }
@@ -21,7 +21,6 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         DbSet<JobRun> JobRuns { get; set; }
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
-        Task BulkInsertAsync<T>(IEnumerable<T> entities, CancellationToken cancellationToken = default) where T : class;
         Task TruncateTable<T>() where T : class;
     }
 }

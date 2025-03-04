@@ -77,7 +77,7 @@ namespace SFA.DAS.AODP.Functions
         private async Task WriteQualifications(List<FundedQualificationDTO> approvedQualifications, Stopwatch stopWatch)
         {
             stopWatch.Restart();
-            await _applicationDbContext.BulkInsertAsync(_mapper.Map<List<FundedQualification>>(approvedQualifications));
+            //await _applicationDbContext.BulkInsertAsync(_mapper.Map<List<FundedQualification>>(approvedQualifications));
             stopWatch.Stop();
         }
     }

@@ -23,27 +23,44 @@ namespace SFA.DAS.AODP.Jobs.Services
             _applicationDbContext = appDbContext;
         }
 
-        public async Task SaveQualificationsStagingAsync(List<string> qualificationsJson)
+        public async Task AddQualificationsStagingRecords(List<string> qualificationsJson)
+        {
+            try
+            {
+                _logger.LogInformation($"[{nameof(QualificationsService)}] -> [{nameof(AddQualificationsStagingRecords)}] -> Adding regulated qualification records...");
+
+                var qualificationsJsonEntities = qualificationsJson
+                    .Select(json => new QualificationImportStaging
+                    {
+                        JsonData = json,
+                        Id = Guid.NewGuid(),
+                        CreatedDate = DateTime.Now
+                    }).ToList();
+
+                await _applicationDbContext.QualificationImportStaging.AddRangeAsync(qualificationsJsonEntities);
+
+                _logger.LogInformation($"[{nameof(QualificationsService)}] -> [{nameof(AddQualificationsStagingRecords)}] ->  Successfully added regulated qualification records.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"[{nameof(QualificationsService)}] -> [{nameof(AddQualificationsStagingRecords)}] -> An error occurred while adding regulated qualification records.");
+                throw;
+            }
+        }
+
+        public async Task SaveQualificationsStagingAsync()
         {
             try
             {
                 _logger.LogInformation($"[{nameof(QualificationsService)}] -> [{nameof(SaveQualificationsStagingAsync)}] -> Saving regulated qualification records...");
 
-                var qualificationsJsonEntities = qualificationsJson
-                    .Select(json => new QualificationImportStaging
-                    {
-                        Id = Guid.NewGuid(),
-                        JsonData = json,
-                        CreatedDate = DateTime.Now
-                    }).ToList();
+                await _applicationDbContext.SaveChangesAsync();
 
-                await _applicationDbContext.BulkInsertAsync(qualificationsJsonEntities);
-
-                _logger.LogInformation("Successfully saved regulated qualification records.");
+                _logger.LogInformation($"[{nameof(QualificationsService)}] -> [{nameof(SaveQualificationsStagingAsync)}] -> Successfully saved regulated qualification records.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An error occurred while saving regulated qualification records.");
+                _logger.LogError(ex, $"[{nameof(QualificationsService)}] -> [{nameof(SaveQualificationsStagingAsync)}] -> An error occurred while saving regulated qualification records.");
                 throw;
             }
         }
@@ -52,7 +69,7 @@ namespace SFA.DAS.AODP.Jobs.Services
         {
             try
             {
-                _logger.LogInformation($"[{nameof(QualificationsService)}] -> [{nameof(SaveQualificationsStagingAsync)}] -> Retrieving next batch of {batchSize} staged qualifications from record {processedCount}...");
+                _logger.LogInformation($"[{nameof(QualificationsService)}] -> [{nameof(GetStagedQualificationsBatchAsync)}] -> Retrieving next batch of {batchSize} staged qualifications from record {processedCount}...");
 
                 var stagedQualifications = await _applicationDbContext.QualificationImportStaging
                     .OrderBy(q => q.Id)
@@ -69,7 +86,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"[{nameof(QualificationsService)}] -> [{nameof(SaveQualificationsStagingAsync)}] -> An error occurred while retrieving batch of import records.");
+                _logger.LogError(ex, $"[{nameof(QualificationsService)}] -> [{nameof(GetStagedQualificationsBatchAsync)}] -> An error occurred while retrieving batch of import records.");
                 throw;
             }
         }
