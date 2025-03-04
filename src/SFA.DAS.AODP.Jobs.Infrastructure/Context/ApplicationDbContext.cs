@@ -19,7 +19,7 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public virtual DbSet<Qualification> Qualification { get; set; }
 
-        public virtual DbSet<Qualifications> Qualifications { get; set; }
+        public virtual DbSet<Qualifications> FundedQualifications { get; set; }
 
         public virtual DbSet<QualificationDiscussionHistory> QualificationDiscussionHistory { get; set; }
 
