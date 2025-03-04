@@ -1,8 +1,5 @@
-﻿using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using SFA.DAS.AODP.Data.Entities;
-using System.Data;
-using Z.BulkOperations;
 
 namespace SFA.DAS.AODP.Infrastructure.Context
 {
@@ -31,7 +28,7 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public virtual DbSet<QualificationImportStaging> QualificationImportStaging { get; set; }
 
-        public virtual DbSet<VersionFieldChange> VersionFieldChanges { get; set; }
+        public virtual DbSet<VersionFieldChanges> VersionFieldChanges { get; set; }
 
         public virtual DbSet<Job> Jobs { get; set; }
 
@@ -42,12 +39,6 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             return base.SaveChangesAsync(cancellationToken);
-        }
-
-        public async Task BulkInsertAsync<T>(IEnumerable<T> entities, CancellationToken cancellationToken = default) where T : class
-        {
-            if (entities.Any())
-                await this.BulkInsertAsync(entities.ToList(), options => { options.BatchSize = 1000; options.IncludeGraph = true; }, cancellationToken: cancellationToken);
         }
 
         public async Task TruncateTable<T>() where T : class

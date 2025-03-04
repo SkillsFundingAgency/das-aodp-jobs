@@ -168,7 +168,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                     var newQualificationVersions = new List<QualificationVersions>();
                     var newQualificationDiscussions = new List<QualificationDiscussionHistory>();
 
-                    var versionFieldChanges = new List<VersionFieldChange>();
+                    var versionFieldChanges = new List<VersionFieldChanges>();
                     var processStatuses = new List<Data.Entities.ProcessStatus>();
                     var lifecycleStages = new List<LifecycleStage>();
 
@@ -243,7 +243,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 notes = _fundingEligibilityService.DetermineFailureReason(importRecord);                                
                             }
 
-                            var versionFieldChange = new VersionFieldChange
+                            var versionFieldChange = new VersionFieldChanges
                             {
                                 Id = Guid.NewGuid(),
                                 QualificationVersionNumber = 1,
@@ -306,7 +306,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                             {
                                 // Not eligible for funding 
                                 
-                                var versionFieldChange = new VersionFieldChange
+                                var versionFieldChange = new VersionFieldChanges
                                 {
                                     Id = Guid.NewGuid(),
                                     QualificationVersionNumber = existingVersion.Version + 1,
@@ -343,7 +343,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                             {
                                 // Eligable for funding 
 
-                                var versionFieldChange = new VersionFieldChange
+                                var versionFieldChange = new VersionFieldChanges
                                 {
                                     Id = Guid.NewGuid(),
                                     QualificationVersionNumber = existingVersion.Version + 1,
@@ -392,17 +392,13 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                             #endregion  
                         }
-                    }                    
+                    }
 
                     if (newOrganisations.Any()) await _applicationDbContext.AwardingOrganisation.AddRangeAsync(newOrganisations);
                     if (newQualifications.Any()) await _applicationDbContext.Qualification.AddRangeAsync(newQualifications);
                     if (newQualificationVersions.Any()) await _applicationDbContext.QualificationVersions.AddRangeAsync(newQualificationVersions);
                     if (newQualificationDiscussions.Any()) await _applicationDbContext.QualificationDiscussionHistory.AddRangeAsync(newQualificationDiscussions);
-                    if (versionFieldChanges.Any())
-                    {
-                        await _applicationDbContext.VersionFieldChanges.AddRangeAsync(versionFieldChanges);
-                        //await _applicationDbContext.SaveChangesAsync();
-                    }
+                    if (versionFieldChanges.Any()) await _applicationDbContext.VersionFieldChanges.AddRangeAsync(versionFieldChanges);
 
                     await _applicationDbContext.SaveChangesAsync();
 
@@ -420,7 +416,7 @@ namespace SFA.DAS.AODP.Jobs.Services
         }
 
         private QualificationVersions CreateQualificationVersion(Guid qualificationId, Guid organisationId, string lifecycleStage,
-            string processStatus, QualificationDTO qualificationData, VersionFieldChange versionFieldChange, int? version)
+            string processStatus, QualificationDTO qualificationData, VersionFieldChanges versionFieldChange, int? version)
         {
             string GetJoinedArrayOrEmpty(JsonElement? value)
             {

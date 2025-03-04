@@ -100,9 +100,22 @@ namespace SFA.DAS.AODP.Functions
         {
             stopWatch.Restart();
 
-            var test = _mapper.Map<List<Qualifications>>(approvedQualifications);
-          
-            await _applicationDbContext.BulkInsertAsync(test);
+            const int _batchSize = 1000;
+
+            for (int i = 0; i < approvedQualifications.Count; i += _batchSize)
+            {
+                var batch = approvedQualifications
+                    .Skip(i)
+                    .Take(_batchSize)
+                    .ToList();
+
+                var entities = _mapper.Map<List<Qualifications>>(approvedQualifications);
+
+                await _applicationDbContext.Qualifications.AddRangeAsync(entities);
+            }
+
+            await _applicationDbContext.SaveChangesAsync();
+
             stopWatch.Stop();
         }
     }
