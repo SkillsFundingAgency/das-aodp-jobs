@@ -13,18 +13,48 @@ namespace SFA.DAS.AODP.Jobs.Services
             {
                 ChangesPresent = false;
                 Fields = new List<string>();
+                KeyFieldsChanged = false;
             }
 
             public bool ChangesPresent { get; set; }
             public List<string> Fields { get; set; }
+            public bool KeyFieldsChanged { get; set; }
+        }
+
+        private readonly List<string> _keyFields;
+
+        public ChangeDetectionService()
+        {
+            _keyFields = new List<string>()
+                {
+                    "OrganisationName",
+                    "Title",
+                    "Level",
+                    "Type",
+                    "QualCit", // no match
+                    "QualSSADescription", //no match
+                    "GradingType",
+                    "OfferedInEngland", // no match
+                    "PreSixteen",
+                    "SixteenToEighteen",
+                    "EighteenPlus",
+                    "NineteenPlus",
+                    "FundingInEngland", // no match
+                    "GLH",
+                    "MinimumGLH",
+                    "Tqt",
+                    "OperationalEndDate",
+                    "LastUpdatedDate",
+                    "Version", //internal version numbers do not match Ofqual version numbers (we start from 1)
+                    "OfferedInternationally"
+                };
         }
 
         public DetectionResults DetectChanges(QualificationDTO newRecord, QualificationVersions qualificationVersion, AwardingOrganisation awardingOrganisation, Qualification qualification)
         {
             // Could use Reflection here, but records being compared have mismatched names, different field types, or information located in other structures
 
-            var fields = new List<string>();
-            
+            var fields = new List<string>();       
             fields = fields.AppendIf(newRecord.Ssa != qualificationVersion.Ssa, "Ssa");
             fields = fields.AppendIf(newRecord.Pathways != qualificationVersion.Pathways, "Pathways");
             fields = fields.AppendIf(newRecord.Status != qualificationVersion.Status, "Status");
@@ -56,7 +86,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             fields = fields.AppendIf(newRecord.OfferedInternationally != qualificationVersion.OfferedInternationally, "OfferedInternationally");
             fields = fields.AppendIf(newRecord.OperationalEndDate != qualificationVersion.OperationalEndDate, "OperationalEndDate");
             fields = fields.AppendIf(newRecord.OperationalStartDate != qualificationVersion.OperationalStartDate, "OperationalStartDate");
-
+          
             fields = fields.AppendIf(newRecord.OrganisationAcronym != awardingOrganisation.Acronym, "OrganisationAcronym");
             fields = fields.AppendIf(newRecord.OrganisationName != awardingOrganisation.NameOfqual, "OrganisationName");
             fields = fields.AppendIf(newRecord.OrganisationId != awardingOrganisation.Ukprn, "OrganisationId");
@@ -81,7 +111,14 @@ namespace SFA.DAS.AODP.Jobs.Services
             fields = fields.AppendIf(newRecord.TypeId != qualificationVersion.TypeId, "Type");
             fields = fields.AppendIf(newRecord.UiLastUpdatedDate != qualificationVersion.UiLastUpdatedDate, "UiLastUpdatedDate");
 
-            return new DetectionResults() { Fields = fields, ChangesPresent = fields.Any() };
+            var results = new DetectionResults() { Fields = fields, ChangesPresent = fields.Any() };
+
+            if (results.ChangesPresent)
+            {
+                results.KeyFieldsChanged = results.Fields.Intersect(_keyFields).Any();               
+            }
+
+            return results;
         }
     }
 }
