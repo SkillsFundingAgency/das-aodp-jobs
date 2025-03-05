@@ -290,6 +290,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                             var currentQualificationVersion = _applicationDbContext.QualificationVersions
                                                                 .Include(i => i.Qualification)
                                                                 .Include(i => i.Organisation)
+                                                                .Include(i => i.ProcessStatus)
+                                                                .Include(i => i.LifecycleStage)
                                                                 .OrderByDescending(o => o.Version)
                                                                 .AsNoTracking()
                                                                 .Where(w => w.QualificationId == qualificationId)
@@ -302,82 +304,103 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 if (!detectionResults.ChangesPresent) continue;
                             }
 
+                            var processStatusName = Enum.ProcessStatus.NoActionRequired;
+                            var lifecycleStageName = LifeCycleStage.Changed;
+                            var actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired);
+                            var notes = "";
+
                             #region New Version of Existing Qualification
 
                             if (!_fundingEligibilityService.EligibleForFunding(importRecord))
                             {
                                 // Not eligible for funding 
-                                
-                                var versionFieldChange = new VersionFieldChange
-                                {
-                                    Id = Guid.NewGuid(),
-                                    QualificationVersionNumber = existingVersion.Version + 1,
-                                    ChangedFieldNames = detectionResults.ChangesPresent ? string.Join(", ", detectionResults.Fields) : ""
-                                };
-                                var processStatusName = Enum.ProcessStatus.NoActionRequired;
-                                var lifecycleStageName = LifeCycleStage.Changed;
 
-                                var discussionHistory = new QualificationDiscussionHistory
-                                {
-                                    Id = Guid.NewGuid(),
-                                    QualificationId = qualificationId,
-                                    ActionTypeId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired),
-                                    UserDisplayName = "OFQUAL Import",
-                                    Notes = "No Action required - Changed Qualification (Funding Criteria)",
-                                    Timestamp = DateTime.Now
-                                };
-                                newQualificationDiscussions.Add(discussionHistory);
-
-                                versionFieldChanges.Add(versionFieldChange);
-
-                                var newQualificationVersion = CreateQualificationVersion(
-                                    qualificationId,
-                                    organisationId,
-                                    lifecycleStageName,
-                                    processStatusName,
-                                    importRecord,
-                                    versionFieldChange,
-                                    existingVersion.Version + 1);
-
-                                newQualificationVersions.Add(newQualificationVersion);
+                                processStatusName = Enum.ProcessStatus.NoActionRequired;
+                                lifecycleStageName = LifeCycleStage.Changed;
+                                actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired);
+                                notes = "No Action required - Changed Qualification (Funding Criteria)";
                             }
                             else
                             {
-                                // Eligable for funding 
-
-                                var versionFieldChange = new VersionFieldChange
+                                notes = "Decision Required - Changed Qualification";
+                                if ((currentQualificationVersion.ProcessStatus.Name == Enum.ProcessStatus.Approved) ||
+                                        (currentQualificationVersion.ProcessStatus.Name == Enum.ProcessStatus.Rejected))
                                 {
-                                    Id = Guid.NewGuid(),
-                                    QualificationVersionNumber = existingVersion.Version + 1,
-                                    ChangedFieldNames = detectionResults.ChangesPresent ? string.Join(", ", detectionResults.Fields) : ""
-                                };
-                                var processStatusName = Enum.ProcessStatus.DecisionRequired;
-                                var lifecycleStageName = LifeCycleStage.Changed;
 
-                                var discussionHistory = new QualificationDiscussionHistory
+                                    if (detectionResults.KeyFieldsChanged)
+                                    {
+                                        // Decision required as major changes
+                                        processStatusName = Enum.ProcessStatus.DecisionRequired;
+                                        notes = "Decision Required - Changed Qualification (Key Fields)";
+                                    }
+                                    else
+                                    {
+                                        // Keep the current status as only minor changes
+                                        processStatusName = currentQualificationVersion.ProcessStatus.Name;
+                                        notes = "Decision Required - Changed Qualification (Minor Fields)";
+                                    }
+
+                                    lifecycleStageName = LifeCycleStage.Changed;
+                                    actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.ActionRequired);                                    
+                                }
+                                else if ((currentQualificationVersion.ProcessStatus.Name == Enum.ProcessStatus.Hold) ||
+                                        (currentQualificationVersion.ProcessStatus.Name == Enum.ProcessStatus.DecisionRequired))
                                 {
-                                    Id = Guid.NewGuid(),
-                                    QualificationId = qualificationId,
-                                    ActionTypeId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired),
-                                    UserDisplayName = "",
-                                    Notes = "",
-                                    Timestamp = DateTime.Now
-                                };
-                                newQualificationDiscussions.Add(discussionHistory);
-
-                                versionFieldChanges.Add(versionFieldChange);
-
-                                var newQualificationVersion = CreateQualificationVersion(
-                                    qualificationId,
-                                    organisationId,
-                                    lifecycleStageName,
-                                    processStatusName,
-                                    importRecord,
-                                    versionFieldChange,
-                                    existingVersion.Version + 1);
-
-                                newQualificationVersions.Add(newQualificationVersion);
+                                    // Keep the current status as only changed dont matter when on hold/decision required
+                                    processStatusName = currentQualificationVersion.ProcessStatus.Name;
+                                    lifecycleStageName = currentQualificationVersion.LifecycleStage.Name;
+                                    if (detectionResults.KeyFieldsChanged)
+                                    {                                        
+                                        
+                                        notes = currentQualificationVersion.ProcessStatus.Name == Enum.ProcessStatus.Hold ?
+                                            "On Hold - Changed Qualification (Key Fields)" :
+                                            "Decision Required - Changed Qualification (Key Fields)";                                        
+                                    }
+                                    else
+                                    {
+                                        notes = "Decision Required - Changed Qualification (Minor Fields)";
+                                    }
+                                    
+                                    actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.ActionRequired);
+                                }
+                                else
+                                {
+                                    processStatusName = Enum.ProcessStatus.DecisionRequired;
+                                    lifecycleStageName = LifeCycleStage.Changed;
+                                    actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired);                                   
+                                }
                             }
+
+                            var versionFieldChange = new VersionFieldChange
+                            {
+                                Id = Guid.NewGuid(),
+                                QualificationVersionNumber = existingVersion.Version + 1,
+                                ChangedFieldNames = detectionResults.ChangesPresent ? string.Join(", ", detectionResults.Fields) : ""
+                            };
+
+                            var discussionHistory = new QualificationDiscussionHistory
+                            {
+                                Id = Guid.NewGuid(),
+                                QualificationId = qualificationId,
+                                ActionTypeId = actionId,
+                                UserDisplayName = "OFQUAL Import",
+                                Notes = notes,
+                                Timestamp = DateTime.Now
+                            };
+                            newQualificationDiscussions.Add(discussionHistory);
+
+                            versionFieldChanges.Add(versionFieldChange);
+
+                            var newQualificationVersion = CreateQualificationVersion(
+                                qualificationId,
+                                organisationId,
+                                lifecycleStageName,
+                                processStatusName,
+                                importRecord,
+                                versionFieldChange,
+                                existingVersion.Version + 1);
+
+                            newQualificationVersions.Add(newQualificationVersion);
 
                             if (detectionResults.Fields.Contains("Title"))
                             {
@@ -507,7 +530,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                 EighteenPlus = qualificationData.EighteenPlus,
                 NineteenPlus = qualificationData.NineteenPlus,
                 ImportStatus = qualificationData.ImportStatus,                           
-                VersionFieldChanges = versionFieldChange
+                VersionFieldChanges = versionFieldChange,
+                InsertedTimestamp = DateTime.Now
             };
         }
 

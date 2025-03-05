@@ -31,10 +31,10 @@ namespace SFA.DAS.AODP.Jobs.Services
                     "Title",
                     "Level",
                     "Type",
-                    "QualCit", // no match
-                    "QualSSADescription", //no match
+                    "TotalCredits",
+                    "Ssa",
                     "GradingType",
-                    "OfferedInEngland", // no match
+                    "OfferedInEngland",
                     "PreSixteen",
                     "SixteenToEighteen",
                     "EighteenPlus",
