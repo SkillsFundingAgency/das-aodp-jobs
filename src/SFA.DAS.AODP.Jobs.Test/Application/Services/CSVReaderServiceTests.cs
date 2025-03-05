@@ -3,6 +3,7 @@ using CsvHelper.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
+using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Jobs.Services.CSV;
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Services
@@ -24,12 +25,23 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         public void ReadCSVFromFilePath_ShouldReturnRecords_WhenCsvFileIsValid()
         {
             // Arrange
-            var csvContent = "Id,Name\n1,Test\n2,Test2";
+            var csvContent = "Id,Name,Test_FundingAvailable\n1,Test,100\n2,Test2,200";
             var filePath = "test.csv";
             File.WriteAllText(filePath, csvContent);
 
+            var organisations = new List<AwardingOrganisation>();
+            var qualifications = new List<Qualification>();
+
+            var loggerMock = new Mock<ILogger<CsvReaderService>>();
+            var httpClientFactoryMock = new Mock<IHttpClientFactory>();
+            var csvReaderService = new CsvReaderService(loggerMock.Object, httpClientFactoryMock.Object);
+
             // Act
-            var result = _csvReaderService.ReadCSVFromFilePath<TestRecord, TestRecordMap>(filePath);
+            var result = csvReaderService.ReadCSVFromFilePath<TestRecord, TestRecordMap>(
+                filePath,
+                organisations,
+                qualifications
+            );
 
             // Assert
             Assert.Equal(2, result.Count);
@@ -46,7 +58,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         public async Task ReadCsvFileFromUrlAsync_ShouldReturnRecords_WhenCsvFileIsValid()
         {
             // Arrange
-            var csvContent = "Id,Name\n1,Test\n2,Test2";
+            var csvContent = "Id,Name,Test_FundingAvailable\n1,Test,100\n2,Test2,200";
             var httpMessageHandlerMock = new Mock<HttpMessageHandler>();
             httpMessageHandlerMock
                 .Protected()
@@ -61,10 +73,21 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 });
 
             var httpClient = new HttpClient(httpMessageHandlerMock.Object);
-            _httpClientFactoryMock.Setup(_ => _.CreateClient(It.IsAny<string>())).Returns(httpClient);
+            var httpClientFactoryMock = new Mock<IHttpClientFactory>();
+            httpClientFactoryMock.Setup(_ => _.CreateClient(It.IsAny<string>())).Returns(httpClient);
+
+            var loggerMock = new Mock<ILogger<CsvReaderService>>();
+            var csvReaderService = new CsvReaderService(loggerMock.Object, httpClientFactoryMock.Object);
+
+            var organisations = new List<AwardingOrganisation>();
+            var qualifications = new List<Qualification>();
 
             // Act
-            var result = await _csvReaderService.ReadCsvFileFromUrlAsync<TestRecord, TestRecordMap>("http://test.com/test.csv");
+            var result = await csvReaderService.ReadCsvFileFromUrlAsync<TestRecord, TestRecordMap>(
+                "http://test.com/test.csv",
+                organisations,
+                qualifications
+            );
 
             // Assert
             Assert.Equal(2, result.Count);
@@ -140,9 +163,9 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             public string? Name { get; set; } = null;
         }
 
-        private sealed class TestRecordMap : ClassMap<TestRecord>
+        private class TestRecordMap : ClassMap<TestRecord>
         {
-            public TestRecordMap()
+            public TestRecordMap(List<string> customHeaders, List<AwardingOrganisation> organisations, List<Qualification> qualifications)
             {
                 Map(m => m.Id).Name("Id");
                 Map(m => m.Name).Name("Name");
