@@ -10,6 +10,7 @@ using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Jobs.Services.CSV;
 using Microsoft.EntityFrameworkCore;
+using SFA.DAS.AODP.Jobs.Enum;
 
 namespace SFA.DAS.AODP.Functions
 {
@@ -37,6 +38,7 @@ namespace SFA.DAS.AODP.Functions
         {
             string? approvedUrlFilePath = Environment.GetEnvironmentVariable("FundedQualificationsImportUrl");
             string? archivedUrlFilePath = Environment.GetEnvironmentVariable("ArchivedFundedQualificationsImportUrl");
+            var fundedQualificationsImportClassMaplogger = _loggerFactory.CreateLogger<FundedQualificationsImportClassMap>();
 
             if (string.IsNullOrEmpty(approvedUrlFilePath) || string.IsNullOrEmpty(archivedUrlFilePath))
             {
@@ -49,7 +51,7 @@ namespace SFA.DAS.AODP.Functions
                 .AsNoTracking()
                 .ToListAsync();
 
-            // order orgs by rec number and select org with highest rec number
+            // order organisations by recognition number desc and select by highest recoginition number
             var organisations = await _applicationDbContext.AwardingOrganisation
                 .AsNoTracking()
                 .OrderByDescending(o => o.RecognitionNumber)
@@ -57,13 +59,14 @@ namespace SFA.DAS.AODP.Functions
                 .Select(g => g.First())
                 .ToListAsync();
 
-            var fundedQualificationsImportClassMaplogger = _loggerFactory.CreateLogger<FundedQualificationsImportClassMap>();
+            var stopWatch = new Stopwatch();
+
             var approvedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(approvedUrlFilePath, qualifications, organisations, fundedQualificationsImportClassMaplogger);
 
-            var stopWatch = new Stopwatch();
             if (approvedQualifications.Any())
             {
-                //await _applicationDbContext.TruncateTable<Qualifications>();
+                await _applicationDbContext.TruncateTable<QualificationOffers>(SchemaTypeEnum.Funded);
+                await _applicationDbContext.TruncateTable<Qualifications>(SchemaTypeEnum.Funded);
 
                 await WriteQualifications(approvedQualifications, stopWatch);
             }

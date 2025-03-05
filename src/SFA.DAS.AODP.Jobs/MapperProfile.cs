@@ -8,6 +8,6 @@ public class MapperProfile : Profile
     {
         CreateMap<Qualifications, FundedQualificationDTO>().ReverseMap()
             .ForMember(dest => dest.QualificationOffers, opt => opt.MapFrom(src => src.Offers));
-        CreateMap<QualificationOffer, FundedQualificationOfferDTO>().ReverseMap();
+        CreateMap<QualificationOffers, FundedQualificationOfferDTO>().ReverseMap();
     }
 }

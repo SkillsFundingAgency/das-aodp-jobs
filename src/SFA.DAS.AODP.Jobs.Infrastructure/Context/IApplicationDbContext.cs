@@ -12,7 +12,7 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         DbSet<Qualification> Qualification { get; set; }
         DbSet<Qualifications> Qualifications { get; set; }
         DbSet<QualificationDiscussionHistory> QualificationDiscussionHistory { get; set; }
-        DbSet<QualificationOffer> QualificationOffers { get; set; }
+        DbSet<QualificationOffers> QualificationOffers { get; set; }
         DbSet<QualificationVersions> QualificationVersions { get; set; }
         DbSet<VersionFieldChanges> VersionFieldChanges { get; set; }
         DbSet<QualificationImportStaging> QualificationImportStaging { get; set; }
@@ -21,6 +21,6 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         DbSet<JobRun> JobRuns { get; set; }
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
-        Task TruncateTable<T>() where T : class;
+        Task TruncateTable<T>(string? schema = null) where T : class;
     }
 }

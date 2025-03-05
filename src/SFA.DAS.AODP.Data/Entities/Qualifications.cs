@@ -31,5 +31,5 @@ public partial class Qualifications
 
     public virtual Qualification Qualification { get; set; } = null!;
 
-    public virtual ICollection<QualificationOffer> QualificationOffers { get; set; } = new List<QualificationOffer>();
+    public virtual ICollection<QualificationOffers> QualificationOffers { get; set; } = new List<QualificationOffers>();
 }

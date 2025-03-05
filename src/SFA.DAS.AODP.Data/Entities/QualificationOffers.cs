@@ -4,7 +4,7 @@ namespace SFA.DAS.AODP.Data.Entities;
 
 [Table("QualificationOffers", Schema = "funded")]
 
-public partial class QualificationOffer
+public partial class QualificationOffers
 {
     public Guid Id { get; set; }
 

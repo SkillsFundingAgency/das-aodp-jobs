@@ -23,7 +23,7 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public virtual DbSet<QualificationDiscussionHistory> QualificationDiscussionHistory { get; set; }
 
-        public virtual DbSet<QualificationOffer> QualificationOffers { get; set; }
+        public virtual DbSet<QualificationOffers> QualificationOffers { get; set; }
 
         public virtual DbSet<QualificationVersions> QualificationVersions { get; set; }
 
@@ -42,14 +42,18 @@ namespace SFA.DAS.AODP.Infrastructure.Context
             return base.SaveChangesAsync(cancellationToken);
         }
 
-        public async Task TruncateTable<T>() where T : class
+        public async Task TruncateTable<T>(string? schema = null) where T : class
         {
-            //await this.Set<T>().ExecuteDeleteAsync();
-
             var tableName = this.Model.FindEntityType(typeof(T))?.GetTableName();
-            if (tableName != null)
+
+            if (!string.IsNullOrEmpty(tableName))
             {
-                await this.Database.ExecuteSqlRawAsync($"TRUNCATE TABLE {tableName}");
+                if (!string.IsNullOrEmpty(schema))
+                {
+                    tableName = $"[{schema}].[{tableName}]";
+                }
+
+                await this.Database.ExecuteSqlRawAsync($"DELETE FROM {tableName}");
             }
         }
     }
