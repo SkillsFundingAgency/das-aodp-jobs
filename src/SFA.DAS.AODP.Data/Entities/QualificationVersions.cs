@@ -117,6 +117,8 @@ public partial class QualificationVersions
 
     public string? ImportStatus { get; set; }
 
+    public DateTime InsertedTimestamp { get; set; }
+
     public virtual LifecycleStage LifecycleStage { get; set; } = null!;
 
     public virtual AwardingOrganisation Organisation { get; set; } = null!;

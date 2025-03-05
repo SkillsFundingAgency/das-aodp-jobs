@@ -81,7 +81,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                 return stagedQualifications
                     .Select(q => JsonSerializer.Deserialize<QualificationDTO>(
                         q.JsonData ?? "",
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? throw new Exception($"Unable to serialize import json into dto for id {q.Id}"))
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? throw new Exception($"[{nameof(QualificationsService)}] -> [{nameof(GetStagedQualificationsBatchAsync)}] -> Unable to serialize import json into dto for id {q.Id}"))
                     .Where(dto => dto != null)
                     .ToList();
             }
