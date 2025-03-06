@@ -127,5 +127,5 @@ public partial class QualificationVersions
 
     public virtual Qualification Qualification { get; set; } = null!;
 
-    public virtual VersionFieldChange VersionFieldChanges { get; set; } = null!;
+    public virtual VersionFieldChanges VersionFieldChanges { get; set; } = null!;
 }

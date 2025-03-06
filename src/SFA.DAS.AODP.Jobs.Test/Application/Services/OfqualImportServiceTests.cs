@@ -18,7 +18,6 @@ using Microsoft.EntityFrameworkCore;
 using SFA.DAS.AODP.Jobs.Enum;
 using Microsoft.AspNetCore.Components;
 using System.Text.Json;
-using Newtonsoft.Json.Linq;
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 {
@@ -85,11 +84,11 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 .Returns(Task.CompletedTask);
 
 
-            _dbContextMock.Setup(db => db.TruncateTable<QualificationImportStaging>()).Returns(Task.CompletedTask);
+            _dbContextMock.Setup(db => db.TruncateTable<QualificationImportStaging>(null)).Returns(Task.CompletedTask);
 
             await _service.ImportApiData(requestMock.Object);
 
-            _dbContextMock.Verify(db => db.TruncateTable<QualificationImportStaging>(), Times.Once);
+            _dbContextMock.Verify(db => db.TruncateTable<QualificationImportStaging>(null), Times.Once);
         }
 
         [Fact]
@@ -868,7 +867,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 .With(w => w.Qan, qualificationNumber)
                 .Create();
 
-            var qan1_qualificationVersionFieldChange1 = _fixture.Build<VersionFieldChange>()
+            var qan1_qualificationVersionFieldChange1 = _fixture.Build<VersionFieldChanges>()
                 .Without(w => w.QualificationVersions)
                 .With(w => w.QualificationVersionNumber, 1)
                 .With(w => w.ChangedFieldNames, "Glh, Status")
@@ -894,7 +893,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var organisations = new List<AwardingOrganisation>() { qan1_organisation };
             var qualifications = new List<Qualification>() { qan1_qualification };
             var qualificationVersions = new List<QualificationVersions>() { qan1_qualificationVersion1 };
-            var qualificationVersionFieldChanges = new List<VersionFieldChange>() { qan1_qualificationVersionFieldChange1 };
+            var qualificationVersionFieldChanges = new List<VersionFieldChanges>() { qan1_qualificationVersionFieldChange1 };
 
             await _dbContext.AddRangeAsync(organisations);            
             await _dbContext.AddRangeAsync(qualifications);            

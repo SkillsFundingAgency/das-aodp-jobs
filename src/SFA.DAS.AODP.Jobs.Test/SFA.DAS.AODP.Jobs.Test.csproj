@@ -36,7 +36,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SAF.DAS.AODP.Jobs.Models\SAF.DAS.AODP.Models.csproj" />
+    <ProjectReference Include="..\SAF.DAS.AODP.Jobs.Models\SFA.DAS.AODP.Models.csproj" />
     <ProjectReference Include="..\SFA.DAS.AODP.Jobs\SFA.DAS.AODP.Jobs.csproj" />
   </ItemGroup>
 

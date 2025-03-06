@@ -52,13 +52,13 @@ namespace SFA.DAS.AODP.Jobs.Services
             _loopCycleStopWatch.Start();
             try
             {                
-                _logger.LogInformation($"Clearing down StageQualifications table...");
+                _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ImportApiData)}] -> Clearing down StageQualifications table...");
 
                 await _applicationDbContext.TruncateTable<QualificationImportStaging>();
 
                 var parameters = _ofqualRegisterService.ParseQueryParameters(request.Query);
 
-                _logger.LogInformation($"Ofqual data import started...");
+                _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ImportApiData)}] -> Starting Ofqual data import...");
 
                 while (true && pageCount < 1000000)
                 {
@@ -68,11 +68,11 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                     if (paginatedResult.Results == null || !paginatedResult.Results.Any())
                     {
-                        _logger.LogInformation("No more qualifications to process.");
+                        _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ImportApiData)}] -> No more qualifications to process.");
                         break;
                     }
 
-                    _logger.LogInformation($"Processing page {pageCount}. Retrieved {paginatedResult.Results?.Count} qualifications.");
+                    _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ImportApiData)}] -> Processing page {pageCount}. Retrieved {paginatedResult.Results?.Count} qualifications.");
 
                     var importedQualificationsJson = paginatedResult.Results
                         .Select(JsonConvert.SerializeObject)
@@ -84,12 +84,12 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                     if (paginatedResult.Results?.Count < parameters.Limit)
                     {
-                        _logger.LogInformation("Reached the end of the results set.");
+                        _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ImportApiData)}] -> Reached the end of the results set.");
                         break;
                     }
 
                     _loopCycleStopWatch.Stop();
-                    _logger.LogInformation($"Page {pageCount} import complete. {paginatedResult.Results.Count()} records imported in {_loopCycleStopWatch.Elapsed.TotalSeconds:F2} seconds");
+                    _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ImportApiData)}] -> Page {pageCount} import complete. {paginatedResult.Results.Count()} records imported in {_loopCycleStopWatch.Elapsed.TotalSeconds:F2} seconds");
                     _loopCycleStopWatch.Restart();
                     pageCount++;
                 }
@@ -97,16 +97,16 @@ namespace SFA.DAS.AODP.Jobs.Services
                 await _qualificationsService.SaveQualificationsStagingAsync();
 
                 _processStopWatch.Stop();
-                _logger.LogInformation($"Successfully imported {totalProcessed} qualifications in {_processStopWatch.Elapsed.TotalSeconds:F2} seconds");
+                _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ImportApiData)}] -> Successfully imported {totalProcessed} qualifications in {_processStopWatch.Elapsed.TotalSeconds:F2} seconds");
             }
             catch (ApiException ex)
             {
-                _logger.LogError(ex, "Unexpected API exception occurred.");
+                _logger.LogError(ex, $"[{nameof(OfqualImportService)}] -> [{nameof(ImportApiData)}] -> Unexpected API exception occurred.");
                 throw;
             }
             catch (SystemException ex)
             {
-                _logger.LogError(ex, "Unexpected system exception occurred.");
+                _logger.LogError(ex, $"[{nameof(OfqualImportService)}] -> [{nameof(ImportApiData)}] -> Unexpected system exception occurred.");
                 throw;
             }
 
@@ -117,12 +117,14 @@ namespace SFA.DAS.AODP.Jobs.Services
         {
             _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ProcessQualificationsDataAsync)}] -> Processing Ofqual Qualifications Staging Data...");
 
-            const int batchSize = 1000;
+            const int batchSize = 500;
             int processedCount = 0;
             _processStopWatch.Restart();
 
             try
-            {                                
+            {
+                _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ProcessQualificationsDataAsync)}] -> Building existing qualification, organisation and qualifcation version caches...");
+
                 var organisationCache = (await _applicationDbContext.AwardingOrganisation
                     .AsNoTracking()
                     .Where(w => w.Ukprn.HasValue)
@@ -170,7 +172,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                     var newQualificationVersions = new List<QualificationVersions>();
                     var newQualificationDiscussions = new List<QualificationDiscussionHistory>();
 
-                    var versionFieldChanges = new List<VersionFieldChange>();
+                    var versionFieldChanges = new List<VersionFieldChanges>();
                     var processStatuses = new List<Data.Entities.ProcessStatus>();
                     var lifecycleStages = new List<LifecycleStage>();
 
@@ -245,7 +247,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 notes = _fundingEligibilityService.DetermineFailureReason(importRecord);                                
                             }
 
-                            var versionFieldChange = new VersionFieldChange
+                            var versionFieldChange = new VersionFieldChanges
                             {
                                 Id = Guid.NewGuid(),
                                 QualificationVersionNumber = 1,
@@ -295,7 +297,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                                                 .OrderByDescending(o => o.Version)
                                                                 .AsNoTracking()
                                                                 .Where(w => w.QualificationId == qualificationId)
-                                                                .FirstOrDefault() ?? throw new Exception($"Unable to location qualification with id {qualificationId} while processing changes");
+                                                                .FirstOrDefault() ?? throw new Exception($"[{nameof(OfqualImportService)}] -> [{nameof(ProcessQualificationsDataAsync)}] -> Unable to location qualification with id {qualificationId} while processing changes");
 
                             var detectionResults = new DetectionResults();
                             if (currentQualificationVersion != null)
@@ -371,7 +373,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 }
                             }
 
-                            var versionFieldChange = new VersionFieldChange
+                            var versionFieldChange = new VersionFieldChanges
                             {
                                 Id = Guid.NewGuid(),
                                 QualificationVersionNumber = existingVersion.Version + 1,
@@ -417,16 +419,13 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                             #endregion  
                         }
-                    }                    
+                    }
 
                     if (newOrganisations.Any()) await _applicationDbContext.AwardingOrganisation.AddRangeAsync(newOrganisations);
                     if (newQualifications.Any()) await _applicationDbContext.Qualification.AddRangeAsync(newQualifications);
                     if (newQualificationVersions.Any()) await _applicationDbContext.QualificationVersions.AddRangeAsync(newQualificationVersions);
                     if (newQualificationDiscussions.Any()) await _applicationDbContext.QualificationDiscussionHistory.AddRangeAsync(newQualificationDiscussions);
-                    if (versionFieldChanges.Any())
-                    {
-                        await _applicationDbContext.VersionFieldChanges.AddRangeAsync(versionFieldChanges);
-                    }
+                    if (versionFieldChanges.Any()) await _applicationDbContext.VersionFieldChanges.AddRangeAsync(versionFieldChanges);
 
                     await _applicationDbContext.SaveChangesAsync();
 
@@ -434,17 +433,17 @@ namespace SFA.DAS.AODP.Jobs.Services
                 }
 
                 _processStopWatch.Stop();
-                _logger.LogInformation($"Processed {processedCount} records in {_processStopWatch.Elapsed.TotalSeconds:F2} seconds");
+                _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ProcessQualificationsDataAsync)}] -> Processed {processedCount} records in {_processStopWatch.Elapsed.TotalSeconds:F2} seconds");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing qualifications.");
+                _logger.LogError(ex, $"[{nameof(OfqualImportService)}] -> [{nameof(ProcessQualificationsDataAsync)}] -> Error processing qualifications.");
                 throw;
             }
         }
 
         private QualificationVersions CreateQualificationVersion(Guid qualificationId, Guid organisationId, string lifecycleStage,
-            string processStatus, QualificationDTO qualificationData, VersionFieldChange versionFieldChange, int? version)
+            string processStatus, QualificationDTO qualificationData, VersionFieldChanges versionFieldChange, int? version)
         {
             string GetJoinedArrayOrEmpty(JsonElement? value)
             {
