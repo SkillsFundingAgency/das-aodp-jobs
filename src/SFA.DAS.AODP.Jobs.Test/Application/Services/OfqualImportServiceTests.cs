@@ -931,7 +931,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
             var processStatus1 = new Data.Entities.ProcessStatus() { Name = Enum.ProcessStatus.DecisionRequired, Id = ProcessStageDecision };
             var processStatus2 = new Data.Entities.ProcessStatus() { Name = Enum.ProcessStatus.NoActionRequired, Id = ProcessStageNoAction };
-            var processStatus3 = new Data.Entities.ProcessStatus() { Name = Enum.ProcessStatus.Hold, Id = ProcessStageHold };
+            var processStatus3 = new Data.Entities.ProcessStatus() { Name = Enum.ProcessStatus.OnHold, Id = ProcessStageHold };
             var processStatus4 = new Data.Entities.ProcessStatus() { Name = Enum.ProcessStatus.Rejected, Id = ProcessStageRejected };
             var processStatus5 = new Data.Entities.ProcessStatus() { Name = Enum.ProcessStatus.Approved, Id = ProcessStageApproved };
             await _dbContext.AddRangeAsync(new List<Data.Entities.ProcessStatus>() { processStatus1, processStatus2, processStatus3, processStatus4, processStatus5 });

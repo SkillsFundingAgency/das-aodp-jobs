@@ -343,7 +343,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                     lifecycleStageName = LifeCycleStage.Changed;
                                     actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.ActionRequired);                                    
                                 }
-                                else if ((currentQualificationVersion.ProcessStatus.Name == Enum.ProcessStatus.Hold) ||
+                                else if ((currentQualificationVersion.ProcessStatus.Name == Enum.ProcessStatus.OnHold) ||
                                         (currentQualificationVersion.ProcessStatus.Name == Enum.ProcessStatus.DecisionRequired))
                                 {
                                     // Keep the current status as only changed dont matter when on hold/decision required
@@ -352,7 +352,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                     if (detectionResults.KeyFieldsChanged)
                                     {                                        
                                         
-                                        notes = currentQualificationVersion.ProcessStatus.Name == Enum.ProcessStatus.Hold ?
+                                        notes = currentQualificationVersion.ProcessStatus.Name == Enum.ProcessStatus.OnHold ?
                                             "On Hold - Changed Qualification (Key Fields)" :
                                             "Decision Required - Changed Qualification (Key Fields)";                                        
                                     }
