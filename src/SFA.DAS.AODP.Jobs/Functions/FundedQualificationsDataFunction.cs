@@ -65,7 +65,7 @@ namespace SFA.DAS.AODP.Functions
 
             if (approvedQualifications.Any())
             {
-                await _applicationDbContext.TruncateTable<QualificationOffers>(SchemaTypeEnum.Funded);
+                await _applicationDbContext.TruncateTable<QualificationOffer>(SchemaTypeEnum.Funded);
                 await _applicationDbContext.TruncateTable<Qualifications>(SchemaTypeEnum.Funded);
 
                 await WriteQualifications(approvedQualifications, stopWatch);
@@ -111,7 +111,7 @@ namespace SFA.DAS.AODP.Functions
 
                 var entities = _mapper.Map<List<Qualifications>>(batch);
 
-                await _applicationDbContext.Qualifications.AddRangeAsync(entities);
+                await _applicationDbContext.FundedQualifications.AddRangeAsync(entities);
             }
 
             await _applicationDbContext.SaveChangesAsync();
