@@ -44,30 +44,17 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public async Task TruncateTable<T>(string? schema = null) where T : class
         {
-            var entityType = this.Model.FindEntityType(typeof(T));
-            var tableName = entityType?.GetTableName();
+            var tableName = this.Model.FindEntityType(typeof(T))?.GetTableName();
+
             if (!string.IsNullOrEmpty(tableName))
             {
-                if (!string.IsNullOrEmpty(schema) && IsValidSqlIdentifier(schema) && IsValidSqlIdentifier(tableName))
+                if (!string.IsNullOrEmpty(schema))
                 {
-                    var formattedTableName = $"[{schema}].[{tableName}]";
-                    await this.Database.ExecuteSqlRawAsync($"DELETE FROM {formattedTableName}");
+                    tableName = $"[{schema}].[{tableName}]";
                 }
-                else if (IsValidSqlIdentifier(tableName))
-                {
-                    await this.Database.ExecuteSqlRawAsync($"DELETE FROM [{tableName}]");
-                }
-                else
-                {
-                    throw new ArgumentException("Invalid schema or table name");
-                }
-            }
-        }
 
-        private bool IsValidSqlIdentifier(string identifier)
-        {
-            return !string.IsNullOrEmpty(identifier) &&
-                   System.Text.RegularExpressions.Regex.IsMatch(identifier, @"^[a-zA-Z0-9_]+$");
+                await this.Database.ExecuteSqlRawAsync($"DELETE FROM {tableName}");
+            }
         }
     }
 }
