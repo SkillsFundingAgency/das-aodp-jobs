@@ -84,11 +84,11 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 .Returns(Task.CompletedTask);
 
 
-            _dbContextMock.Setup(db => db.TruncateTable<QualificationImportStaging>(null)).Returns(Task.CompletedTask);
+            _dbContextMock.Setup(db => db.Truncate_QualificationImportStaging()).Returns(Task.CompletedTask);
 
             await _service.ImportApiData(requestMock.Object);
 
-            _dbContextMock.Verify(db => db.TruncateTable<QualificationImportStaging>(null), Times.Once);
+            _dbContextMock.Verify(db => db.Truncate_QualificationImportStaging(), Times.Once);
         }
 
         [Fact]
