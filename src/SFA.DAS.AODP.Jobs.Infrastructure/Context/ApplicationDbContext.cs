@@ -42,19 +42,14 @@ namespace SFA.DAS.AODP.Infrastructure.Context
             return base.SaveChangesAsync(cancellationToken);
         }
 
-        public async Task TruncateTable<T>(string? schema = null) where T : class
+        public async Task Truncate_FundedQualifications()
         {
-            var tableName = this.Model.FindEntityType(typeof(T))?.GetTableName();
+            await this.Database.ExecuteSqlRawAsync($"EXEC [dbo].[Truncate_Funded_Qualifications]");            
+        }
 
-            if (!string.IsNullOrEmpty(tableName))
-            {
-                if (!string.IsNullOrEmpty(schema))
-                {
-                    tableName = $"[{schema}].[{tableName}]";
-                }
-
-                await this.Database.ExecuteSqlRawAsync($"DELETE FROM {tableName}");
-            }
+        public async Task Truncate_QualificationImportStaging()
+        {
+            await this.Database.ExecuteSqlRawAsync($"EXEC [dbo].[Truncate_QualificationImportStaging]");
         }
     }
 }

@@ -65,8 +65,7 @@ namespace SFA.DAS.AODP.Functions
 
             if (approvedQualifications.Any())
             {
-                await _applicationDbContext.TruncateTable<QualificationOffer>(SchemaTypeEnum.Funded);
-                await _applicationDbContext.TruncateTable<Qualifications>(SchemaTypeEnum.Funded);
+                await _applicationDbContext.Truncate_FundedQualifications();
 
                 await WriteQualifications(approvedQualifications, stopWatch);
             }

@@ -54,7 +54,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             {                
                 _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ImportApiData)}] -> Clearing down StageQualifications table...");
 
-                await _applicationDbContext.TruncateTable<QualificationImportStaging>();
+                await _applicationDbContext.Truncate_QualificationImportStaging();
 
                 var parameters = _ofqualRegisterService.ParseQueryParameters(request.Query);
 

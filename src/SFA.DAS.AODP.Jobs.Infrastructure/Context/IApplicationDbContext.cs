@@ -21,6 +21,7 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         DbSet<JobRun> JobRuns { get; set; }
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
-        Task TruncateTable<T>(string? schema = null) where T : class;
+        Task Truncate_FundedQualifications();
+        Task Truncate_QualificationImportStaging();
     }
 }
