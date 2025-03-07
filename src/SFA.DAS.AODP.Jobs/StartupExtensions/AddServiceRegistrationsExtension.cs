@@ -64,7 +64,8 @@ public static class AddServiceRegistrationsExtension
         }
 
         services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseSqlServer(connectionString));
+            options.UseSqlServer(connectionString,
+        sqlServerOptions => sqlServerOptions.CommandTimeout(60)));
 
         services.AddAutoMapper(typeof(MapperProfile));
 
