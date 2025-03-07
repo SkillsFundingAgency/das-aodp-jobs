@@ -100,9 +100,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             fields = fields.AppendIf(newRecord.RegulationStartDate != qualificationVersion.RegulationStartDate, "RegulationStartDate");
             fields = fields.AppendIf(newRecord.ReviewDate != qualificationVersion.ReviewDate, "ReviewDate");
             fields = fields.AppendIf(newRecord.SixteenToEighteen != qualificationVersion.SixteenToEighteen, "SixteenToEighteen");
-            fields = fields.AppendIf(newRecord.Specialism != qualificationVersion.Specialism, "Specialism");
-            fields = fields.AppendIf(newRecord.Ssa != qualificationVersion.Ssa, "Ssa");
-            fields = fields.AppendIf(newRecord.Status != qualificationVersion.Status, "Status");
+            fields = fields.AppendIf(newRecord.Specialism != qualificationVersion.Specialism, "Specialism");            
             fields = fields.AppendIf(newRecord.SubLevel != qualificationVersion.SubLevel, "SubLevel");
             fields = fields.AppendIf(newRecord.Title != qualification.QualificationName, "Title");
             fields = fields.AppendIf(newRecord.TotalCredits != qualificationVersion.TotalCredits, "TotalCredits");
