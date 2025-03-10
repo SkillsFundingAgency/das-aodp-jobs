@@ -16,6 +16,7 @@
     "logLevel": {
       "default": "Information",
       "Microsoft": "Warning",
+      "Microsoft.EntityFrameworkCore": "Warning",
       "System": "Warning"
     }
   }

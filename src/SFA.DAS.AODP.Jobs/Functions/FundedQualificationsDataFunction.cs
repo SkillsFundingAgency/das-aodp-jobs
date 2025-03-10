@@ -36,13 +36,20 @@ namespace SFA.DAS.AODP.Functions
         public async Task<HttpResponseData> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "api/approvedQualificationsImport")] HttpRequestData req)
         {
-            string? approvedUrlFilePath = Environment.GetEnvironmentVariable("FundedQualificationsImportUrl");
+            string? fundedUrlFilePath = Environment.GetEnvironmentVariable("FundedQualificationsImportUrl");
             string? archivedUrlFilePath = Environment.GetEnvironmentVariable("ArchivedFundedQualificationsImportUrl");
             var fundedQualificationsImportClassMaplogger = _loggerFactory.CreateLogger<FundedQualificationsImportClassMap>();
 
-            if (string.IsNullOrEmpty(approvedUrlFilePath) || string.IsNullOrEmpty(archivedUrlFilePath))
+            if (string.IsNullOrEmpty(fundedUrlFilePath))
             {
-                _logger.LogInformation("Environment variable 'ApprovedQualificationsImportUrl' is not set or empty.");
+                _logger.LogInformation("Environment variable 'FundedQualificationsImportUrl' is not set or empty.");
+                var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
+                return notFoundResponse;
+            }
+
+            if (string.IsNullOrEmpty(archivedUrlFilePath))
+            {
+                _logger.LogInformation("Environment variable 'ArchivedFundedQualificationsImportUrl' is not set or empty.");
                 var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
                 return notFoundResponse;
             }
@@ -61,7 +68,7 @@ namespace SFA.DAS.AODP.Functions
 
             var stopWatch = new Stopwatch();
 
-            var approvedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(approvedUrlFilePath, qualifications, organisations, fundedQualificationsImportClassMaplogger);
+            var approvedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(fundedUrlFilePath, qualifications, organisations, fundedQualificationsImportClassMaplogger);
 
             if (approvedQualifications.Any())
             {
