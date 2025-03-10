@@ -8,6 +8,7 @@ using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Jobs.Services.CSV;
 using SFA.DAS.AODP.Jobs.Test.Mocks;
+using SFA.DAS.AODP.Models.Config;
 using SFA.DAS.AODP.Models.Qualification;
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
@@ -21,6 +22,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
         private readonly FundedQualificationsDataFunction _function;
         private readonly ILoggerFactory _loggerFactory;
         private readonly IMapper _mapper;
+        private readonly AodpJobsConfiguration _config;
 
         public FundedQualificationsDataFunctionTests()
         {
@@ -29,6 +31,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
             _csvReaderServiceMock = new Mock<ICsvReaderService>();
             _functionContext = new Mock<FunctionContext>().Object;
             _loggerFactory = new Mock<ILoggerFactory>().Object;
+            _config = new AodpJobsConfiguration();
 
             var configuration = new MapperConfiguration(cfg => cfg.AddProfile(new MapperProfile()));
             _mapper = new Mapper(configuration);
@@ -38,7 +41,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
                 _applicationDbContextMock.Object,
                 _csvReaderServiceMock.Object,
                 _mapper,
-                _loggerFactory);
+                _loggerFactory,
+                _config);
         }
 
         [Fact]

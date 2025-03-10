@@ -10,7 +10,7 @@ using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Jobs.Services.CSV;
 using Microsoft.EntityFrameworkCore;
-using SFA.DAS.AODP.Jobs.Enum;
+using SFA.DAS.AODP.Models.Config;
 
 namespace SFA.DAS.AODP.Functions
 {
@@ -21,23 +21,26 @@ namespace SFA.DAS.AODP.Functions
         private readonly ICsvReaderService _csvReaderService;
         private readonly ILoggerFactory _loggerFactory;
         private readonly IMapper _mapper;
+		private readonly AodpJobsConfiguration _config;
 
-        public FundedQualificationsDataFunction(ILogger<FundedQualificationsDataFunction> logger, IApplicationDbContext applicationDbContext, ICsvReaderService csvReaderService, 
-            IMapper mapper, ILoggerFactory loggerFactory)
+		public FundedQualificationsDataFunction(ILogger<FundedQualificationsDataFunction> logger, IApplicationDbContext applicationDbContext, ICsvReaderService csvReaderService, 
+            IMapper mapper, ILoggerFactory loggerFactory, AodpJobsConfiguration config)
         {
             _logger = logger;
             _applicationDbContext = applicationDbContext;
             _csvReaderService = csvReaderService;
             _mapper = mapper;
             _loggerFactory = loggerFactory;
+            _config = config;
         }
 
         [Function("ApprovedQualificationsDataFunction")]
         public async Task<HttpResponseData> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "api/approvedQualificationsImport")] HttpRequestData req)
         {
-            string? fundedUrlFilePath = Environment.GetEnvironmentVariable("FundedQualificationsImportUrl");
-            string? archivedUrlFilePath = Environment.GetEnvironmentVariable("ArchivedFundedQualificationsImportUrl");
+			string? fundedUrlFilePath = _config.FundedQualificationsImportUrl;
+			string? archivedUrlFilePath = _config.ArchivedFundedQualificationsImportUrl;
+
             var fundedQualificationsImportClassMaplogger = _loggerFactory.CreateLogger<FundedQualificationsImportClassMap>();
 
             if (string.IsNullOrEmpty(fundedUrlFilePath))
