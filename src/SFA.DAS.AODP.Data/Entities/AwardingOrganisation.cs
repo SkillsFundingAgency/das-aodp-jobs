@@ -3,7 +3,7 @@
 public partial class AwardingOrganisation
 {
     public Guid Id { get; set; }
-    
+
     public int? Ukprn { get; set; }
 
     public string? RecognitionNumber { get; set; }

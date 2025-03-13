@@ -52,13 +52,13 @@ namespace SFA.DAS.AODP.Jobs.Services
             _loopCycleStopWatch.Start();
             try
             {                
-                _logger.LogInformation($"Clearing down StageQualifications table...");
+                _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ImportApiData)}] -> Clearing down StageQualifications table...");
 
-                await _applicationDbContext.TruncateTable<QualificationImportStaging>();
+                await _applicationDbContext.Truncate_QualificationImportStaging();
 
                 var parameters = _ofqualRegisterService.ParseQueryParameters(request.Query);
 
-                _logger.LogInformation($"Ofqual data import started...");
+                _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ImportApiData)}] -> Starting Ofqual data import...");
 
                 while (true && pageCount < 1000000)
                 {
@@ -68,43 +68,45 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                     if (paginatedResult.Results == null || !paginatedResult.Results.Any())
                     {
-                        _logger.LogInformation("No more qualifications to process.");
+                        _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ImportApiData)}] -> No more qualifications to process.");
                         break;
                     }
 
-                    _logger.LogInformation($"Processing page {pageCount}. Retrieved {paginatedResult.Results?.Count} qualifications.");
+                    _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ImportApiData)}] -> Processing page {pageCount}. Retrieved {paginatedResult.Results?.Count} qualifications.");
 
                     var importedQualificationsJson = paginatedResult.Results
                         .Select(JsonConvert.SerializeObject)
                         .ToList();
 
-                    await _qualificationsService.SaveQualificationsStagingAsync(importedQualificationsJson);
+                    await _qualificationsService.AddQualificationsStagingRecords(importedQualificationsJson);
 
                     totalProcessed += paginatedResult.Results.Count;
 
                     if (paginatedResult.Results?.Count < parameters.Limit)
                     {
-                        _logger.LogInformation("Reached the end of the results set.");
+                        _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ImportApiData)}] -> Reached the end of the results set.");
                         break;
                     }
 
                     _loopCycleStopWatch.Stop();
-                    _logger.LogInformation($"Page {pageCount} import complete. {paginatedResult.Results.Count()} records imported in {_loopCycleStopWatch.Elapsed.TotalSeconds:F2} seconds");
+                    _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ImportApiData)}] -> Page {pageCount} import complete. {paginatedResult.Results.Count()} records imported in {_loopCycleStopWatch.Elapsed.TotalSeconds:F2} seconds");
                     _loopCycleStopWatch.Restart();
                     pageCount++;
                 }
 
+                await _qualificationsService.SaveQualificationsStagingAsync();
+
                 _processStopWatch.Stop();
-                _logger.LogInformation($"Successfully imported {totalProcessed} qualifications in {_processStopWatch.Elapsed.TotalSeconds:F2} seconds");
+                _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ImportApiData)}] -> Successfully imported {totalProcessed} qualifications in {_processStopWatch.Elapsed.TotalSeconds:F2} seconds");
             }
             catch (ApiException ex)
             {
-                _logger.LogError(ex, "Unexpected API exception occurred.");
+                _logger.LogError(ex, $"[{nameof(OfqualImportService)}] -> [{nameof(ImportApiData)}] -> Unexpected API exception occurred.");
                 throw;
             }
             catch (SystemException ex)
             {
-                _logger.LogError(ex, "Unexpected system exception occurred.");
+                _logger.LogError(ex, $"[{nameof(OfqualImportService)}] -> [{nameof(ImportApiData)}] -> Unexpected system exception occurred.");
                 throw;
             }
 
@@ -120,7 +122,9 @@ namespace SFA.DAS.AODP.Jobs.Services
             _processStopWatch.Restart();
 
             try
-            {                                
+            {
+                _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ProcessQualificationsDataAsync)}] -> Building existing qualification, organisation and qualifcation version caches...");
+
                 var organisationCache = (await _applicationDbContext.AwardingOrganisation
                     .AsNoTracking()
                     .Where(w => w.Ukprn.HasValue)
@@ -168,7 +172,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                     var newQualificationVersions = new List<QualificationVersions>();
                     var newQualificationDiscussions = new List<QualificationDiscussionHistory>();
 
-                    var versionFieldChanges = new List<VersionFieldChange>();
+                    var versionFieldChanges = new List<VersionFieldChanges>();
                     var processStatuses = new List<Data.Entities.ProcessStatus>();
                     var lifecycleStages = new List<LifecycleStage>();
 
@@ -243,7 +247,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 notes = _fundingEligibilityService.DetermineFailureReason(importRecord);                                
                             }
 
-                            var versionFieldChange = new VersionFieldChange
+                            var versionFieldChange = new VersionFieldChanges
                             {
                                 Id = Guid.NewGuid(),
                                 QualificationVersionNumber = 1,
@@ -288,10 +292,12 @@ namespace SFA.DAS.AODP.Jobs.Services
                             var currentQualificationVersion = _applicationDbContext.QualificationVersions
                                                                 .Include(i => i.Qualification)
                                                                 .Include(i => i.Organisation)
+                                                                .Include(i => i.ProcessStatus)
+                                                                .Include(i => i.LifecycleStage)
                                                                 .OrderByDescending(o => o.Version)
                                                                 .AsNoTracking()
                                                                 .Where(w => w.QualificationId == qualificationId)
-                                                                .FirstOrDefault() ?? throw new Exception($"Unable to location qualification with id {qualificationId} while processing changes");
+                                                                .FirstOrDefault() ?? throw new Exception($"[{nameof(OfqualImportService)}] -> [{nameof(ProcessQualificationsDataAsync)}] -> Unable to location qualification with id {qualificationId} while processing changes");
 
                             var detectionResults = new DetectionResults();
                             if (currentQualificationVersion != null)
@@ -300,82 +306,103 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 if (!detectionResults.ChangesPresent) continue;
                             }
 
+                            var processStatusName = Enum.ProcessStatus.NoActionRequired;
+                            var lifecycleStageName = LifeCycleStage.Changed;
+                            var actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired);
+                            var notes = "";
+
                             #region New Version of Existing Qualification
 
                             if (!_fundingEligibilityService.EligibleForFunding(importRecord))
                             {
                                 // Not eligible for funding 
-                                
-                                var versionFieldChange = new VersionFieldChange
-                                {
-                                    Id = Guid.NewGuid(),
-                                    QualificationVersionNumber = existingVersion.Version + 1,
-                                    ChangedFieldNames = detectionResults.ChangesPresent ? string.Join(", ", detectionResults.Fields) : ""
-                                };
-                                var processStatusName = Enum.ProcessStatus.NoActionRequired;
-                                var lifecycleStageName = LifeCycleStage.Changed;
 
-                                var discussionHistory = new QualificationDiscussionHistory
-                                {
-                                    Id = Guid.NewGuid(),
-                                    QualificationId = qualificationId,
-                                    ActionTypeId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired),
-                                    UserDisplayName = "OFQUAL Import",
-                                    Notes = "No Action required - Changed Qualification (Funding Criteria)",
-                                    Timestamp = DateTime.Now
-                                };
-                                newQualificationDiscussions.Add(discussionHistory);
-
-                                versionFieldChanges.Add(versionFieldChange);
-
-                                var newQualificationVersion = CreateQualificationVersion(
-                                    qualificationId,
-                                    organisationId,
-                                    lifecycleStageName,
-                                    processStatusName,
-                                    importRecord,
-                                    versionFieldChange,
-                                    existingVersion.Version + 1);
-
-                                newQualificationVersions.Add(newQualificationVersion);
+                                processStatusName = Enum.ProcessStatus.NoActionRequired;
+                                lifecycleStageName = LifeCycleStage.Changed;
+                                actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired);
+                                notes = "No Action required - Changed Qualification (Funding Criteria)";
                             }
                             else
                             {
-                                // Eligable for funding 
-
-                                var versionFieldChange = new VersionFieldChange
+                                notes = "Decision Required - Changed Qualification";
+                                if ((currentQualificationVersion.ProcessStatus.Name == Enum.ProcessStatus.Approved) ||
+                                        (currentQualificationVersion.ProcessStatus.Name == Enum.ProcessStatus.Rejected))
                                 {
-                                    Id = Guid.NewGuid(),
-                                    QualificationVersionNumber = existingVersion.Version + 1,
-                                    ChangedFieldNames = detectionResults.ChangesPresent ? string.Join(", ", detectionResults.Fields) : ""
-                                };
-                                var processStatusName = Enum.ProcessStatus.DecisionRequired;
-                                var lifecycleStageName = LifeCycleStage.Changed;
 
-                                var discussionHistory = new QualificationDiscussionHistory
+                                    if (detectionResults.KeyFieldsChanged)
+                                    {
+                                        // Decision required as major changes
+                                        processStatusName = Enum.ProcessStatus.DecisionRequired;
+                                        notes = "Decision Required - Changed Qualification (Key Fields)";
+                                    }
+                                    else
+                                    {
+                                        // Keep the current status as only minor changes
+                                        processStatusName = currentQualificationVersion.ProcessStatus.Name;
+                                        notes = "Decision Required - Changed Qualification (Minor Fields)";
+                                    }
+
+                                    lifecycleStageName = LifeCycleStage.Changed;
+                                    actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.ActionRequired);                                    
+                                }
+                                else if ((currentQualificationVersion.ProcessStatus.Name == Enum.ProcessStatus.OnHold) ||
+                                        (currentQualificationVersion.ProcessStatus.Name == Enum.ProcessStatus.DecisionRequired))
                                 {
-                                    Id = Guid.NewGuid(),
-                                    QualificationId = qualificationId,
-                                    ActionTypeId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired),
-                                    UserDisplayName = "",
-                                    Notes = "",
-                                    Timestamp = DateTime.Now
-                                };
-                                newQualificationDiscussions.Add(discussionHistory);
-
-                                versionFieldChanges.Add(versionFieldChange);
-
-                                var newQualificationVersion = CreateQualificationVersion(
-                                    qualificationId,
-                                    organisationId,
-                                    lifecycleStageName,
-                                    processStatusName,
-                                    importRecord,
-                                    versionFieldChange,
-                                    existingVersion.Version + 1);
-
-                                newQualificationVersions.Add(newQualificationVersion);
+                                    // Keep the current status as only changed dont matter when on hold/decision required
+                                    processStatusName = currentQualificationVersion.ProcessStatus.Name;
+                                    lifecycleStageName = currentQualificationVersion.LifecycleStage.Name;
+                                    if (detectionResults.KeyFieldsChanged)
+                                    {                                        
+                                        
+                                        notes = currentQualificationVersion.ProcessStatus.Name == Enum.ProcessStatus.OnHold ?
+                                            "On Hold - Changed Qualification (Key Fields)" :
+                                            "Decision Required - Changed Qualification (Key Fields)";                                        
+                                    }
+                                    else
+                                    {
+                                        notes = "Decision Required - Changed Qualification (Minor Fields)";
+                                    }
+                                    
+                                    actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.ActionRequired);
+                                }
+                                else
+                                {
+                                    processStatusName = Enum.ProcessStatus.DecisionRequired;
+                                    lifecycleStageName = LifeCycleStage.Changed;
+                                    actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired);                                   
+                                }
                             }
+
+                            var versionFieldChange = new VersionFieldChanges
+                            {
+                                Id = Guid.NewGuid(),
+                                QualificationVersionNumber = existingVersion.Version + 1,
+                                ChangedFieldNames = detectionResults.ChangesPresent ? string.Join(", ", detectionResults.Fields) : ""
+                            };
+
+                            var discussionHistory = new QualificationDiscussionHistory
+                            {
+                                Id = Guid.NewGuid(),
+                                QualificationId = qualificationId,
+                                ActionTypeId = actionId,
+                                UserDisplayName = "OFQUAL Import",
+                                Notes = notes,
+                                Timestamp = DateTime.Now
+                            };
+                            newQualificationDiscussions.Add(discussionHistory);
+
+                            versionFieldChanges.Add(versionFieldChange);
+
+                            var newQualificationVersion = CreateQualificationVersion(
+                                qualificationId,
+                                organisationId,
+                                lifecycleStageName,
+                                processStatusName,
+                                importRecord,
+                                versionFieldChange,
+                                existingVersion.Version + 1);
+
+                            newQualificationVersions.Add(newQualificationVersion);
 
                             if (detectionResults.Fields.Contains("Title"))
                             {
@@ -392,17 +419,13 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                             #endregion  
                         }
-                    }                    
+                    }
 
                     if (newOrganisations.Any()) await _applicationDbContext.AwardingOrganisation.AddRangeAsync(newOrganisations);
                     if (newQualifications.Any()) await _applicationDbContext.Qualification.AddRangeAsync(newQualifications);
                     if (newQualificationVersions.Any()) await _applicationDbContext.QualificationVersions.AddRangeAsync(newQualificationVersions);
                     if (newQualificationDiscussions.Any()) await _applicationDbContext.QualificationDiscussionHistory.AddRangeAsync(newQualificationDiscussions);
-                    if (versionFieldChanges.Any())
-                    {
-                        await _applicationDbContext.VersionFieldChanges.AddRangeAsync(versionFieldChanges);
-                        //await _applicationDbContext.SaveChangesAsync();
-                    }
+                    if (versionFieldChanges.Any()) await _applicationDbContext.VersionFieldChanges.AddRangeAsync(versionFieldChanges);
 
                     await _applicationDbContext.SaveChangesAsync();
 
@@ -410,17 +433,17 @@ namespace SFA.DAS.AODP.Jobs.Services
                 }
 
                 _processStopWatch.Stop();
-                _logger.LogInformation($"Processed {processedCount} records in {_processStopWatch.Elapsed.TotalSeconds:F2} seconds");
+                _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ProcessQualificationsDataAsync)}] -> Processed {processedCount} records in {_processStopWatch.Elapsed.TotalSeconds:F2} seconds");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing qualifications.");
+                _logger.LogError(ex, $"[{nameof(OfqualImportService)}] -> [{nameof(ProcessQualificationsDataAsync)}] -> Error processing qualifications.");
                 throw;
             }
         }
 
         private QualificationVersions CreateQualificationVersion(Guid qualificationId, Guid organisationId, string lifecycleStage,
-            string processStatus, QualificationDTO qualificationData, VersionFieldChange versionFieldChange, int? version)
+            string processStatus, QualificationDTO qualificationData, VersionFieldChanges versionFieldChange, int? version)
         {
             string GetJoinedArrayOrEmpty(JsonElement? value)
             {
@@ -506,7 +529,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                 EighteenPlus = qualificationData.EighteenPlus,
                 NineteenPlus = qualificationData.NineteenPlus,
                 ImportStatus = qualificationData.ImportStatus,                           
-                VersionFieldChanges = versionFieldChange
+                VersionFieldChanges = versionFieldChange,
+                InsertedTimestamp = DateTime.Now
             };
         }
 

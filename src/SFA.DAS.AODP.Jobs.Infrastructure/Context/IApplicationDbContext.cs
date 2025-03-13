@@ -14,14 +14,14 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         DbSet<QualificationDiscussionHistory> QualificationDiscussionHistory { get; set; }
         DbSet<QualificationOffer> QualificationOffers { get; set; }
         DbSet<QualificationVersions> QualificationVersions { get; set; }
-        DbSet<VersionFieldChange> VersionFieldChanges { get; set; }
+        DbSet<VersionFieldChanges> VersionFieldChanges { get; set; }
         DbSet<QualificationImportStaging> QualificationImportStaging { get; set; }
         DbSet<Job> Jobs { get; set; }
         DbSet<JobConfiguration> JobConfigurations { get; set; }
         DbSet<JobRun> JobRuns { get; set; }
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
-        Task BulkInsertAsync<T>(IEnumerable<T> entities, CancellationToken cancellationToken = default) where T : class;
-        Task TruncateTable<T>() where T : class;
+        Task Truncate_FundedQualifications();
+        Task Truncate_QualificationImportStaging();
     }
 }

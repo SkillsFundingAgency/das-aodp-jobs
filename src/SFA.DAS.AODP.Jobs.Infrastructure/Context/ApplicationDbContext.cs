@@ -1,8 +1,6 @@
-﻿using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using SFA.DAS.AODP.Data.Entities;
-using System.Data;
-using Z.BulkOperations;
+
 
 namespace SFA.DAS.AODP.Infrastructure.Context
 {
@@ -31,7 +29,7 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public virtual DbSet<QualificationImportStaging> QualificationImportStaging { get; set; }
 
-        public virtual DbSet<VersionFieldChange> VersionFieldChanges { get; set; }
+        public virtual DbSet<VersionFieldChanges> VersionFieldChanges { get; set; }
 
         public virtual DbSet<Job> Jobs { get; set; }
 
@@ -44,21 +42,14 @@ namespace SFA.DAS.AODP.Infrastructure.Context
             return base.SaveChangesAsync(cancellationToken);
         }
 
-        public async Task BulkInsertAsync<T>(IEnumerable<T> entities, CancellationToken cancellationToken = default) where T : class
+        public async Task Truncate_FundedQualifications()
         {
-            if (entities.Any())
-                await this.BulkInsertAsync(entities.ToList(), options => { options.BatchSize = 1000; options.IncludeGraph = true; }, cancellationToken: cancellationToken);
+            await this.Database.ExecuteSqlRawAsync($"EXEC [dbo].[Truncate_Funded_Qualifications]");            
         }
 
-        public async Task TruncateTable<T>() where T : class
+        public async Task Truncate_QualificationImportStaging()
         {
-            //await this.Set<T>().ExecuteDeleteAsync();
-
-            var tableName = this.Model.FindEntityType(typeof(T))?.GetTableName();
-            if (tableName != null)
-            {
-                await this.Database.ExecuteSqlRawAsync($"TRUNCATE TABLE {tableName}");
-            }
+            await this.Database.ExecuteSqlRawAsync($"EXEC [dbo].[Truncate_QualificationImportStaging]");
         }
     }
 }

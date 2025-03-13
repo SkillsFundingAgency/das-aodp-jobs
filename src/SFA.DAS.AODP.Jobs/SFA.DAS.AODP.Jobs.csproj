@@ -37,7 +37,7 @@
 		<PackageReference Include="System.Data.SqlClient" Version="4.9.0" />
 	</ItemGroup>
 	<ItemGroup>
-	  <ProjectReference Include="..\SAF.DAS.AODP.Jobs.Models\SAF.DAS.AODP.Models.csproj" />
+	  <ProjectReference Include="..\SAF.DAS.AODP.Jobs.Models\SFA.DAS.AODP.Models.csproj" />
 	  <ProjectReference Include="..\SFA.DAS.AODP.Data\SFA.DAS.AODP.Data.csproj" />
 	  <ProjectReference Include="..\SFA.DAS.AODP.Jobs.Infrastructure\SFA.DAS.AODP.Infrastructure.csproj" />
 	</ItemGroup>

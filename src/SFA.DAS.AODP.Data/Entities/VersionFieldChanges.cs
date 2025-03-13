@@ -3,7 +3,7 @@
 namespace SFA.DAS.AODP.Data.Entities;
 
 [Table("VersionFieldChanges", Schema = "regulated")]
-public partial class VersionFieldChange
+public partial class VersionFieldChanges
 {
     public Guid Id { get; set; }
 
