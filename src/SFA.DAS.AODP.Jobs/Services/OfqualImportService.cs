@@ -89,6 +89,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                     }
 
                     _loopCycleStopWatch.Stop();
+                    Thread.Sleep(200);
                     _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ImportApiData)}] -> Page {pageCount} import complete. {paginatedResult.Results.Count()} records imported in {_loopCycleStopWatch.Elapsed.TotalSeconds:F2} seconds");
                     _loopCycleStopWatch.Restart();
                     pageCount++;
@@ -369,7 +370,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 {
                                     processStatusName = Enum.ProcessStatus.DecisionRequired;
                                     lifecycleStageName = LifeCycleStage.Changed;
-                                    actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired);                                   
+                                    actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.ActionRequired);                                   
                                 }
                             }
 
@@ -430,6 +431,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                     await _applicationDbContext.SaveChangesAsync();
 
                     processedCount += importRecords.Count;
+                    Thread.Sleep(200);
                 }
 
                 _processStopWatch.Stop();
