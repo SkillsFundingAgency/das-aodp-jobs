@@ -1,4 +1,5 @@
-﻿using SFA.DAS.AODP.Data.Repositories.Jobs;
+﻿using Microsoft.Identity.Client;
+using SFA.DAS.AODP.Data.Repositories.Jobs;
 using SFA.DAS.AODP.Jobs.Enum;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
@@ -56,7 +57,22 @@ namespace SFA.DAS.AODP.Jobs.Services
             var startTime = _systemClockService.UtcNow;
             return await _jobsRepository.InsertJobRunAsync(jobId, userName, startTime, status.ToString());
         }
+
+        public async Task<JobRunControl> GetRequestedJobsAsync()
+        {
+            var jobRunControl = new JobRunControl();
+            var jobRunRecord = await _jobsRepository.GetJobRunByStatusAsync(JobStatus.Requested.ToString());
+            jobRunControl.Id = jobRunRecord?.Id ?? Guid.Empty;
+            jobRunControl.Status = jobRunRecord?.Status ?? string.Empty;
+            jobRunControl.StartTime = jobRunRecord?.StartTime ?? DateTime.MinValue;
+            jobRunControl.EndTime = jobRunRecord?.EndTime ?? DateTime.MinValue;
+            jobRunControl.User = jobRunRecord?.User ?? string.Empty;
+            jobRunControl.RecordsProcessed = jobRunRecord?.RecordsProcessed ?? 0;
+
+            return jobRunControl;
+        }
     }
+
     public struct JobControl
     {
         public Guid JobId;
@@ -64,5 +80,16 @@ namespace SFA.DAS.AODP.Jobs.Services
         public bool RunApiImport;
         public bool ProcessStagingData;
         public bool JobEnabled;
+    }
+
+    public struct JobRunControl
+    {
+        public Guid Id;
+        public string Status;
+        public DateTime StartTime;
+        public DateTime? EndTime;
+        public string User;
+        public int? RecordsProcessed;
+        public Guid JobId;
     }
 }

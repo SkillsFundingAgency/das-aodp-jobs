@@ -8,5 +8,6 @@ namespace SFA.DAS.AODP.Jobs.Interfaces
         Task<JobControl> ReadJobConfiguration();
         Task UpdateJobRun(string username, Guid jobId, Guid jobRunId, int totalRecords, JobStatus status);
         Task<Guid> InsertJobRunAsync(Guid jobId, string userName, JobStatus status);
+        Task<JobRunControl> GetRequestedJobsAsync();
     }
 }
