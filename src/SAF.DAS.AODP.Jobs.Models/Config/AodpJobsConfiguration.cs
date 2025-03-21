@@ -24,5 +24,6 @@
 
         public string? Environment { get; set; }
 
+        public string? Function_App_Base_Url { get; set; }
     }
 }

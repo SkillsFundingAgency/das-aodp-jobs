@@ -9,14 +9,14 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
     {
         private readonly Dictionary<string, Guid> _qualificationNumberToIdCache;
         private readonly Dictionary<string, Guid> _organsationNameToIdCache;
-        private readonly ILogger<FundedQualificationsImportClassMap> _logger;
+        private readonly ILogger _logger;
         private Guid _currentQualificationId;
 
         public FundedQualificationsImportClassMap(
             List<string> headers,
             List<Qualification> qualifications,
             List<AwardingOrganisation> organisations,
-            ILogger<FundedQualificationsImportClassMap> logger)         
+            ILogger logger)         
         {
             _logger = logger;
             _qualificationNumberToIdCache = qualifications.ToDictionary(q => q.Qan, q => q.Id);

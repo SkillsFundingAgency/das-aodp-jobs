@@ -31,14 +31,15 @@ namespace SFA.DAS.AODP.Jobs.Services
             }
         }
 
-        public async Task<JobControl> ReadJobConfiguration()
+        public async Task<RegulatedJobControl> ReadRegulatedJobConfiguration()
         {
-            var jobControl = new JobControl();
+            var jobControl = new RegulatedJobControl();
             var jobRecord = await _jobsRepository.GetJobByNameAsync(JobNames.RegulatedQualifications.ToString());
             jobControl.JobEnabled = jobRecord?.Enabled ?? false;
             jobControl.JobId = jobRecord?.Id ?? Guid.Empty;
             jobControl.RunApiImport = false;
             jobControl.ProcessStagingData = false;
+            jobControl.Status = jobRecord.Status;
 
             if (jobControl.JobId != Guid.Empty)
             {
@@ -52,34 +53,71 @@ namespace SFA.DAS.AODP.Jobs.Services
             return jobControl;
         }
 
+        public async Task<FundedJobControl> ReadFundedJobConfiguration()
+        {
+            var jobControl = new FundedJobControl();
+            var jobRecord = await _jobsRepository.GetJobByNameAsync(JobNames.FundedQualifications.ToString());
+            jobControl.JobEnabled = jobRecord?.Enabled ?? false;
+            jobControl.JobId = jobRecord?.Id ?? Guid.Empty;
+            jobControl.ImportFundedCsv = false;
+            jobControl.ImportArchivedCsv = false;
+            jobControl.Status = jobRecord.Status;
+
+            if (jobControl.JobId != Guid.Empty)
+            {
+                var configEntries = await _jobsRepository.GetJobConfigurationsByIdAsync(jobControl.JobId);
+                var importFundedCsvValue = configEntries.FirstOrDefault(f => f.Name == JobConfiguration.ImportFundedCsv.ToString())?.Value ?? "false";
+                bool.TryParse(importFundedCsvValue, out jobControl.ImportFundedCsv);
+                var ImportArchivedCsvValue = configEntries.FirstOrDefault(f => f.Name == JobConfiguration.ImportArchivedCsv.ToString())?.Value ?? "false";
+                bool.TryParse(ImportArchivedCsvValue, out jobControl.ImportArchivedCsv);
+            }
+
+            return jobControl;
+        }
+
         public async Task<Guid> InsertJobRunAsync(Guid jobId, string userName, JobStatus status)
         {
             var startTime = _systemClockService.UtcNow;
             return await _jobsRepository.InsertJobRunAsync(jobId, userName, startTime, status.ToString());
         }
 
-        public async Task<JobRunControl> GetRequestedJobsAsync()
+        public async Task<JobRunControl> GetLastJobRunAsync(string jobName)
         {
-            var jobRunControl = new JobRunControl();
-            var jobRunRecord = await _jobsRepository.GetJobRunByStatusAsync(JobStatus.Requested.ToString());
-            jobRunControl.Id = jobRunRecord?.Id ?? Guid.Empty;
-            jobRunControl.Status = jobRunRecord?.Status ?? string.Empty;
-            jobRunControl.StartTime = jobRunRecord?.StartTime ?? DateTime.MinValue;
-            jobRunControl.EndTime = jobRunRecord?.EndTime ?? DateTime.MinValue;
-            jobRunControl.User = jobRunRecord?.User ?? string.Empty;
-            jobRunControl.RecordsProcessed = jobRunRecord?.RecordsProcessed ?? 0;
+           
+            var jobRunRecord = await _jobsRepository.GetLastJobRunsAsync(jobName);
+            var jobRunControl = new JobRunControl()
+            {
+                Id = jobRunRecord?.Id ?? Guid.Empty,
+                JobId = jobRunRecord?.JobId ?? Guid.Empty,
+                Status = jobRunRecord?.Status ?? string.Empty,
+                StartTime = jobRunRecord?.StartTime ?? DateTime.MinValue,
+                EndTime = jobRunRecord?.EndTime ?? DateTime.MinValue,
+                User = jobRunRecord?.User ?? string.Empty,
+                RecordsProcessed = jobRunRecord?.RecordsProcessed ?? 0
+            };
 
             return jobRunControl;
         }
     }
 
-    public struct JobControl
+    public struct RegulatedJobControl
     {
         public Guid JobId;
         public Guid JobRunId;
         public bool RunApiImport;
         public bool ProcessStagingData;
         public bool JobEnabled;
+        public string Status;
+    }
+
+    public struct FundedJobControl
+    {
+        public Guid JobId;
+        public Guid JobRunId;
+        public bool ImportFundedCsv;
+        public bool ImportArchivedCsv;
+        public bool JobEnabled;
+        public string Status;
     }
 
     public struct JobRunControl

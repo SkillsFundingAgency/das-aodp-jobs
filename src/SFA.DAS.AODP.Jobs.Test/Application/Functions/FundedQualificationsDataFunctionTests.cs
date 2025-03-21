@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -18,6 +19,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
         private readonly Mock<ILogger<FundedQualificationsDataFunction>> _loggerMock;
         private readonly Mock<IApplicationDbContext> _applicationDbContextMock;
         private readonly Mock<ICsvReaderService> _csvReaderServiceMock;
+        private readonly Mock<IJobConfigurationService> _jobConfigurationService;
         private readonly FunctionContext _functionContext;
         private readonly FundedQualificationsDataFunction _function;
         private readonly ILoggerFactory _loggerFactory;
@@ -29,9 +31,9 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
             _loggerMock = new Mock<ILogger<FundedQualificationsDataFunction>>();
             _applicationDbContextMock = new Mock<IApplicationDbContext>();
             _csvReaderServiceMock = new Mock<ICsvReaderService>();
-            _functionContext = new Mock<FunctionContext>().Object;
-            _loggerFactory = new Mock<ILoggerFactory>().Object;
+            _functionContext = new Mock<FunctionContext>().Object;            
             _config = new AodpJobsConfiguration();
+            _jobConfigurationService = new Mock<IJobConfigurationService>();
 
             var configuration = new MapperConfiguration(cfg => cfg.AddProfile(new MapperProfile()));
             _mapper = new Mapper(configuration);
@@ -40,9 +42,9 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
                 _loggerMock.Object,
                 _applicationDbContextMock.Object,
                 _csvReaderServiceMock.Object,
-                _mapper,
-                _loggerFactory,
-                _config);
+                _mapper,       
+                _config,
+                _jobConfigurationService.Object);
         }
 
         [Fact]
@@ -60,7 +62,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
             var response = await _function.Run(httpRequestData);
 
             // Assert
-            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            var okResult = Assert.IsType<BadRequestObjectResult>(response);
         }
 
         [Fact]
@@ -74,7 +76,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
             var response = await _function.Run(httpRequestData);
 
             // Assert
-            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            var okResult = Assert.IsType<BadRequestObjectResult>(response);
             _csvReaderServiceMock.Verify(service => service.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(It.IsAny<string>()), Times.Never);
         }
     }

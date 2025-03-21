@@ -138,12 +138,16 @@ namespace SFA.DAS.AODP.Data.Repositories.Jobs
             return null;
         }
 
-        public async Task<JobRun?> GetJobRunByStatusAsync(string status)
+        public async Task<JobRun?> GetLastJobRunsAsync(string jobName)
         {
             try
             {
-                var record = await _context.JobRuns.FirstOrDefaultAsync(v => v.Status == status);
-                return record is null ? throw new EntityNotFoundException($"JobRun record with status {status} not found") : record;
+                var record = await _context.JobRuns
+                                    .Include(i => i.Job)
+                                    .Where(w => w.Job.Name == jobName)
+                                    .OrderByDescending(o => o.StartTime)
+                                    .FirstOrDefaultAsync();
+                return record;
             }
             catch (Exception ex)
             {
