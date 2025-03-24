@@ -119,7 +119,7 @@ namespace SFA.DAS.AODP.Jobs.Functions
                                 string functionBaseUrl = _aodpJobsConfiguration.Function_App_Base_Url ?? "http://localhost:7000";
 
                                 string username = string.IsNullOrWhiteSpace(requestedJobRun.User) ? "ScheduledJob" : requestedJobRun.User;
-                                string functionUrl = $"{functionBaseUrl}/gov/approvedQualificationsImport/{username}";
+                                string functionUrl = $"{functionBaseUrl}/api/approvedQualificationsImport/{username}";
 
                                 HttpResponseMessage response = await client.GetAsync(functionUrl);
 
