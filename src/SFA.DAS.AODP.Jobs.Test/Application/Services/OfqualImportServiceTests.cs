@@ -450,7 +450,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .Where(w => w.QualificationId == insertedQualification.Id)
                                     .FirstAsync();
             Assert.NotNull(insertedDiscussion);
-            Assert.Equal("No Action Required", insertedDiscussion.ActionType.Description);
+            Assert.Equal("Action Required", insertedDiscussion.ActionType.Description);
             Assert.Equal("Decision Required - Changed Qualification", insertedDiscussion.Notes);
         }
 

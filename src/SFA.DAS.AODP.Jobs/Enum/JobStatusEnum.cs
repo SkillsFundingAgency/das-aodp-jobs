@@ -2,6 +2,8 @@
 {
     public enum JobStatus
     {
+        Requested,
+        RequestSent,
         Running,
         Completed,
         Error

@@ -3,6 +3,8 @@
     public enum JobConfiguration
     {
         ProcessStagingData,
-        ApiImport,        
+        ApiImport,
+        ImportFundedCsv,
+        ImportArchivedCsv
     }
 }
