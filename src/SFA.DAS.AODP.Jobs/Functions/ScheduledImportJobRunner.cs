@@ -76,7 +76,7 @@ namespace SFA.DAS.AODP.Jobs.Functions
                         {
                             using (HttpClient client = new HttpClient())
                             {
-                                string functionBaseUrl = _aodpJobsConfiguration.Function_App_Base_Url ?? "http://localhost:7000";
+                                string functionBaseUrl = _aodpJobsConfiguration.FunctionAppBaseUrl ?? "http://localhost:7000";
 
                                 string username = string.IsNullOrWhiteSpace(requestedJobRun.User) ? "ScheduledJob" : requestedJobRun.User;
                                 string functionUrl = $"{functionBaseUrl}/gov/regulatedQualificationsImport/{username}";
@@ -116,7 +116,7 @@ namespace SFA.DAS.AODP.Jobs.Functions
                         {
                             using (HttpClient client = new HttpClient())
                             {
-                                string functionBaseUrl = _aodpJobsConfiguration.Function_App_Base_Url ?? "http://localhost:7000";
+                                string functionBaseUrl = _aodpJobsConfiguration.FunctionAppBaseUrl ?? "http://localhost:7000";
 
                                 string username = string.IsNullOrWhiteSpace(requestedJobRun.User) ? "ScheduledJob" : requestedJobRun.User;
                                 string functionUrl = $"{functionBaseUrl}/api/approvedQualificationsImport/{username}";
