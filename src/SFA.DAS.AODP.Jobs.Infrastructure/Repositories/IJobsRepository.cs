@@ -8,6 +8,7 @@ namespace SFA.DAS.AODP.Data.Repositories.Jobs
         Task<Job?> GetJobByNameAsync(string name);
         Task<List<JobConfiguration>> GetJobConfigurationsByIdAsync(Guid jobId);
         Task<JobRun?> GetJobRunByIdAsync(Guid id);
+        Task<JobRun?> GetLastJobRunsAsync(string jobName);
         Task<List<Job>> GetJobsAsync();
         Task<Guid> InsertJobRunAsync(Guid jobId, string user, DateTime startTime, string status);
         Task<bool> UpdateJobAsync(Guid id, DateTime lastRunTime, string status);

@@ -42,21 +42,36 @@ namespace SFA.DAS.AODP.Functions.Functions
             var stopWatch = new Stopwatch();
 
             _logger.LogInformation($"[{nameof(RegulatedQualificationsDataFunction)}] -> Reading Configuration");
-            var jobControl = await _jobConfigurationService.ReadJobConfiguration();           
+            var jobControl = await _jobConfigurationService.ReadRegulatedJobConfiguration();           
             var totalRecords = 0;
 
             if (!jobControl.JobEnabled)
             {
                 return new OkObjectResult($"[{nameof(RegulatedQualificationsDataFunction)}] -> Job disabled");
-            }            
+            }
+
+            if (jobControl.Status == JobStatus.Running.ToString())
+            {
+                return new OkObjectResult($"[{nameof(RegulatedQualificationsDataFunction)}] -> Job currently running");
+            }
 
             _logger.LogInformation($"[{nameof(RegulatedQualificationsDataFunction)}] -> Configuration set to Run Api Import = {jobControl.RunApiImport}, Process Staging Data = {jobControl.ProcessStagingData}");
 
             try
             {
                 stopWatch.Start();
-
-                jobControl.JobRunId = await _jobConfigurationService.InsertJobRunAsync(jobControl.JobId, username, JobStatus.Running);
+                
+                var lastJobRun = await _jobConfigurationService.GetLastJobRunAsync(JobNames.RegulatedQualifications.ToString());
+                if (lastJobRun.Id != Guid.Empty && lastJobRun.Status == JobStatus.RequestSent.ToString())
+                {
+                    jobControl.JobRunId = lastJobRun.Id;
+                    await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, 0, JobStatus.Running);
+                }
+                
+                else
+                {
+                    jobControl.JobRunId = await _jobConfigurationService.InsertJobRunAsync(jobControl.JobId, username, JobStatus.Running);
+                }
 
                 if (jobControl.RunApiImport)
                 {

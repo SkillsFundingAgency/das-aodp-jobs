@@ -138,6 +138,25 @@ namespace SFA.DAS.AODP.Data.Repositories.Jobs
             return null;
         }
 
+        public async Task<JobRun?> GetLastJobRunsAsync(string jobName)
+        {
+            try
+            {
+                var record = await _context.JobRuns
+                                    .Include(i => i.Job)
+                                    .Where(w => w.Job.Name == jobName)
+                                    .OrderByDescending(o => o.StartTime)
+                                    .FirstOrDefaultAsync();
+                return record;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error while retrieving job run: {ex.Message}");
+            }
+
+            return null;
+        }
+
         public async Task<bool> UpdateJobRunAsync(Guid id, string user, DateTime stopTime, string status, int recordsProcessed)
         {
             try
