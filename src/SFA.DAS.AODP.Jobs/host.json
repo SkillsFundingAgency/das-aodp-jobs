@@ -1,5 +1,6 @@
 {
   "version": "2.0",
+  "functionTimeout": "00:30:00",
   "extensions": {
     "http": {
       "routePrefix": ""
@@ -17,7 +18,9 @@
       "default": "Information",
       "Microsoft": "Warning",
       "Microsoft.EntityFrameworkCore": "Warning",
-      "System": "Warning"
+      "System": "Warning",
+      "Host.Results": "Information",
+      "Function": "Information"
     }
   }
 }
