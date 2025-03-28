@@ -25,5 +25,6 @@
         public string? Environment { get; set; }
 
         public string? FunctionAppBaseUrl { get; set; }
+        public string? FunctionHostKey { get; set; }
     }
 }
