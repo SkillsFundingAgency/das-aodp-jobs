@@ -66,8 +66,7 @@ namespace SFA.DAS.AODP.Functions.Functions
                 {
                     jobControl.JobRunId = lastJobRun.Id;
                     await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, 0, JobStatus.Running);
-                }
-                
+                }                
                 else
                 {
                     jobControl.JobRunId = await _jobConfigurationService.InsertJobRunAsync(jobControl.JobId, username, JobStatus.Running);

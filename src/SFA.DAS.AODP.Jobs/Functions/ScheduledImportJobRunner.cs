@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using RestEase;
 using SFA.DAS.AODP.Jobs.Enum;
 using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Jobs.Services;
 using SFA.DAS.AODP.Models.Config;
 
 namespace SFA.DAS.AODP.Jobs.Functions
@@ -14,12 +13,17 @@ namespace SFA.DAS.AODP.Jobs.Functions
         private readonly ILogger<ScheduledImportJobRunner> _logger;
         private readonly IJobConfigurationService _jobConfigurationService;
         private readonly AodpJobsConfiguration _aodpJobsConfiguration;
+        private readonly ISchedulerClientService _schedulerClientService;
 
-        public ScheduledImportJobRunner(ILogger<ScheduledImportJobRunner> logger, IJobConfigurationService jobConfigurationService, AodpJobsConfiguration aodpJobsConfiguration)
+        public ScheduledImportJobRunner(ILogger<ScheduledImportJobRunner> logger, 
+            IJobConfigurationService jobConfigurationService, 
+            AodpJobsConfiguration aodpJobsConfiguration,
+            ISchedulerClientService schedulerClientService)
         {
             _logger = logger;
             _jobConfigurationService = jobConfigurationService;
             _aodpJobsConfiguration = aodpJobsConfiguration;
+            _schedulerClientService = schedulerClientService;
         }
 
         [Function("ScheduledImportJobRunner")]
@@ -72,7 +76,7 @@ namespace SFA.DAS.AODP.Jobs.Functions
 
                         await _jobConfigurationService.UpdateJobRun(requestedJobRun.User, requestedJobRun.JobId, requestedJobRun.Id, requestedJobRun.RecordsProcessed ?? 0, JobStatus.RequestSent);
 
-                        await ExecuteFunction(requestedJobRun, "regulatedQualificationsImport", "gov/regulatedQualificationsImport");                                      
+                        await _schedulerClientService.ExecuteFunction(requestedJobRun, "regulatedQualificationsImport", "gov/regulatedQualificationsImport");                                      
                     }
                     else
                     {
@@ -90,7 +94,7 @@ namespace SFA.DAS.AODP.Jobs.Functions
 
                         await _jobConfigurationService.UpdateJobRun(requestedJobRun.User, requestedJobRun.JobId, requestedJobRun.Id, requestedJobRun.RecordsProcessed ?? 0, JobStatus.RequestSent);
 
-                        await ExecuteFunction(requestedJobRun, "approvedQualificationsImport", "api/approvedQualificationsImport");
+                        await _schedulerClientService.ExecuteFunction(requestedJobRun, "approvedQualificationsImport", "api/approvedQualificationsImport");
                     }
                     else
                     {
@@ -109,39 +113,6 @@ namespace SFA.DAS.AODP.Jobs.Functions
 
 
             return new OkObjectResult($"[{nameof(ScheduledImportJobRunner)}] -> Job execution complete.");
-        }
-
-        private async Task ExecuteFunction(JobRunControl requestedJobRun, string functionName, string functionUrlPartial)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                string functionBaseUrl = _aodpJobsConfiguration.FunctionAppBaseUrl ?? "http://localhost:7000";
-                string functionHostKey = _aodpJobsConfiguration.FunctionHostKey ?? string.Empty;
-
-                string username = string.IsNullOrWhiteSpace(requestedJobRun.User) ? "ScheduledJob" : requestedJobRun.User;
-                string functionUrl = $"{functionBaseUrl}/{functionUrlPartial}/{username}";
-                if (!string.IsNullOrWhiteSpace(functionHostKey))
-                {
-                    functionUrl = $"{functionUrl}?code={functionHostKey}";
-                    _logger.LogInformation($"[{nameof(ScheduledImportJobRunner)}] -> Calling function {functionName} job using host key");
-                }
-                else
-                {
-                    _logger.LogInformation($"[{nameof(ScheduledImportJobRunner)}] -> Calling function {functionName} job");
-                }
-
-                HttpResponseMessage response = await client.GetAsync(functionUrl);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    string responseBody = await response.Content.ReadAsStringAsync();
-                    _logger.LogInformation($"[{nameof(ScheduledImportJobRunner)}] -> {functionName} called successfully: {responseBody}");
-                }
-                else
-                {
-                    _logger.LogError($"[{nameof(ScheduledImportJobRunner)}] -> Error calling {functionName}: {response.StatusCode}");
-                }
-            }
-        }
+        }       
     }
 }
