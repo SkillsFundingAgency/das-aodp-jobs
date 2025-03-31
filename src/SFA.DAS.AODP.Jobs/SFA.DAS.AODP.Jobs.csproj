@@ -8,7 +8,10 @@
 		<UserSecretsId>f1c8a8c3-1de3-497d-999c-dabdd7e0f9da</UserSecretsId>
 	</PropertyGroup>
 	<ItemGroup>
-	  <Content Include="Data\funded.csv">
+	  <None Remove="Data\approved.csv" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Content Include="Data\approved.csv">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </Content>
 	  <Content Include="local.settings.json" />
@@ -43,6 +46,9 @@
 	  <ProjectReference Include="..\SFA.DAS.AODP.Jobs.Infrastructure\SFA.DAS.AODP.Infrastructure.csproj" />
 	</ItemGroup>
 	<ItemGroup>
+		<None Update="Data\funded.csv">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 		<None Update="host.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
