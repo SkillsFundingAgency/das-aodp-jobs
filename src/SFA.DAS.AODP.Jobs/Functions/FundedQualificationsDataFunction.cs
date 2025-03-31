@@ -104,10 +104,7 @@ namespace SFA.DAS.AODP.Functions
                 {
                     _logger.LogInformation($"[{nameof(FundedQualificationsDataFunction)}] -> Importing Funded CSV");
                     var approvedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(fundedUrlFilePath, qualifications, organisations, _logger);
-                    //Commented out method to read a file from disk, useful for testing
-                    //var path = "D:\\Source\\Repos\\das-aodp-jobs\\src\\SFA.DAS.AODP.Jobs\\Data\\approved.csv";
-                    //var approvedQualifications = _csvReaderService.ReadCSVFromFilePath<FundedQualificationDTO, FundedQualificationsImportClassMap>(path, qualifications, organisations, _logger);
-
+                    
                     if (approvedQualifications.Any())
                     {
                         await _applicationDbContext.Truncate_FundedQualifications();
