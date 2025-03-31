@@ -73,7 +73,7 @@ namespace SFA.DAS.AODP.Functions
             try
             {
                 _logger.LogInformation($"[{nameof(FundedQualificationsDataFunction)}] -> Starting Job");
-                var lastJobRun = await _jobConfigurationService.GetLastJobRunAsync(JobNames.RegulatedQualifications.ToString());
+                var lastJobRun = await _jobConfigurationService.GetLastJobRunAsync(JobNames.FundedQualifications.ToString());
                 if (lastJobRun.Id != Guid.Empty && lastJobRun.Status == JobStatus.RequestSent.ToString())
                 {
                     jobControl.JobRunId = lastJobRun.Id;
