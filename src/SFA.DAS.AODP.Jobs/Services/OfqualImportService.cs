@@ -190,6 +190,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 Ukprn = importRecord.OrganisationId,
                                 RecognitionNumber = importRecord.OrganisationRecognitionNumber,
                                 NameOfqual = importRecord.OrganisationName,
+                                NameLegal = importRecord.OrganisationName,
                                 Acronym = importRecord.OrganisationAcronym
                             };
                             newOrganisations.Add(organisation);
@@ -230,8 +231,10 @@ namespace SFA.DAS.AODP.Jobs.Services
                             var notes = "";
                             var processStatusName = "";                       
                             var actionTypeId = Guid.Empty;
-                            
-                            if (_fundingEligibilityService.EligibleForFunding(importRecord))
+
+                            var eligibleForFunding = _fundingEligibilityService.EligibleForFunding(importRecord);
+
+                            if (eligibleForFunding)
                             {
                                 // Eligible for funding - needs decision
 
@@ -277,6 +280,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 processStatusName,
                                 importRecord,
                                 versionFieldChange,
+                                eligibleForFunding,
                                 1);
 
                             newQualificationVersions.Add(newQualificationVersion);
@@ -313,8 +317,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                             var notes = "";
 
                             #region New Version of Existing Qualification
-
-                            if (!_fundingEligibilityService.EligibleForFunding(importRecord))
+                            var eligibleForFunding = _fundingEligibilityService.EligibleForFunding(importRecord);
+                            if (!eligibleForFunding)
                             {
                                 // Not eligible for funding 
 
@@ -401,6 +405,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 processStatusName,
                                 importRecord,
                                 versionFieldChange,
+                                eligibleForFunding,
                                 existingVersion.Version + 1);
 
                             newQualificationVersions.Add(newQualificationVersion);
@@ -445,7 +450,7 @@ namespace SFA.DAS.AODP.Jobs.Services
         }
 
         private QualificationVersions CreateQualificationVersion(Guid qualificationId, Guid organisationId, string lifecycleStage,
-            string processStatus, QualificationDTO qualificationData, VersionFieldChanges versionFieldChange, int? version)
+            string processStatus, QualificationDTO qualificationData, VersionFieldChanges versionFieldChange, bool eligibleForFunding, int? version)
         {
             string GetJoinedArrayOrEmpty(JsonElement? value)
             {
@@ -532,7 +537,9 @@ namespace SFA.DAS.AODP.Jobs.Services
                 NineteenPlus = qualificationData.NineteenPlus,
                 ImportStatus = qualificationData.ImportStatus,                           
                 VersionFieldChanges = versionFieldChange,
-                InsertedTimestamp = DateTime.Now
+                InsertedTimestamp = DateTime.Now,
+                EligibleForFunding = eligibleForFunding,
+                Name = qualificationData.Title
             };
         }
 

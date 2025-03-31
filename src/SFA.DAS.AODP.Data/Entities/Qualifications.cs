@@ -9,9 +9,9 @@ public partial class Qualifications
 
     public DateTime? DateOfOfqualDataSnapshot { get; set; }
 
-    public Guid QualificationId { get; set; }
+    public Guid? QualificationId { get; set; }
 
-    public Guid AwardingOrganisationId { get; set; }
+    public Guid? AwardingOrganisationId { get; set; }
 
     public string? Level { get; set; }
 

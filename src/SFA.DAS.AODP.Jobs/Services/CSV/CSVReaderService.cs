@@ -1,9 +1,8 @@
-﻿using System.Globalization;
-using CsvHelper;
+﻿using CsvHelper;
 using CsvHelper.Configuration;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Models.Qualification;
+using System.Globalization;
 
 namespace SFA.DAS.AODP.Jobs.Services.CSV
 {
@@ -65,7 +64,7 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
 
         private async Task<HttpResponseMessage> GetDataFromUrl(string approvedUrlFilePath)
         {
-            var _httpClient = _httpClientFactory.CreateClient();
+            var _httpClient = _httpClientFactory.CreateClient("CsvReaderServiceClient");
             var response = await _httpClient.GetAsync(approvedUrlFilePath);
             response.EnsureSuccessStatusCode();
             return response;
@@ -108,17 +107,7 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
             {
                 try
                 {
-                    var record = csvReader.GetRecord<T>();
-
-                    // Check funded qualification has a valid qualification and awarding organisation id
-                    if (record is FundedQualificationDTO fundedRecord)
-                    {
-                        if (fundedRecord.QualificationId == default || fundedRecord.AwardingOrganisationId == default)
-                        {
-                            skippedCount++;
-                            continue;
-                        }
-                    }
+                    var record = csvReader.GetRecord<T>();                    
 
                     records.Add(record);
                 }
