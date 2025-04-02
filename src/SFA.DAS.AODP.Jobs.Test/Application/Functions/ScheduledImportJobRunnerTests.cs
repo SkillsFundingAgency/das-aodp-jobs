@@ -2,7 +2,7 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Moq;
-using SFA.DAS.AODP.Jobs.Enum;
+using SFA.DAS.AODP.Common.Enum;
 using SFA.DAS.AODP.Jobs.Functions;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Jobs.Services;
@@ -84,7 +84,7 @@ public class ScheduledImportJobRunnerTests
         _jobConfigurationService.Setup(s => s.ReadFundedJobConfiguration()).ReturnsAsync(fundedJobControl).Verifiable();
         _jobConfigurationService.Setup(s => s.GetLastJobRunAsync(JobNames.RegulatedQualifications.ToString())).ReturnsAsync(lastRegulatedJobRun).Verifiable();
         _jobConfigurationService.Setup(s => s.GetLastJobRunAsync(JobNames.FundedQualifications.ToString())).ReturnsAsync(lastFundedJobRun).Verifiable();        
-        _jobConfigurationService.Setup(s => s.UpdateJobRun(userName, regulatedJobControl.JobId, lastRegulatedJobRun.Id, 0, Enum.JobStatus.RequestSent)).Verifiable();
+        _jobConfigurationService.Setup(s => s.UpdateJobRun(userName, regulatedJobControl.JobId, lastRegulatedJobRun.Id, 0, Common.Enum.JobStatus.RequestSent)).Verifiable();
         _schedulerClientService.Setup(s => s.ExecuteFunction(It.Is<JobRunControl>(j => j.Id == lastRegulatedJobRun.Id), regulatedJobName, regulatedJobUrl)).Verifiable();
 
         // Act
@@ -110,7 +110,7 @@ public class ScheduledImportJobRunnerTests
         _jobConfigurationService.Setup(s => s.ReadFundedJobConfiguration()).ReturnsAsync(fundedJobControl).Verifiable();
         _jobConfigurationService.Setup(s => s.GetLastJobRunAsync(JobNames.RegulatedQualifications.ToString())).ReturnsAsync(lastRegulatedJobRun).Verifiable();
         _jobConfigurationService.Setup(s => s.GetLastJobRunAsync(JobNames.FundedQualifications.ToString())).ReturnsAsync(lastFundedJobRun).Verifiable();
-        _jobConfigurationService.Setup(s => s.UpdateJobRun(userName, fundedJobControl.JobId, lastFundedJobRun.Id, 0, Enum.JobStatus.RequestSent)).Verifiable();
+        _jobConfigurationService.Setup(s => s.UpdateJobRun(userName, fundedJobControl.JobId, lastFundedJobRun.Id, 0, Common.Enum.JobStatus.RequestSent)).Verifiable();
         _schedulerClientService.Setup(s => s.ExecuteFunction(It.Is<JobRunControl>(j => j.Id == lastFundedJobRun.Id), fundedJobName, fundedJobUrl)).Verifiable();
 
         // Act

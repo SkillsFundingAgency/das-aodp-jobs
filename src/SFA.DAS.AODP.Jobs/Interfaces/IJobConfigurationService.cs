@@ -1,4 +1,4 @@
-﻿using SFA.DAS.AODP.Jobs.Enum;
+﻿using SFA.DAS.AODP.Common.Enum;
 using SFA.DAS.AODP.Jobs.Services;
 
 namespace SFA.DAS.AODP.Jobs.Interfaces

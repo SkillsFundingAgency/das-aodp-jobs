@@ -15,9 +15,11 @@ using AutoFixture;
 using RestEase;
 using SFA.DAS.AODP.Data.Repositories.Jobs;
 using Microsoft.EntityFrameworkCore;
-using SFA.DAS.AODP.Jobs.Enum;
 using Microsoft.AspNetCore.Components;
 using System.Text.Json;
+using SFA.DAS.AODP.Infrastructure.Interfaces;
+using SFA.DAS.AODP.Common.Enum;
+using SFA.DAS.AODP.Infrastructure.Services;
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 {
@@ -222,8 +224,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .Include(i => i.ProcessStatus)
                                     .Where(w => w.QualificationId == insertedQualification.Id).Single();
             Assert.NotNull(insertedVersion);
-            Assert.Equal(Enum.ProcessStatus.NoActionRequired, insertedVersion.ProcessStatus.Name);
-            Assert.Equal(Enum.LifeCycleStage.New, insertedVersion.LifecycleStage.Name);
+            Assert.Equal(Common.Enum.ProcessStatus.NoActionRequired, insertedVersion.ProcessStatus.Name);
+            Assert.Equal(Common.Enum.LifeCycleStage.New, insertedVersion.LifecycleStage.Name);
 
             // new qualification discussion
             var insertedDiscussion = _dbContext.QualificationDiscussionHistory
@@ -274,8 +276,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .Include(i => i.ProcessStatus)
                                     .Where(w => w.QualificationId == insertedQualification.Id).Single();
             Assert.NotNull(insertedVersion);
-            Assert.Equal(Enum.ProcessStatus.DecisionRequired, insertedVersion.ProcessStatus.Name);
-            Assert.Equal(Enum.LifeCycleStage.New, insertedVersion.LifecycleStage.Name);
+            Assert.Equal(Common.Enum.ProcessStatus.DecisionRequired, insertedVersion.ProcessStatus.Name);
+            Assert.Equal(Common.Enum.LifeCycleStage.New, insertedVersion.LifecycleStage.Name);
 
             // new qualification discussion
             var insertedDiscussion = _dbContext.QualificationDiscussionHistory
@@ -327,8 +329,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .Include(i => i.ProcessStatus)
                                     .Where(w => w.QualificationId == insertedQualification.Id).First();
             Assert.NotNull(insertedVersion);
-            Assert.Equal(Enum.ProcessStatus.NoActionRequired, insertedVersion.ProcessStatus.Name);
-            Assert.Equal(Enum.LifeCycleStage.New, insertedVersion.LifecycleStage.Name);
+            Assert.Equal(Common.Enum.ProcessStatus.NoActionRequired, insertedVersion.ProcessStatus.Name);
+            Assert.Equal(Common.Enum.LifeCycleStage.New, insertedVersion.LifecycleStage.Name);
 
             // new qualification discussion
             var insertedDiscussion = _dbContext.QualificationDiscussionHistory
@@ -376,8 +378,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .FirstAsync();
             Assert.NotNull(insertedVersion);
             Assert.Equal(2, insertedVersion.Version);
-            Assert.Equal(Enum.ProcessStatus.NoActionRequired, insertedVersion.ProcessStatus.Name);
-            Assert.Equal(Enum.LifeCycleStage.Changed, insertedVersion.LifecycleStage.Name);
+            Assert.Equal(Common.Enum.ProcessStatus.NoActionRequired, insertedVersion.ProcessStatus.Name);
+            Assert.Equal(Common.Enum.LifeCycleStage.Changed, insertedVersion.LifecycleStage.Name);
 
             // new qualification discussion
             var insertedDiscussion = await _dbContext.QualificationDiscussionHistory
@@ -440,8 +442,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .FirstAsync();
             Assert.NotNull(insertedVersion);
             Assert.Equal(2, insertedVersion.Version);
-            Assert.Equal(Enum.ProcessStatus.DecisionRequired, insertedVersion.ProcessStatus.Name);
-            Assert.Equal(Enum.LifeCycleStage.Changed, insertedVersion.LifecycleStage.Name);
+            Assert.Equal(Common.Enum.ProcessStatus.DecisionRequired, insertedVersion.ProcessStatus.Name);
+            Assert.Equal(Common.Enum.LifeCycleStage.Changed, insertedVersion.LifecycleStage.Name);
 
             // new qualification discussion
             var insertedDiscussion = await _dbContext.QualificationDiscussionHistory
@@ -492,8 +494,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .FirstAsync();
             Assert.NotNull(insertedVersion);
             Assert.Equal(2, insertedVersion.Version);
-            Assert.Equal(Enum.ProcessStatus.DecisionRequired, insertedVersion.ProcessStatus.Name);
-            Assert.Equal(Enum.LifeCycleStage.Changed, insertedVersion.LifecycleStage.Name);
+            Assert.Equal(Common.Enum.ProcessStatus.DecisionRequired, insertedVersion.ProcessStatus.Name);
+            Assert.Equal(Common.Enum.LifeCycleStage.Changed, insertedVersion.LifecycleStage.Name);
 
             // new qualification discussion
             var insertedDiscussion = await _dbContext.QualificationDiscussionHistory
@@ -552,7 +554,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .Where(w => w.QualificationId == insertedQualification.Id && w.Version == 1)
                                     .FirstAsync();
             Assert.Equal(insertedVersion.ProcessStatus.Name, oldVersion.ProcessStatus.Name);
-            Assert.Equal(Enum.LifeCycleStage.Changed, insertedVersion.LifecycleStage.Name);
+            Assert.Equal(Common.Enum.LifeCycleStage.Changed, insertedVersion.LifecycleStage.Name);
 
             // new qualification discussion
             var insertedDiscussion = await _dbContext.QualificationDiscussionHistory
@@ -928,16 +930,16 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             await _dbContext.AddRangeAsync(new List<ActionType>() { actionType1, actionType2, actionType3});
             await _dbContext.SaveChangesAsync();
 
-            var processStatus1 = new Data.Entities.ProcessStatus() { Name = Enum.ProcessStatus.DecisionRequired, Id = ProcessStageDecision };
-            var processStatus2 = new Data.Entities.ProcessStatus() { Name = Enum.ProcessStatus.NoActionRequired, Id = ProcessStageNoAction };
-            var processStatus3 = new Data.Entities.ProcessStatus() { Name = Enum.ProcessStatus.OnHold, Id = ProcessStageHold };
-            var processStatus4 = new Data.Entities.ProcessStatus() { Name = Enum.ProcessStatus.Rejected, Id = ProcessStageRejected };
-            var processStatus5 = new Data.Entities.ProcessStatus() { Name = Enum.ProcessStatus.Approved, Id = ProcessStageApproved };
+            var processStatus1 = new Data.Entities.ProcessStatus() { Name = Common.Enum.ProcessStatus.DecisionRequired, Id = ProcessStageDecision };
+            var processStatus2 = new Data.Entities.ProcessStatus() { Name = Common.Enum.ProcessStatus.NoActionRequired, Id = ProcessStageNoAction };
+            var processStatus3 = new Data.Entities.ProcessStatus() { Name = Common.Enum.ProcessStatus.OnHold, Id = ProcessStageHold };
+            var processStatus4 = new Data.Entities.ProcessStatus() { Name = Common.Enum.ProcessStatus.Rejected, Id = ProcessStageRejected };
+            var processStatus5 = new Data.Entities.ProcessStatus() { Name = Common.Enum.ProcessStatus.Approved, Id = ProcessStageApproved };
             await _dbContext.AddRangeAsync(new List<Data.Entities.ProcessStatus>() { processStatus1, processStatus2, processStatus3, processStatus4, processStatus5 });
             await _dbContext.SaveChangesAsync();
 
-            var lifecycle1 = new Data.Entities.LifecycleStage() { Name = Enum.LifeCycleStage.New, Id = LifeCycleStageNew };
-            var lifecycle2 = new Data.Entities.LifecycleStage() { Name = Enum.LifeCycleStage.Changed, Id = LifeCycleStageChanged };
+            var lifecycle1 = new Data.Entities.LifecycleStage() { Name = Common.Enum.LifeCycleStage.New, Id = LifeCycleStageNew };
+            var lifecycle2 = new Data.Entities.LifecycleStage() { Name = Common.Enum.LifeCycleStage.Changed, Id = LifeCycleStageChanged };
             await _dbContext.AddRangeAsync(new List<Data.Entities.LifecycleStage>() { lifecycle1, lifecycle2 });
             await _dbContext.SaveChangesAsync();            
         }
