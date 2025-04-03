@@ -173,6 +173,9 @@ namespace SFA.DAS.AODP.Jobs.Services
                     var newQualifications = new List<Qualification>();
                     var newQualificationVersions = new List<QualificationVersions>();
                     var newQualificationDiscussions = new List<QualificationDiscussionHistory>();
+                    var updatedQualifications = new List<Qualification>();
+                    var updatedQualificationFundings = new List<QualificationFunding>();
+                    var updatedQualificationFeedbacks = new List<QualificationFundingFeedback>();
 
                     var versionFieldChanges = new List<VersionFieldChanges>();
                     var processStatuses = new List<Data.Entities.ProcessStatus>();
@@ -299,7 +302,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                                                 .Include(i => i.Qualification)
                                                                 .Include(i => i.Organisation)
                                                                 .Include(i => i.ProcessStatus)
-                                                                .Include(i => i.LifecycleStage)
+                                                                .Include(i => i.LifecycleStage)                                                                
                                                                 .OrderByDescending(o => o.Version)
                                                                 .AsNoTracking()
                                                                 .Where(w => w.QualificationId == qualificationId)
@@ -420,10 +423,24 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 if (qualificationToUpdate != null)
                                 {
                                     qualificationToUpdate.QualificationName = importRecord.Title;
+                                    updatedQualifications.Add(qualificationToUpdate);
                                 }
 
                             }
 
+                            var currentProcessStatus = currentQualificationVersion.ProcessStatus.Name;
+                            if (currentProcessStatus != Common.Enum.ProcessStatus.Approved 
+                                && currentProcessStatus != Common.Enum.ProcessStatus.Rejected)                                
+                            {
+                                var fundingsPresent = await CheckForPreviousFundings(currentQualificationVersion.Id);
+                                if (fundingsPresent)
+                                {
+                                    var updatedFunding = await UpdateFundings(currentQualificationVersion.Id, newQualificationVersion.Id);
+                                    updatedQualificationFundings.AddRange(updatedFunding);
+                                    var updatedFundingFeedback = UpdateFundingFeedbacks(currentQualificationVersion.Id, newQualificationVersion.Id);
+                                    updatedQualificationFeedbacks.AddRange(updatedQualificationFeedbacks);
+                                }
+                            }
                             #endregion  
                         }
                     }
@@ -544,5 +561,35 @@ namespace SFA.DAS.AODP.Jobs.Services
             };
         }
 
+        private async Task<bool> CheckForPreviousFundings(Guid currentQualificationVersionId)
+        {
+            return await _applicationDbContext.QualificationFundings.Where(w => w.QualificationVersionId == currentQualificationVersionId).AnyAsync();
+        }
+
+        private async Task<List<QualificationFunding>> UpdateFundings(Guid currentQualificationVersionId, Guid newQualificationVersionId)
+        {
+            var fundings = await _applicationDbContext.QualificationFundings
+                            .Where(w => w.QualificationVersionId == currentQualificationVersionId)
+                            .ToListAsync();
+            foreach(var funding in fundings)
+            {
+                funding.QualificationVersionId = newQualificationVersionId;             
+            }
+
+            return fundings;
+        }
+
+        private async Task<List<QualificationFundingFeedback>> UpdateFundingFeedbacks(Guid currentQualificationVersionId, Guid newQualificationVersionId)
+        {
+            var fundingFeedbacks = await _applicationDbContext.QualificationFundingFeedbacks
+                            .Where(w => w.QualificationVersionId == currentQualificationVersionId)
+                            .ToListAsync();
+            foreach (var funding in fundingFeedbacks)
+            {
+                funding.QualificationVersionId = newQualificationVersionId;
+            }
+
+            return fundingFeedbacks;
+        }
     }
 }
