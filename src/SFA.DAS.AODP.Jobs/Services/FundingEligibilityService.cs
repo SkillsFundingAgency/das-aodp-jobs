@@ -18,7 +18,7 @@ namespace SFA.DAS.AODP.Jobs.Services
         public bool EligibleForFunding(QualificationDTO qualification)
         {            
             var eligibleForFunding = qualification.OfferedInEngland
-                                      //  && qualification.FundedInEngland
+                                      && (qualification.IntentionToSeekFundingInEngland ?? false)
                                       && qualification.Type != QualificationReference.EndPointAssessment                                     
                                       && !QualificationReference.IneligibleQualifications.Any(s => qualification.Title.Contains(s, StringComparison.OrdinalIgnoreCase))
                                       && !QualificationReference.IneligibleQualificationsShortForms.Any(s => qualification.Title.Contains(s, StringComparison.OrdinalIgnoreCase))

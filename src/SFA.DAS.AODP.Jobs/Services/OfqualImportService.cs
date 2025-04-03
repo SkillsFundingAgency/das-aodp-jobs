@@ -10,6 +10,7 @@ using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Infrastructure.Interfaces;
 using SFA.DAS.AODP.Jobs.Client;
 using SFA.DAS.AODP.Jobs.Interfaces;
+using SFA.DAS.AODP.Jobs.Models;
 using SFA.DAS.AODP.Models.Qualification;
 using System.Diagnostics;
 using System.Text.Json;
@@ -126,6 +127,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             try
             {
                 _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ProcessQualificationsDataAsync)}] -> Building existing qualification, organisation and qualifcation version caches...");
+                var fundingsToBeUpdated = new List<QualificationFundingTracker>();
 
                 var organisationCache = (await _applicationDbContext.AwardingOrganisation
                     .AsNoTracking()
@@ -435,10 +437,13 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 var fundingsPresent = await CheckForPreviousFundings(currentQualificationVersion.Id);
                                 if (fundingsPresent)
                                 {
-                                    var updatedFunding = await UpdateFundings(currentQualificationVersion.Id, newQualificationVersion.Id);
-                                    updatedQualificationFundings.AddRange(updatedFunding);
-                                    var updatedFundingFeedback = UpdateFundingFeedbacks(currentQualificationVersion.Id, newQualificationVersion.Id);
-                                    updatedQualificationFeedbacks.AddRange(updatedQualificationFeedbacks);
+                                    var tracker = new QualificationFundingTracker() 
+                                    { 
+                                        OldVersionId = currentQualificationVersion.Id,
+                                        NewVersionId = newQualificationVersion.Id
+                                    };
+
+                                    fundingsToBeUpdated.Add(tracker);
                                 }
                             }
                             #endregion  
@@ -455,6 +460,18 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                     processedCount += importRecords.Count;
                     Thread.Sleep(200);
+                }
+
+                if (fundingsToBeUpdated.Any())
+                {
+                    _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ImportApiData)}] -> Moving {fundingsToBeUpdated.Count} Qual Funding records from old versions to new");
+                    // Update any qualifications that need funding records moved from old version to new
+                    foreach (var tracker in fundingsToBeUpdated)
+                    {
+                        var updatedFunding = await UpdateFundings(tracker.OldVersionId, tracker.NewVersionId);
+                        var updatedFundingFeedback = await UpdateFundingFeedbacks(tracker.OldVersionId, tracker.NewVersionId);
+                    }
+                    await _applicationDbContext.SaveChangesAsync();
                 }
 
                 _processStopWatch.Stop();
@@ -557,7 +574,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                 VersionFieldChanges = versionFieldChange,
                 InsertedTimestamp = DateTime.Now,
                 EligibleForFunding = eligibleForFunding,
-                Name = qualificationData.Title
+                Name = qualificationData.Title,
+                FundedInEngland = qualificationData.IntentionToSeekFundingInEngland
             };
         }
 
@@ -573,7 +591,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                             .ToListAsync();
             foreach(var funding in fundings)
             {
-                funding.QualificationVersionId = newQualificationVersionId;             
+                funding.QualificationVersionId = newQualificationVersionId;               
             }
 
             return fundings;
