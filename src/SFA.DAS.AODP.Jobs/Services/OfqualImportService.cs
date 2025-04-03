@@ -4,10 +4,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RestEase;
+using SFA.DAS.AODP.Common.Enum;
 using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Infrastructure.Context;
+using SFA.DAS.AODP.Infrastructure.Interfaces;
 using SFA.DAS.AODP.Jobs.Client;
-using SFA.DAS.AODP.Jobs.Enum;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Models.Qualification;
 using System.Diagnostics;
@@ -238,7 +239,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                             {
                                 // Eligible for funding - needs decision
 
-                                processStatusName = Enum.ProcessStatus.DecisionRequired;
+                                processStatusName = Common.Enum.ProcessStatus.DecisionRequired;
                                 actionTypeId = _actionTypeService.GetActionTypeId(ActionTypeEnum.ActionRequired);
                                 notes = ImportReason.DecisionRequired;                                
                             }
@@ -246,7 +247,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                             {
                                 // Ineligible for funding - No Action Required                                
 
-                                processStatusName = Enum.ProcessStatus.NoActionRequired;
+                                processStatusName = Common.Enum.ProcessStatus.NoActionRequired;
                                 actionTypeId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired);
                                 notes = _fundingEligibilityService.DetermineFailureReason(importRecord);                                
                             }
@@ -311,7 +312,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 if (!detectionResults.ChangesPresent) continue;
                             }
 
-                            var processStatusName = Enum.ProcessStatus.NoActionRequired;
+                            var processStatusName = Common.Enum.ProcessStatus.NoActionRequired;
                             var lifecycleStageName = LifeCycleStage.Changed;
                             var actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired);
                             var notes = "";
@@ -322,7 +323,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                             {
                                 // Not eligible for funding 
 
-                                processStatusName = Enum.ProcessStatus.NoActionRequired;
+                                processStatusName = Common.Enum.ProcessStatus.NoActionRequired;
                                 lifecycleStageName = LifeCycleStage.Changed;
                                 actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired);
                                 notes = "No Action required - Changed Qualification (Funding Criteria)";
@@ -330,14 +331,14 @@ namespace SFA.DAS.AODP.Jobs.Services
                             else
                             {
                                 notes = "Decision Required - Changed Qualification";
-                                if ((currentQualificationVersion.ProcessStatus.Name == Enum.ProcessStatus.Approved) ||
-                                        (currentQualificationVersion.ProcessStatus.Name == Enum.ProcessStatus.Rejected))
+                                if ((currentQualificationVersion.ProcessStatus.Name == Common.Enum.ProcessStatus.Approved) ||
+                                        (currentQualificationVersion.ProcessStatus.Name == Common.Enum.ProcessStatus.Rejected))
                                 {
 
                                     if (detectionResults.KeyFieldsChanged)
                                     {
                                         // Decision required as major changes
-                                        processStatusName = Enum.ProcessStatus.DecisionRequired;
+                                        processStatusName = Common.Enum.ProcessStatus.DecisionRequired;
                                         notes = "Decision Required - Changed Qualification (Key Fields)";
                                     }
                                     else
@@ -350,8 +351,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                                     lifecycleStageName = LifeCycleStage.Changed;
                                     actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.ActionRequired);                                    
                                 }
-                                else if ((currentQualificationVersion.ProcessStatus.Name == Enum.ProcessStatus.OnHold) ||
-                                        (currentQualificationVersion.ProcessStatus.Name == Enum.ProcessStatus.DecisionRequired))
+                                else if ((currentQualificationVersion.ProcessStatus.Name == Common.Enum.ProcessStatus.OnHold) ||
+                                        (currentQualificationVersion.ProcessStatus.Name == Common.Enum.ProcessStatus.DecisionRequired))
                                 {
                                     // Keep the current status as only changed dont matter when on hold/decision required
                                     processStatusName = currentQualificationVersion.ProcessStatus.Name;
@@ -359,7 +360,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                     if (detectionResults.KeyFieldsChanged)
                                     {                                        
                                         
-                                        notes = currentQualificationVersion.ProcessStatus.Name == Enum.ProcessStatus.OnHold ?
+                                        notes = currentQualificationVersion.ProcessStatus.Name == Common.Enum.ProcessStatus.OnHold ?
                                             "On Hold - Changed Qualification (Key Fields)" :
                                             "Decision Required - Changed Qualification (Key Fields)";                                        
                                     }
@@ -372,7 +373,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 }
                                 else
                                 {
-                                    processStatusName = Enum.ProcessStatus.DecisionRequired;
+                                    processStatusName = Common.Enum.ProcessStatus.DecisionRequired;
                                     lifecycleStageName = LifeCycleStage.Changed;
                                     actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.ActionRequired);                                   
                                 }

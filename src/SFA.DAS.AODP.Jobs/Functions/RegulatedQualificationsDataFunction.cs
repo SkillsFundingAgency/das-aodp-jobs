@@ -3,8 +3,8 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using RestEase;
+using SFA.DAS.AODP.Common.Enum;
 using SFA.DAS.AODP.Infrastructure.Context;
-using SFA.DAS.AODP.Jobs.Enum;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using System.Diagnostics;
 
@@ -62,7 +62,7 @@ namespace SFA.DAS.AODP.Functions.Functions
                 stopWatch.Start();
                 
                 var lastJobRun = await _jobConfigurationService.GetLastJobRunAsync(JobNames.RegulatedQualifications.ToString());
-                if (lastJobRun.Id != Guid.Empty && lastJobRun.Status == JobStatus.RequestSent.ToString())
+                if (lastJobRun != null && lastJobRun.Id != Guid.Empty && lastJobRun.Status == JobStatus.RequestSent.ToString())
                 {
                     jobControl.JobRunId = lastJobRun.Id;
                     await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, 0, JobStatus.Running);

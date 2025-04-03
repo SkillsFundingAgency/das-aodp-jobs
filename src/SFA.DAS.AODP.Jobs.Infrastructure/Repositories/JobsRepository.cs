@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using SFA.DAS.AODP.Common.Exceptions;
 using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Infrastructure.Context;
+using SFA.DAS.AODP.Infrastructure.Interfaces;
 
 namespace SFA.DAS.AODP.Data.Repositories.Jobs
 {

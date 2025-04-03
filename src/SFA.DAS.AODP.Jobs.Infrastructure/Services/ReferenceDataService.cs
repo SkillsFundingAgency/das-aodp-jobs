@@ -1,8 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
 using SFA.DAS.AODP.Infrastructure.Context;
-using SFA.DAS.AODP.Jobs.Interfaces;
+using SFA.DAS.AODP.Infrastructure.Interfaces;
 
-namespace SFA.DAS.AODP.Jobs.Services
+namespace SFA.DAS.AODP.Infrastructure.Services
 {
     public class ReferenceDataService : IReferenceDataService
     {

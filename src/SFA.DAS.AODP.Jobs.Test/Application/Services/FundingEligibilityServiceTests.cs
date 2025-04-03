@@ -2,9 +2,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
+using SFA.DAS.AODP.Common.Enum;
 using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Infrastructure.Context;
-using SFA.DAS.AODP.Jobs.Enum;
 using SFA.DAS.AODP.Jobs.Services;
 using SFA.DAS.AODP.Models.Qualification;
 

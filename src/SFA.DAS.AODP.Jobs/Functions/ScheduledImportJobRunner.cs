@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using RestEase;
-using SFA.DAS.AODP.Jobs.Enum;
+using SFA.DAS.AODP.Common.Enum;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Models.Config;
 

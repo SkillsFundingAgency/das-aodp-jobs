@@ -1,6 +1,4 @@
-﻿using SFA.DAS.AODP.Jobs.Enum;
-
-namespace SFA.DAS.AODP.Jobs.Interfaces
+﻿namespace SFA.DAS.AODP.Infrastructure.Interfaces
 {
     public interface IReferenceDataService
     {
