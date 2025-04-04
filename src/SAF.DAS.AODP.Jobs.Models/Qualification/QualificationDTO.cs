@@ -115,4 +115,6 @@ public class QualificationDTO
     public string? ImportStatus { get; set; }
 
     public string? ChangedFields { get; set; }
+
+    public bool? IntentionToSeekFundingInEngland { get; set; }
 }
