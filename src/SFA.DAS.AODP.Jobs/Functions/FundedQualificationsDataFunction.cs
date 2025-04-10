@@ -119,6 +119,7 @@ namespace SFA.DAS.AODP.Functions
                         return new NotFoundObjectResult($"[{nameof(FundedQualificationsDataFunction)}] -> {warningMsg}");
                     }
                     totalRecords = approvedQualifications.Count();
+                    _logger.LogInformation($"{totalRecords} approved records imported");
                 }
 
                 if (jobControl.ImportArchivedCsv)
@@ -142,16 +143,17 @@ namespace SFA.DAS.AODP.Functions
                     }
 
                     totalArchivedRecords = archivedQualifications.Count();
-                    _logger.LogInformation($"{totalArchivedRecords} records imported");
+                    _logger.LogInformation($"{totalArchivedRecords} archived records imported");
                 }
-                
-                if ((totalRecords + totalArchivedRecords) > 0)
+
+                var totalProcessedRecords = totalRecords + totalArchivedRecords;
+                if ((totalProcessedRecords) > 0)
                 {
                     _logger.LogInformation($"Seeding funded data into funding offers");
                     await _fundedQualificationWriter.SeedFundingData();
                 }
 
-                await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, totalRecords, JobStatus.Completed);
+                await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, totalProcessedRecords, JobStatus.Completed);
 
                 var msg = $"[{nameof(FundedQualificationsDataFunction)}] -> {totalRecords} approved qualifications imported, {totalArchivedRecords} archived qualifications imported";
                 _logger.LogInformation(msg);
