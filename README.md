@@ -21,13 +21,14 @@ In order to run this service locally you will need:
 * **local.settings.json** - Create a `local.settings.json` file (Copy to Output Directory = Copy always) with the following data:
 ```json
 {
+  "IsEncrypted": false,
   "Values": {
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
-    "ConfigurationStorageConnectionString": "UseDevelopmentStorage=true",
-    "Environment": "LOCAL",
+    "ConfigurationStorageConnectionString": "UseDevelopmentStorage=true;",
     "ConfigNames": "SFA.DAS.AODP.Jobs",
-    "Version": "1.0"
+    "EnvironmentName": "LOCAL",
+    "AzureFunctionsJobHost:Logging:LogLevel:Host": "Information"
   }
 }
 ```
