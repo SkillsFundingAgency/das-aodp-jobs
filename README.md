@@ -23,7 +23,7 @@ In order to run this service locally you will need:
 {
   "AodpJobsConfiguration": {
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
-    "OcpApimSubscriptionKey": "19930293b2d94c33b47f5ca5f8f35bd4",
+    "OcpApimSubscriptionKey": "??",
     "DefaultImportPage": "1",
     "DefaultImportLimit": "500",
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
@@ -51,26 +51,6 @@ Row Key: SFA.SFA.DAS.AODP.Jobs_1.0
     Partition Key: LOCAL
 
     Data: [data](https://github.com/SkillsFundingAgency/das-employer-config/blob/master/das-aodp-jobs/SFA.DAS.AODP.Jobs.json)
-
-    # Sample json
-  ```json
-  { 
-    "AodpJobsConfiguration": { 
-        "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated", 
-        "DbConnectionString": "Data Source=DBInstnace;Initial Catalog=SFA.DAS.AODP;Integrated Security=True;Connect Timeout=30;Encrypt=True;Trust Server Certificate=True;Application Intent=ReadWrite;Multi Subnet Failover=False", 
-        "OcpApimSubscriptionKey": "19930293b2d94c33b47f5ca5f8f35bd4", 
-        "DefaultImportPage": "1", 
-        "DefaultImportLimit": "500", 
-        "FundedQualificationsImportUrl": "https://dastestaodpstr2.blob.core.windows.net/funded-qualifications-import/approved.csv?sp=r&st=2025-04-08T11:33:08Z&se=2026-04-08T19:33:08Z&spr=https&sv=2024-11-04&sr=b&sig=J6hXobtYVBVMbhhpx%2BXFSUnVxj9Xz3FdnYBK9zExYFE%3D",
-        "ArchivedFundedQualificationsImportUrl":"https://dastestaodpstr2.blob.core.windows.net/funded-qualifications-import/archived.csv?sp=r&st=2025-04-08T11:35:24Z&se=2026-04-08T19:35:24Z&spr=https&sv=2024-11-04&sr=b&sig=%2F7l074oPQ7lo8mMkFNibIqaUOJY%2Bbnui78tL4%2Bh8m6Y%3D",
-        "ConfigurationStorageConnectionString": "UseDevelopmentStorage=true;", 
-        "ConfigNames": "SFA.DAS.AODP.Jobs", 
-        "Environment": "LOCAL",
-        "FunctionAppBaseUrl": "http://localhost:7000" 
-    } 
-  }
-  ```
-
 
 ### Running
 
