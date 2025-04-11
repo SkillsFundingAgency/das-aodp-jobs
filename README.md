@@ -28,7 +28,7 @@ In order to run this service locally you will need:
     "ConfigurationStorageConnectionString": "UseDevelopmentStorage=true;",
     "ConfigNames": "SFA.DAS.AODP.Jobs",
     "Version": "1.0",
-    "EnvironmentName": "LOCAL",
+    "EnvironmentName": "LOCAL"
   }
 }
 ```
