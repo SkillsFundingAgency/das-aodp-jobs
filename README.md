@@ -27,6 +27,7 @@ In order to run this service locally you will need:
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
     "ConfigurationStorageConnectionString": "UseDevelopmentStorage=true;",
     "ConfigNames": "SFA.DAS.AODP.Jobs",
+    "Version": "1.0",
     "EnvironmentName": "LOCAL",
   }
 }
