@@ -21,18 +21,6 @@ In order to run this service locally you will need:
 * **local.settings.json** - Create a `local.settings.json` file (Copy to Output Directory = Copy always) with the following data:
 ```json
 {
-  "AodpJobsConfiguration": {
-    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
-    "OcpApimSubscriptionKey": "??",
-    "DefaultImportPage": "1",
-    "DefaultImportLimit": "500",
-    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-    "EnvironmentName": "LOCAL",
-    "ConfigNames": "SFA.DAS.AODP.Jobs",
-    "FunctionAppBaseUrl": "http://localhost:7000",
-    "FunctionHostKey": ""
-  },
-  "IsEncrypted": false,
   "Values": {
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
