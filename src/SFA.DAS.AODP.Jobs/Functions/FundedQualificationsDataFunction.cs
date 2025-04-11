@@ -145,13 +145,14 @@ namespace SFA.DAS.AODP.Functions
                     _logger.LogInformation($"{totalArchivedRecords} records imported");
                 }
                 
-                if ((totalRecords + totalArchivedRecords) > 0)
+                var totalProcessedRecords = totalRecords + totalArchivedRecords;
+                if ((totalProcessedRecords) > 0)
                 {
                     _logger.LogInformation($"Seeding funded data into funding offers");
                     await _fundedQualificationWriter.SeedFundingData();
                 }
 
-                await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, totalRecords, JobStatus.Completed);
+                await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, totalProcessedRecords, JobStatus.Completed);
 
                 var msg = $"[{nameof(FundedQualificationsDataFunction)}] -> {totalRecords} approved qualifications imported, {totalArchivedRecords} archived qualifications imported";
                 _logger.LogInformation(msg);
