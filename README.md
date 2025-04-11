@@ -28,7 +28,6 @@ In order to run this service locally you will need:
     "ConfigurationStorageConnectionString": "UseDevelopmentStorage=true;",
     "ConfigNames": "SFA.DAS.AODP.Jobs",
     "EnvironmentName": "LOCAL",
-    "AzureFunctionsJobHost:Logging:LogLevel:Host": "Information"
   }
 }
 ```
