@@ -56,7 +56,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                 else
                 {                    
                     _logger.LogError($"[{nameof(ScheduledImportJobRunner)}] -> Error calling {functionName}: {response.StatusCode}. {responseBody}");
-                    success |= false;
+                    success = false;
                 }
             }
 
