@@ -20,8 +20,10 @@ namespace SFA.DAS.AODP.Jobs.Services
             _httpClientFactory = httpClientFactory;
         }
 
-        public async Task ExecuteFunction(JobRunControl requestedJobRun, string functionName, string functionUrlPartial)
+        public async Task<bool> ExecuteFunction(JobRunControl requestedJobRun, string functionName, string functionUrlPartial)
         {
+            var success = false;
+
             using (HttpClient client = _httpClientFactory.CreateClient(functionName))
             {
                 string functionBaseUrl = _aodpJobsConfiguration.FunctionAppBaseUrl ?? "http://localhost:7000";
@@ -40,17 +42,25 @@ namespace SFA.DAS.AODP.Jobs.Services
                 }
 
                 HttpResponseMessage response = await client.GetAsync(functionUrl);
+                string responseBody = "";
+                if (response.Content != null)
+                {
+                    responseBody = await response.Content.ReadAsStringAsync();
+                }
 
                 if (response.IsSuccessStatusCode)
-                {
-                    string responseBody = await response.Content.ReadAsStringAsync();
+                {                    
                     _logger.LogInformation($"[{nameof(ScheduledImportJobRunner)}] -> {functionName} called successfully: {responseBody}");
+                    success = true;
                 }
                 else
-                {
-                    _logger.LogError($"[{nameof(ScheduledImportJobRunner)}] -> Error calling {functionName}: {response.StatusCode}");
+                {                    
+                    _logger.LogError($"[{nameof(ScheduledImportJobRunner)}] -> Error calling {functionName}: {response.StatusCode}. {responseBody}");
+                    success |= false;
                 }
             }
+
+            return success;
         }
     }
 }

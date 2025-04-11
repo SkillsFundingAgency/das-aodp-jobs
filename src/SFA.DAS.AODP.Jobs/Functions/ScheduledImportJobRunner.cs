@@ -5,6 +5,7 @@ using RestEase;
 using SFA.DAS.AODP.Common.Enum;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Models.Config;
+using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
 
 namespace SFA.DAS.AODP.Jobs.Functions
 {
@@ -14,16 +15,19 @@ namespace SFA.DAS.AODP.Jobs.Functions
         private readonly IJobConfigurationService _jobConfigurationService;
         private readonly AodpJobsConfiguration _aodpJobsConfiguration;
         private readonly ISchedulerClientService _schedulerClientService;
+        private readonly ISystemClockService _systemClockService;
 
         public ScheduledImportJobRunner(ILogger<ScheduledImportJobRunner> logger, 
             IJobConfigurationService jobConfigurationService, 
             AodpJobsConfiguration aodpJobsConfiguration,
-            ISchedulerClientService schedulerClientService)
+            ISchedulerClientService schedulerClientService,
+            ISystemClockService systemClockService)
         {
             _logger = logger;
             _jobConfigurationService = jobConfigurationService;
             _aodpJobsConfiguration = aodpJobsConfiguration;
             _schedulerClientService = schedulerClientService;
+            _systemClockService = systemClockService;
         }
 
         [Function("ScheduledImportJobRunner")]
@@ -76,11 +80,26 @@ namespace SFA.DAS.AODP.Jobs.Functions
 
                         await _jobConfigurationService.UpdateJobRun(requestedJobRun.User, requestedJobRun.JobId, requestedJobRun.Id, requestedJobRun.RecordsProcessed ?? 0, JobStatus.RequestSent);
 
-                        await _schedulerClientService.ExecuteFunction(requestedJobRun, "regulatedQualificationsImport", "gov/regulatedQualificationsImport");                                      
+                        var success = await _schedulerClientService.ExecuteFunction(requestedJobRun, "regulatedQualificationsImport", "gov/regulatedQualificationsImport");
+                        if (!success)
+                        {
+                            _logger.LogError($"[{nameof(ScheduledImportJobRunner)}] -> Call to regulatedQualificationsImport failed");
+                            await _jobConfigurationService.UpdateJobRun(requestedJobRun.User, requestedJobRun.JobId, requestedJobRun.Id, requestedJobRun.RecordsProcessed ?? 0, JobStatus.Error);
+                            return new BadRequestObjectResult("Call to regulatedQualificationsImport failed");
+                        }
                     }
                     else
                     {
                         _logger.LogInformation($"[{nameof(ScheduledImportJobRunner)}] -> No requested Ofqual import job runs found.");
+                    }
+
+                    // Cleanup operation
+                    if (requestedJobRun.Id != Guid.Empty && requestedJobRun.Status == JobStatus.RequestSent.ToString())
+                    {
+                        if (requestedJobRun.StartTime < _systemClockService.UtcNow.AddHours(-4))
+                        {
+                            await _jobConfigurationService.UpdateJobRun(requestedJobRun.User, requestedJobRun.JobId, requestedJobRun.Id, requestedJobRun.RecordsProcessed ?? 0, JobStatus.Error);
+                        }
                     }
                 }
                 
@@ -94,11 +113,26 @@ namespace SFA.DAS.AODP.Jobs.Functions
 
                         await _jobConfigurationService.UpdateJobRun(requestedJobRun.User, requestedJobRun.JobId, requestedJobRun.Id, requestedJobRun.RecordsProcessed ?? 0, JobStatus.RequestSent);
 
-                        await _schedulerClientService.ExecuteFunction(requestedJobRun, "approvedQualificationsImport", "api/approvedQualificationsImport");
+                        var success = await _schedulerClientService.ExecuteFunction(requestedJobRun, "approvedQualificationsImport", "api/approvedQualificationsImport");
+                        if (!success)
+                        {
+                            _logger.LogError($"[{nameof(ScheduledImportJobRunner)}] -> Call to approvedQualificationsImport failed");
+                            await _jobConfigurationService.UpdateJobRun(requestedJobRun.User, requestedJobRun.JobId, requestedJobRun.Id, requestedJobRun.RecordsProcessed ?? 0, JobStatus.Error);
+                            return new BadRequestObjectResult("Call to approvedQualificationsImport failed");
+                        }
                     }
                     else
                     {
                         _logger.LogInformation($"[{nameof(ScheduledImportJobRunner)}] -> No requested Funded CSV import job runs found.");
+                    }
+
+                    // Cleanup operation
+                    if (requestedJobRun.Id != Guid.Empty && requestedJobRun.Status == JobStatus.RequestSent.ToString())
+                    {
+                        if (requestedJobRun.StartTime < _systemClockService.UtcNow.AddHours(-4))
+                        {
+                            await _jobConfigurationService.UpdateJobRun(requestedJobRun.User, requestedJobRun.JobId, requestedJobRun.Id, requestedJobRun.RecordsProcessed ?? 0, JobStatus.Error);
+                        }
                     }
                 }
             }

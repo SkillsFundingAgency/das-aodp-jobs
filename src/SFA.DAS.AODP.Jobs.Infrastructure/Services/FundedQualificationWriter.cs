@@ -99,15 +99,23 @@ namespace SFA.DAS.AODP.Infrastructure.Services
                 if (qualsMissingFunding.Any())
                 {
                     _logger.LogInformation($"SeedFundingData -> Adding missing offers to funded.QualificationFundings");
+
+                    var missingQualLookup = await _applicationDbContext.QualificationVersions                                                    
+                                                    .Where(w => qualsMissingFunding.Contains(w.QualificationId))                                                    
+                                                    .ToListAsync();
+
+                    var batchSize = 1000;
+                    var batchCounter = 0;
+                    var newRecords = new List<QualificationFunding>();
+                    var newDiscussions = new List<QualificationDiscussionHistory>();
+
                     foreach (var id in qualsMissingFunding)
                     {
                         // Exists in FundedQualifications, Create new QualificationFunding record
-                        var latestVersion = await _applicationDbContext.QualificationVersions
-                                                    .Include(i => i.Qualification)
-                                                    .ThenInclude(t => t.QualificationDiscussionHistories)
-                                                    .Where(w => w.QualificationId == id)
-                                                    .OrderByDescending(o => o.Version)
-                                                    .FirstOrDefaultAsync();
+                        var latestVersion = missingQualLookup
+                                                .Where(w => w.QualificationId == id)
+                                                .OrderByDescending(o => o.Version)
+                                                .FirstOrDefault();
 
                         if (latestVersion == null)
                         {
@@ -122,7 +130,7 @@ namespace SFA.DAS.AODP.Infrastructure.Services
                         if (fundedQualToBeAdded != null)
                         {
                             var offers = fundedQualToBeAdded.QualificationOffers.Where(w => w.FundingAvailable ?? false).ToList();
-                            var newRecords = new List<QualificationFunding>();
+                            
                             int added = 0;
                             foreach (var offer in offers)
                             {
@@ -153,40 +161,71 @@ namespace SFA.DAS.AODP.Infrastructure.Services
                                     added++;
                                 }
                             }
-                            _logger.LogInformation($"Found {added} missing offers for {latestVersion.Name}");
-                            var previousActionTypeId = latestVersion.Qualification.QualificationDiscussionHistories
-                                                        .OrderByDescending(o => o.Timestamp)
-                                                        .FirstOrDefault()?.ActionTypeId ?? noActionNeededId;
 
-                            await _applicationDbContext.QualificationDiscussionHistory.AddAsync(new QualificationDiscussionHistory()
+                            if (added > 0)
                             {
-                                Id = Guid.NewGuid(),
-                                QualificationId = id,
-                                Timestamp = importRun,
-                                UserDisplayName = "FundedImport",
-                                Notes = $"Funded Import inserted {added} new offers",
-                                ActionTypeId = previousActionTypeId
-                            });
-                            await _applicationDbContext.QualificationFundings.AddRangeAsync(newRecords);
-                            await _applicationDbContext.SaveChangesAsync();
+                                _logger.LogInformation($"Found {added} missing offers for {latestVersion.Name}");                               
+
+                                newDiscussions.Add(new QualificationDiscussionHistory()
+                                {
+                                    Id = Guid.NewGuid(),
+                                    QualificationId = id,
+                                    Timestamp = importRun,
+                                    UserDisplayName = "FundedImport",
+                                    Notes = $"Funded Import inserted {added} new offers",
+                                    ActionTypeId = noActionNeededId
+                                });                                
+                            }
                         }
                         else
                         {
                             _logger.LogInformation($"SeedFundingData -> Qual Id {id} has no offers with funding available");
                         }
+
+                        batchCounter++;
+                        if (batchCounter > batchSize)
+                        {
+                            _logger.LogInformation($"SeedFundingData -> Saving a batch of {batchCounter} records");
+                            await _applicationDbContext.QualificationFundings.AddRangeAsync(newRecords);
+                            await _applicationDbContext.QualificationDiscussionHistory.AddRangeAsync(newDiscussions);
+                            await _applicationDbContext.SaveChangesAsync();
+                            newRecords.Clear();
+                            newDiscussions.Clear();
+                            batchCounter = 0;
+                        }
+                    }
+
+                    if (batchCounter > 0)
+                    {
+                        _logger.LogInformation($"SeedFundingData -> Saving final batch of {batchCounter} records");
+                        await _applicationDbContext.QualificationFundings.AddRangeAsync(newRecords);
+                        await _applicationDbContext.QualificationDiscussionHistory.AddRangeAsync(newDiscussions);
+                        await _applicationDbContext.SaveChangesAsync();
+                        newRecords.Clear();
+                        newDiscussions.Clear();
+                        batchCounter = 0;
                     }
                 }
 
                 if (qualsNeedUpdating.Any())
                 {
+                    var batchSize = 1000;
+                    var batchCounter = 0;
+                    var newOffers = new List<QualificationFunding>();
+                    var updatedOffers = new List<QualificationFunding>();
+                    var newDiscussions = new List<QualificationDiscussionHistory>();
+
+                    var updatingQualLookup = await _applicationDbContext.QualificationVersions                                                    
+                                                    .Where(w => qualsNeedUpdating.Contains(w.QualificationId))
+                                                    .ToListAsync();
+
                     foreach (var id in qualsNeedUpdating)
                     {
                         
-                        var latestVersion = await _applicationDbContext.QualificationVersions
-                                                    .Include(i => i.Qualification)
+                        var latestVersion = updatingQualLookup
                                                     .Where(w => w.QualificationId == id)
                                                     .OrderByDescending(o => o.Version)
-                                                    .FirstAsync();
+                                                    .FirstOrDefault();
                         if (latestVersion == null)
                         {
                             _logger.LogError($"SeedFundingData -> Unable to process Qual Id {id} as it has no qualification versions");
@@ -198,7 +237,7 @@ namespace SFA.DAS.AODP.Infrastructure.Services
                                                     .FirstOrDefault();
                         if (importedOfferToBeUpdated != null)
                         {
-                            var newRecords = new List<QualificationFunding>();
+                            
                             var existingUserOffers = userCreatedOffers.Where(w => w.QualificationVersion.QualificationId == id).ToList();
                             var offers = importedOfferToBeUpdated.QualificationOffers.Where(w => w.FundingAvailable ?? false).ToList();
                             int added = 0;
@@ -229,6 +268,7 @@ namespace SFA.DAS.AODP.Infrastructure.Services
                                             matchingUserOffer.StartDate = startDate;
                                             matchingUserOffer.EndDate = endDate;
                                             matchingUserOffer.Comments = $"{matchingUserOffer.Comments}, updated by import on {importRun.ToShortDateString()}";
+                                            updatedOffers.Add(matchingUserOffer);
                                             updated++;
                                         }
                                     }
@@ -244,33 +284,56 @@ namespace SFA.DAS.AODP.Infrastructure.Services
                                             EndDate = endDate,
                                             Comments = $"Imported from Funded CSV on {importRun.ToShortDateString()}"
                                         };
-                                        newRecords.Add(newRecord);
+                                        newOffers.Add(newRecord);
                                         added++;
                                     }
                                 }
                             }
-                            _logger.LogInformation($"Added {added} and updated {updated} offers for {latestVersion.Name}");
-                            var previousActionTypeId = latestVersion.Qualification.QualificationDiscussionHistories
-                                                        .OrderByDescending(o => o.Timestamp)
-                                                        .FirstOrDefault()?.ActionTypeId ?? noActionNeededId;
-
-                            await _applicationDbContext.QualificationDiscussionHistory.AddAsync(new QualificationDiscussionHistory()
+                            if ((added + updated) > 0)
                             {
-                                Id = Guid.NewGuid(),
-                                QualificationId = id,
-                                Timestamp = importRun,
-                                UserDisplayName = "FundedImport",
-                                Notes = $"Funded Import added {added} and updated {updated} offers",
-                                ActionTypeId = previousActionTypeId
-                            });
-                            await _applicationDbContext.QualificationFundings.AddRangeAsync(newRecords);
-                            await _applicationDbContext.SaveChangesAsync();
+                                _logger.LogInformation($"Added {added} and updated {updated} offers for {latestVersion.Name}");                             
+
+                                newDiscussions.Add(new QualificationDiscussionHistory()
+                                {
+                                    Id = Guid.NewGuid(),
+                                    QualificationId = id,
+                                    Timestamp = importRun,
+                                    UserDisplayName = "FundedImport",
+                                    Notes = $"Funded Import added {added} and updated {updated} offers",
+                                    ActionTypeId = noActionNeededId
+                                });                                
+                            }
                         }
                         else
                         {
                             _logger.LogInformation($"SeedFundingData -> Qual Id {id} has no offers with funding available");
                         }
-                    }                    
+
+                        batchCounter++;
+                        if (batchCounter > batchSize)
+                        {
+                            _logger.LogInformation($"SeedFundingData -> Saving a batch of {batchCounter} updates");
+                            await _applicationDbContext.QualificationFundings.AddRangeAsync(newOffers);
+                            await _applicationDbContext.QualificationDiscussionHistory.AddRangeAsync(newDiscussions);
+                            await _applicationDbContext.SaveChangesAsync();
+                            newOffers.Clear();
+                            newDiscussions.Clear();
+                            updatedOffers.Clear();
+                            batchCounter = 0;
+                        }
+                    }
+
+                    if (batchCounter > 0)
+                    {
+                        _logger.LogInformation($"SeedFundingData -> Saving final batch of {batchCounter} updates");
+                        await _applicationDbContext.QualificationFundings.AddRangeAsync(newOffers);
+                        await _applicationDbContext.QualificationDiscussionHistory.AddRangeAsync(newDiscussions);
+                        await _applicationDbContext.SaveChangesAsync();
+                        newOffers.Clear();
+                        newDiscussions.Clear();
+                        updatedOffers.Clear();
+                        batchCounter = 0;
+                    }
                 }
             }
             catch (Exception ex)
