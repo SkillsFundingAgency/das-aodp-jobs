@@ -44,7 +44,8 @@ public class ScheduledImportJobRunnerTests
             _loggerMock.Object,           
             _jobConfigurationService.Object,
             _configuration,
-            _schedulerClientService.Object
+            _schedulerClientService.Object,
+            _systemClockService.Object
         );
     }
 
@@ -85,7 +86,7 @@ public class ScheduledImportJobRunnerTests
         _jobConfigurationService.Setup(s => s.GetLastJobRunAsync(JobNames.RegulatedQualifications.ToString())).ReturnsAsync(lastRegulatedJobRun).Verifiable();
         _jobConfigurationService.Setup(s => s.GetLastJobRunAsync(JobNames.FundedQualifications.ToString())).ReturnsAsync(lastFundedJobRun).Verifiable();        
         _jobConfigurationService.Setup(s => s.UpdateJobRun(userName, regulatedJobControl.JobId, lastRegulatedJobRun.Id, 0, Common.Enum.JobStatus.RequestSent)).Verifiable();
-        _schedulerClientService.Setup(s => s.ExecuteFunction(It.Is<JobRunControl>(j => j.Id == lastRegulatedJobRun.Id), regulatedJobName, regulatedJobUrl)).Verifiable();
+        _schedulerClientService.Setup(s => s.ExecuteFunction(It.Is<JobRunControl>(j => j.Id == lastRegulatedJobRun.Id), regulatedJobName, regulatedJobUrl)).ReturnsAsync(true).Verifiable();
 
         // Act
         var result = await _function.Run(new TimerInfo());
@@ -111,13 +112,39 @@ public class ScheduledImportJobRunnerTests
         _jobConfigurationService.Setup(s => s.GetLastJobRunAsync(JobNames.RegulatedQualifications.ToString())).ReturnsAsync(lastRegulatedJobRun).Verifiable();
         _jobConfigurationService.Setup(s => s.GetLastJobRunAsync(JobNames.FundedQualifications.ToString())).ReturnsAsync(lastFundedJobRun).Verifiable();
         _jobConfigurationService.Setup(s => s.UpdateJobRun(userName, fundedJobControl.JobId, lastFundedJobRun.Id, 0, Common.Enum.JobStatus.RequestSent)).Verifiable();
-        _schedulerClientService.Setup(s => s.ExecuteFunction(It.Is<JobRunControl>(j => j.Id == lastFundedJobRun.Id), fundedJobName, fundedJobUrl)).Verifiable();
+        _schedulerClientService.Setup(s => s.ExecuteFunction(It.Is<JobRunControl>(j => j.Id == lastFundedJobRun.Id), fundedJobName, fundedJobUrl)).ReturnsAsync(true).Verifiable();
 
         // Act
         var result = await _function.Run(new TimerInfo());
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
+        _jobConfigurationService.VerifyAll();
+        _schedulerClientService.VerifyAll();
+    }
+
+    [Fact]
+    public async Task Run_Should_Return_BadRequest_When_Function_Call_Fails()
+    {
+        // Arrange
+        var userName = "TestUser";
+        var regulatedJobControl = new RegulatedJobControl() { JobId = Guid.NewGuid(), JobRunId = Guid.NewGuid(), JobEnabled = true, ProcessStagingData = true, RunApiImport = true };
+        var fundedJobControl = new FundedJobControl() { JobId = Guid.NewGuid(), JobRunId = Guid.NewGuid(), JobEnabled = true, ImportFundedCsv = true, ImportArchivedCsv = true };
+        var lastRegulatedJobRun = new JobRunControl() { Id = Guid.NewGuid(), JobId = regulatedJobControl.JobId, Status = JobStatus.Completed.ToString(), User = userName };
+        var lastFundedJobRun = new JobRunControl() { Id = Guid.NewGuid(), JobId = fundedJobControl.JobId, Status = JobStatus.Requested.ToString(), User = userName };
+
+        _jobConfigurationService.Setup(s => s.ReadRegulatedJobConfiguration()).ReturnsAsync(regulatedJobControl).Verifiable();
+        _jobConfigurationService.Setup(s => s.ReadFundedJobConfiguration()).ReturnsAsync(fundedJobControl).Verifiable();
+        _jobConfigurationService.Setup(s => s.GetLastJobRunAsync(JobNames.RegulatedQualifications.ToString())).ReturnsAsync(lastRegulatedJobRun).Verifiable();
+        _jobConfigurationService.Setup(s => s.GetLastJobRunAsync(JobNames.FundedQualifications.ToString())).ReturnsAsync(lastFundedJobRun).Verifiable();
+        _jobConfigurationService.Setup(s => s.UpdateJobRun(userName, fundedJobControl.JobId, lastFundedJobRun.Id, 0, Common.Enum.JobStatus.RequestSent)).Verifiable();
+        _schedulerClientService.Setup(s => s.ExecuteFunction(It.Is<JobRunControl>(j => j.Id == lastFundedJobRun.Id), fundedJobName, fundedJobUrl)).ReturnsAsync(false).Verifiable();
+
+        // Act
+        var result = await _function.Run(new TimerInfo());
+
+        // Assert
+        var okResult = Assert.IsType<BadRequestObjectResult>(result);
         _jobConfigurationService.VerifyAll();
         _schedulerClientService.VerifyAll();
     }
