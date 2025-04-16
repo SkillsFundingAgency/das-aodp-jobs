@@ -68,6 +68,25 @@
         "utcValue": {
             "type": "string",
             "defaultValue": "[utcNow()]"
+        },
+        "EnableRouteTableAssociation": {
+            "type": "bool",
+            "defaultValue": false,
+            "metadata": {
+                "description": "Determines whether to enable route table association on subnet"
+            }
+        },
+        "SharedRouteTableName": {
+            "type": "string",
+            "metadata": {
+                "description": "Determines whether to enable route table association on subnet"
+            }
+        },
+        "sharedSQLServerName": {
+            "type": "string"
+        },
+        "deployPrivateLinkedScopedResource": {
+            "type": "bool"
         }
     },
     "variables": {
@@ -76,7 +95,12 @@
         "resourceGroupName": "[concat(variables('resourceNamePrefix'), '-rg')]",
         "functionAppName": "[concat(variables('resourceNamePrefix'), '-fa')]",
         "appServicePlanName": "[concat(variables('resourceNamePrefix'), '-asp')]",
-        "configNames": "SFA.DAS.AODP.Jobs"
+        "configNames": "SFA.DAS.AODP.Jobs",
+        "routeTableId": {
+            "id": "[resourceId(subscription().subscriptionId, parameters('sharedEnvResourceGroup'), 'Microsoft.Network/routeTables', parameters('SharedRouteTableName'))]"
+        },
+        "emptyObject": {},
+        "privateLinkScopeName": "[toLower(concat('das-', parameters('resourceEnvironmentName'),'-shared-ampls'))]"
     },
     "resources": [
         {
@@ -113,11 +137,38 @@
                     },
                     "delegations": {
                         "value": "[parameters('subnetDelegations')]"
+                    },
+                    "routeTable": {
+                        "value": "[if(parameters('enableRouteTableAssociation'), variables('routeTableId') , variables('emptyObject'))]"
                     }
                 }
             },
             "dependsOn": [
                 "[variables('resourceGroupName')]"
+            ]
+        },
+        {
+            "apiVersion": "2021-04-01",
+            "name": "[concat(parameters('subnetObject').name, '-', 'sql-firewall-rule-', parameters('utcValue'))]",
+            "resourceGroup": "[parameters('sharedEnvResourceGroup')]",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('deploymentUrlBase'), 'sql-server-firewall-rules.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "serverName": {
+                        "value": "[parameters('sharedSQLServerName')]"
+                    },
+                    "subnetResourceIdList": {
+                        "value": "[createArray(reference(concat(parameters('subnetObject').name, '-', parameters('utcValue'))).outputs.SubnetResourceId.value)]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[concat(parameters('subnetObject').name, '-', parameters('utcValue'))]"
             ]
         },
         {
@@ -281,6 +332,31 @@
             "dependsOn": [
                 "[concat(variables('functionAppName'), '-', parameters('utcValue'))]"
             ]
+        },
+        {
+            "condition": "[parameters('deployPrivateLinkedScopedResource')]",
+            "apiVersion": "2021-04-01",
+            "name": "[concat(variables('functionAppName'), '-private-link-scoped-', parameters('utcValue'))]",
+            "type": "Microsoft.Resources/deployments",
+            "resourceGroup": "[parameters('sharedEnvResourceGroup')]",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('deploymentUrlBase'),'private-linked-scoped-resource.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "privateLinkScopeName": {
+                        "value": "[variables('privateLinkScopeName')]"
+                    },
+                    "scopedResourceName": {
+                        "value": "[variables('functionAppName')]"
+                    },
+                    "scopedResourceId": {
+                        "value": "[reference(concat(variables('functionAppName'), '-application-insights-', parameters('utcValue'))).outputs.AppInsightsResourceId.value]"
+                    }
+                }
+            }
         }
     ],
     "outputs": {
