@@ -137,12 +137,12 @@ namespace SFA.DAS.AODP.Infrastructure.Services
                                 if (offerTypeLookup.ContainsKey(offer.Name))
                                 {
                                     var offerTypeId = offerTypeLookup[offer.Name];
-                                    var startDate = new DateOnly();
+                                    DateOnly? startDate = null;
                                     if (offer.FundingApprovalStartDate.HasValue)
                                     {
                                         startDate = new DateOnly(offer.FundingApprovalStartDate.Value.Year, offer.FundingApprovalStartDate.Value.Month, offer.FundingApprovalStartDate.Value.Day);
                                     }
-                                    var endDate = new DateOnly();
+                                    DateOnly? endDate = null;
                                     if (offer.FundingApprovalEndDate.HasValue)
                                     {
                                         endDate = new DateOnly(offer.FundingApprovalEndDate.Value.Year, offer.FundingApprovalEndDate.Value.Month, offer.FundingApprovalEndDate.Value.Day);
@@ -247,12 +247,12 @@ namespace SFA.DAS.AODP.Infrastructure.Services
                                 if (offerTypeLookup.ContainsKey(offer.Name))
                                 {
                                     var offerTypeId = offerTypeLookup[offer.Name];
-                                    var startDate = new DateOnly();
+                                    DateOnly? startDate = null;
                                     if (offer.FundingApprovalStartDate.HasValue)
                                     {
                                         startDate = new DateOnly(offer.FundingApprovalStartDate.Value.Year, offer.FundingApprovalStartDate.Value.Month, offer.FundingApprovalStartDate.Value.Day);
                                     }
-                                    var endDate = new DateOnly();
+                                    DateOnly? endDate = null;
                                     if (offer.FundingApprovalEndDate.HasValue)
                                     {
                                         endDate = new DateOnly(offer.FundingApprovalEndDate.Value.Year, offer.FundingApprovalEndDate.Value.Month, offer.FundingApprovalEndDate.Value.Day);
