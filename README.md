@@ -21,13 +21,14 @@ In order to run this service locally you will need:
 * **local.settings.json** - Create a `local.settings.json` file (Copy to Output Directory = Copy always) with the following data:
 ```json
 {
+  "IsEncrypted": false,
   "Values": {
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
-    "ConfigurationStorageConnectionString": "UseDevelopmentStorage=true",
-    "Environment": "LOCAL",
+    "ConfigurationStorageConnectionString": "UseDevelopmentStorage=true;",
     "ConfigNames": "SFA.DAS.AODP.Jobs",
-    "Version": "1.0"
+    "Version": "1.0",
+    "EnvironmentName": "LOCAL"
   }
 }
 ```
@@ -40,12 +41,3 @@ In order to run this service locally you will need:
 
     Data: [data](https://github.com/SkillsFundingAgency/das-employer-config/blob/master/das-aodp-jobs/SFA.DAS.AODP.Jobs.json)
 
-### Running
-
-_Details of any APis or other services that are required go here_
-
-### ApprovedQualificationsDataFunction
-_Description of what the function does and any configuration needed - or details of how to run and test it succeeded_
-
-### RegulatedQualificationsDataFunction
-_Description of what the function does and any configuration needed - or details of how to run and test it succeeded_
