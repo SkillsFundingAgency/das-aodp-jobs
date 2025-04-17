@@ -41,12 +41,3 @@ In order to run this service locally you will need:
 
     Data: [data](https://github.com/SkillsFundingAgency/das-employer-config/blob/master/das-aodp-jobs/SFA.DAS.AODP.Jobs.json)
 
-### Running
-
-_Details of any APis or other services that are required go here_
-
-### ApprovedQualificationsDataFunction
-_Description of what the function does and any configuration needed - or details of how to run and test it succeeded_
-
-### RegulatedQualificationsDataFunction
-_Description of what the function does and any configuration needed - or details of how to run and test it succeeded_
