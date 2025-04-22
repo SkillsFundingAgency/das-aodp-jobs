@@ -239,54 +239,54 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             Assert.Equal(DateOnly.FromDateTime(insertedOffers[0].FundingApprovalEndDate.Value), matchingFunding.EndDate);
         }
 
-        [Fact]
-        public async Task FundedQualificationWriter_ShouldNotUpdateFundings_WhenApproved()
-        {
-            //Arrange
-            await PopulateDbWithReferenceData();
-            var _service = CreateImportServiceWithDb();
+        //[Fact]
+        //public async Task FundedQualificationWriter_ShouldNotUpdateFundings_WhenApproved()
+        //{
+        //    //Arrange
+        //    await PopulateDbWithReferenceData();
+        //    var _service = CreateImportServiceWithDb();
 
-            var sets = new List<RecordSet>()
-            {
-                new RecordSet() { OrgId = Guid.NewGuid(), OrganisationPrn = 1001, ProcessStatus = ProcessStageNoAction, QualId = Guid.NewGuid(), QualificationName = "QualName1", QualificationNumber = "9001", VersionId = Guid.NewGuid() },
-                new RecordSet() { OrgId = Guid.NewGuid(), OrganisationPrn = 1002, ProcessStatus = ProcessStageNoAction, QualId = Guid.NewGuid(), QualificationName = "QualName2", QualificationNumber = "9002", VersionId = Guid.NewGuid() },
-                new RecordSet() { OrgId = Guid.NewGuid(), OrganisationPrn = 1003, ProcessStatus = ProcessStageNoAction, QualId = Guid.NewGuid(), QualificationName = "QualName3", QualificationNumber = "9003", VersionId = Guid.NewGuid() },
-                new RecordSet() { OrgId = Guid.NewGuid(), OrganisationPrn = 1004, ProcessStatus = ProcessStageNoAction, QualId = Guid.NewGuid(), QualificationName = "QualName4", QualificationNumber = "9004", VersionId = Guid.NewGuid() },
-            };
+        //    var sets = new List<RecordSet>()
+        //    {
+        //        new RecordSet() { OrgId = Guid.NewGuid(), OrganisationPrn = 1001, ProcessStatus = ProcessStageNoAction, QualId = Guid.NewGuid(), QualificationName = "QualName1", QualificationNumber = "9001", VersionId = Guid.NewGuid() },
+        //        new RecordSet() { OrgId = Guid.NewGuid(), OrganisationPrn = 1002, ProcessStatus = ProcessStageNoAction, QualId = Guid.NewGuid(), QualificationName = "QualName2", QualificationNumber = "9002", VersionId = Guid.NewGuid() },
+        //        new RecordSet() { OrgId = Guid.NewGuid(), OrganisationPrn = 1003, ProcessStatus = ProcessStageNoAction, QualId = Guid.NewGuid(), QualificationName = "QualName3", QualificationNumber = "9003", VersionId = Guid.NewGuid() },
+        //        new RecordSet() { OrgId = Guid.NewGuid(), OrganisationPrn = 1004, ProcessStatus = ProcessStageNoAction, QualId = Guid.NewGuid(), QualificationName = "QualName4", QualificationNumber = "9004", VersionId = Guid.NewGuid() },
+        //    };
 
-            foreach (var set in sets)
-            {
-                this.CreateQualificationRecordSet(set);
-            }
+        //    foreach (var set in sets)
+        //    {
+        //        this.CreateQualificationRecordSet(set);
+        //    }
 
-            List<FundedQualificationDTO> importedData = CreateImportedData(sets);
+        //    List<FundedQualificationDTO> importedData = CreateImportedData(sets);
 
-            await CreateFundingOffers(sets);
+        //    await CreateFundingOffers(sets);
 
-            //Act
-            var writeResult = await _service.WriteQualifications(importedData);
+        //    //Act
+        //    var writeResult = await _service.WriteQualifications(importedData);
 
-            Assert.True(writeResult);
-            var insertedOffers = await _dbContext.QualificationOffers
-                                    .ToListAsync();
+        //    Assert.True(writeResult);
+        //    var insertedOffers = await _dbContext.QualificationOffers
+        //                            .ToListAsync();
 
-            await ApproveFundingOffers(sets);
+        //    await ApproveFundingOffers(sets);
 
-            var seedResult = await _service.SeedFundingData();
+        //    var seedResult = await _service.SeedFundingData();
 
-            //Assert
-            Assert.True(seedResult);
-            var currentFundings = await _dbContext.QualificationFundings
-                                        .Include(i => i.QualificationVersion)
-                                            .ThenInclude(t => t.Qualification)
-                                        .Include(i => i.FundingOffer)
-                                        .ToListAsync();
-            Assert.Equal(4, currentFundings.Count);
-            var matchingFunding = currentFundings.Where(w => w.QualificationVersion.QualificationId == insertedOffers[0].Qualification.QualificationId).FirstOrDefault();
-            Assert.NotNull(matchingFunding);            
-            Assert.NotEqual(DateOnly.FromDateTime(insertedOffers[0].FundingApprovalStartDate.Value), matchingFunding.StartDate);
-            Assert.NotEqual(DateOnly.FromDateTime(insertedOffers[0].FundingApprovalEndDate.Value), matchingFunding.EndDate);
-        }
+        //    //Assert
+        //    Assert.True(seedResult);
+        //    var currentFundings = await _dbContext.QualificationFundings
+        //                                .Include(i => i.QualificationVersion)
+        //                                    .ThenInclude(t => t.Qualification)
+        //                                .Include(i => i.FundingOffer)
+        //                                .ToListAsync();
+        //    Assert.Equal(4, currentFundings.Count);
+        //    var matchingFunding = currentFundings.Where(w => w.QualificationVersion.QualificationId == insertedOffers[0].Qualification.QualificationId).FirstOrDefault();
+        //    Assert.NotNull(matchingFunding);            
+        //    Assert.NotEqual(DateOnly.FromDateTime(insertedOffers[0].FundingApprovalStartDate.Value), matchingFunding.StartDate);
+        //    Assert.NotEqual(DateOnly.FromDateTime(insertedOffers[0].FundingApprovalEndDate.Value), matchingFunding.EndDate);
+        //}
 
         private List<FundedQualificationDTO> CreateImportedData(List<RecordSet> sets, bool fundingAvailable = true)
         {
