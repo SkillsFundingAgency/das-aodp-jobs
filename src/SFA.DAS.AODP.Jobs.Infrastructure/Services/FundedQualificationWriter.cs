@@ -80,19 +80,25 @@ namespace SFA.DAS.AODP.Infrastructure.Services
                                         .ToListAsync();
                 var userCreatedOfferIds = userCreatedOffers.Select(s => s.QualificationVersion.QualificationId).ToList();
 
-                // Funding offers not to be updated as they have been approved
-                var noTouchyList = await _applicationDbContext.QualificationFundingFeedbacks
-                                        .Include(i => i.QualificationVersion)
-                                        .Where(w => w.Approved ?? false)
-                                        .Select(s => s.QualificationVersion.QualificationId)
-                                        .ToListAsync();
+                // Previously, only records with qualifications offering feedback that were not approved were updated.
+                // Now, all offer records are updated regardless of their approval status.
+                
+                //var noTouchyList = await _applicationDbContext.QualificationFundingFeedbacks
+                //        .Include(i => i.QualificationVersion)
+                //        .Where(w => w.Approved ?? false)
+                //        .Select(s => s.QualificationVersion.QualificationId)
+                //        .ToListAsync();
 
                 // These are quals that have imported offers, but no user created offers
-                var qualsMissingFunding = importedOfferIds.Except(userCreatedOfferIds).Except(noTouchyList).ToList();
+                //var qualsMissingFunding = importedOfferIds.Except(userCreatedOfferIds).Except(noTouchyList).ToList();
+                var qualsMissingFunding = importedOfferIds.Except(userCreatedOfferIds).ToList();
+
                 _logger.LogInformation($"SeedFundingData -> Found {qualsMissingFunding.Count} quals missing offers");
 
                 // These are quals that have imported offers and user created offers
-                var qualsNeedUpdating = importedOfferIds.Except(qualsMissingFunding).Except(noTouchyList).ToList();
+                //var qualsNeedUpdating = importedOfferIds.Except(qualsMissingFunding).Except(noTouchyList).ToList();
+                var qualsNeedUpdating = importedOfferIds.Except(qualsMissingFunding).ToList();
+
                 _logger.LogInformation($"SeedFundingData -> Found {qualsNeedUpdating.Count} that might need updating");
 
                 var importRun = DateTime.Now;
@@ -174,7 +180,7 @@ namespace SFA.DAS.AODP.Infrastructure.Services
                                     UserDisplayName = "FundedImport",
                                     Notes = $"Funded Import inserted {added} new offers",
                                     ActionTypeId = noActionNeededId
-                                });                                
+                                });   
                             }
                         }
                         else
