@@ -17,7 +17,7 @@ https://skillsfundingagency.atlassian.net.mcas.ms/wiki/spaces/NDL/pages/48959329
 
 In order to run this service locally you will need: 
 - Install [.NET 8](https://www.microsoft.com/net/download)
-- Install [Azure Functions SDK](https://docs.microsoft.com/en-us/azure/azure-functions/functions-run-local
+- Install [Azure Functions SDK](https://docs.microsoft.com/en-us/azure/azure-functions/functions-run-local)
 
 ## Developer Setup
 
