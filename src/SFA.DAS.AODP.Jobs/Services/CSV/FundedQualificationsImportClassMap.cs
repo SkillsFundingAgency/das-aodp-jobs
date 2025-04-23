@@ -10,7 +10,7 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
         private readonly Dictionary<string, Guid> _qualificationNumberToIdCache;
         private readonly Dictionary<string, Guid> _organsationNameToIdCache;
         private readonly ILogger _logger;
-        private Guid _currentQualificationId;
+        private Guid? _currentQualificationId;
 
         public FundedQualificationsImportClassMap(
             List<string> headers,
@@ -47,8 +47,7 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
                     return _currentQualificationId;
                 }
                 else
-                {
-                    _logger.LogWarning($"No matching qualification found for qan: '{qualificationNumber}'");
+                {                    
                     _currentQualificationId = default;
                     return default;
                 }
@@ -69,8 +68,7 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
                     return organisationId;
                 }
                 else
-                {
-                    _logger.LogWarning($"No matching awarding organistion found for name: '{awardingOrganisationName}'");
+                {                   
                     return default;
                 }
             });
@@ -101,16 +99,19 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
                         startDate = parsedStart;
                     }
 
-                    offers.Add(new FundedQualificationOfferDTO()
+                    if (_currentQualificationId.HasValue)
                     {
-                        Id = Guid.NewGuid(),
-                        QualificationId = _currentQualificationId,
-                        Name = offerName,
-                        Notes = r.Row.GetField($"{offerName}_Notes"),
-                        FundingAvailable = r.Row.GetField($"{offerName}_FundingAvailable"),
-                        FundingApprovalEndDate = endDate,
-                        FundingApprovalStartDate = startDate,
-                    });
+                        offers.Add(new FundedQualificationOfferDTO()
+                        {
+                            Id = Guid.NewGuid(),
+                            QualificationId = _currentQualificationId.Value,
+                            Name = offerName,
+                            Notes = r.Row.GetField($"{offerName}_Notes"),
+                            FundingAvailable = r.Row.GetField($"{offerName}_FundingAvailable"),
+                            FundingApprovalEndDate = endDate,
+                            FundingApprovalStartDate = startDate,
+                        });
+                    }
                 };
                 return offers;
             });

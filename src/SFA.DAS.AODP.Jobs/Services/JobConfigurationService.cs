@@ -1,6 +1,5 @@
-﻿using Microsoft.Identity.Client;
-using SFA.DAS.AODP.Data.Repositories.Jobs;
-using SFA.DAS.AODP.Jobs.Enum;
+﻿using SFA.DAS.AODP.Common.Enum;
+using SFA.DAS.AODP.Infrastructure.Interfaces;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
 
@@ -100,7 +99,7 @@ namespace SFA.DAS.AODP.Jobs.Services
         }
     }
 
-    public struct RegulatedJobControl
+    public class RegulatedJobControl
     {
         public Guid JobId;
         public Guid JobRunId;
@@ -110,7 +109,7 @@ namespace SFA.DAS.AODP.Jobs.Services
         public string Status;
     }
 
-    public struct FundedJobControl
+    public class FundedJobControl
     {
         public Guid JobId;
         public Guid JobRunId;
@@ -120,7 +119,7 @@ namespace SFA.DAS.AODP.Jobs.Services
         public string Status;
     }
 
-    public struct JobRunControl
+    public class JobRunControl
     {
         public Guid Id;
         public string Status;

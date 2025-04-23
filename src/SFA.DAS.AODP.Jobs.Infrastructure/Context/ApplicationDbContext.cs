@@ -37,6 +37,12 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public virtual DbSet<JobRun> JobRuns { get; set; }
 
+        public virtual DbSet<QualificationFunding> QualificationFundings { get; set; }
+
+        public virtual DbSet<FundingOffer> FundingOffers { get; set; }
+
+        public virtual DbSet<QualificationFundingFeedback> QualificationFundingFeedbacks { get; set; }
+
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             return base.SaveChangesAsync(cancellationToken);

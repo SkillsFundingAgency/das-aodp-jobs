@@ -119,6 +119,12 @@ public partial class QualificationVersions
 
     public DateTime? InsertedTimestamp { get; set; }
 
+    public bool? EligibleForFunding { get; set; }
+
+    public string? Name { get; set; }
+
+    public bool? FundedInEngland { get; set; }
+
     public virtual LifecycleStage LifecycleStage { get; set; } = null!;
 
     public virtual AwardingOrganisation Organisation { get; set; } = null!;

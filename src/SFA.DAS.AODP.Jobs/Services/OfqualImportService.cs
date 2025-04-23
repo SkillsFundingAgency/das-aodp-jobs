@@ -4,11 +4,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RestEase;
+using SFA.DAS.AODP.Common.Enum;
 using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Infrastructure.Context;
+using SFA.DAS.AODP.Infrastructure.Interfaces;
 using SFA.DAS.AODP.Jobs.Client;
-using SFA.DAS.AODP.Jobs.Enum;
 using SFA.DAS.AODP.Jobs.Interfaces;
+using SFA.DAS.AODP.Jobs.Models;
 using SFA.DAS.AODP.Models.Qualification;
 using System.Diagnostics;
 using System.Text.Json;
@@ -125,6 +127,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             try
             {
                 _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ProcessQualificationsDataAsync)}] -> Building existing qualification, organisation and qualifcation version caches...");
+                var fundingsToBeUpdated = new List<QualificationFundingTracker>();
 
                 var organisationCache = (await _applicationDbContext.AwardingOrganisation
                     .AsNoTracking()
@@ -172,6 +175,9 @@ namespace SFA.DAS.AODP.Jobs.Services
                     var newQualifications = new List<Qualification>();
                     var newQualificationVersions = new List<QualificationVersions>();
                     var newQualificationDiscussions = new List<QualificationDiscussionHistory>();
+                    var updatedQualifications = new List<Qualification>();
+                    var updatedQualificationFundings = new List<QualificationFunding>();
+                    var updatedQualificationFeedbacks = new List<QualificationFundingFeedback>();
 
                     var versionFieldChanges = new List<VersionFieldChanges>();
                     var processStatuses = new List<Data.Entities.ProcessStatus>();
@@ -190,6 +196,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 Ukprn = importRecord.OrganisationId,
                                 RecognitionNumber = importRecord.OrganisationRecognitionNumber,
                                 NameOfqual = importRecord.OrganisationName,
+                                NameLegal = importRecord.OrganisationName,
                                 Acronym = importRecord.OrganisationAcronym
                             };
                             newOrganisations.Add(organisation);
@@ -230,12 +237,14 @@ namespace SFA.DAS.AODP.Jobs.Services
                             var notes = "";
                             var processStatusName = "";                       
                             var actionTypeId = Guid.Empty;
-                            
-                            if (_fundingEligibilityService.EligibleForFunding(importRecord))
+
+                            var eligibleForFunding = _fundingEligibilityService.EligibleForFunding(importRecord);
+
+                            if (eligibleForFunding)
                             {
                                 // Eligible for funding - needs decision
 
-                                processStatusName = Enum.ProcessStatus.DecisionRequired;
+                                processStatusName = Common.Enum.ProcessStatus.DecisionRequired;
                                 actionTypeId = _actionTypeService.GetActionTypeId(ActionTypeEnum.ActionRequired);
                                 notes = ImportReason.DecisionRequired;                                
                             }
@@ -243,7 +252,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                             {
                                 // Ineligible for funding - No Action Required                                
 
-                                processStatusName = Enum.ProcessStatus.NoActionRequired;
+                                processStatusName = Common.Enum.ProcessStatus.NoActionRequired;
                                 actionTypeId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired);
                                 notes = _fundingEligibilityService.DetermineFailureReason(importRecord);                                
                             }
@@ -277,6 +286,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 processStatusName,
                                 importRecord,
                                 versionFieldChange,
+                                eligibleForFunding,
                                 1);
 
                             newQualificationVersions.Add(newQualificationVersion);
@@ -294,7 +304,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                                                 .Include(i => i.Qualification)
                                                                 .Include(i => i.Organisation)
                                                                 .Include(i => i.ProcessStatus)
-                                                                .Include(i => i.LifecycleStage)
+                                                                .Include(i => i.LifecycleStage)                                                                
                                                                 .OrderByDescending(o => o.Version)
                                                                 .AsNoTracking()
                                                                 .Where(w => w.QualificationId == qualificationId)
@@ -307,18 +317,18 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 if (!detectionResults.ChangesPresent) continue;
                             }
 
-                            var processStatusName = Enum.ProcessStatus.NoActionRequired;
+                            var processStatusName = Common.Enum.ProcessStatus.NoActionRequired;
                             var lifecycleStageName = LifeCycleStage.Changed;
                             var actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired);
                             var notes = "";
 
                             #region New Version of Existing Qualification
-
-                            if (!_fundingEligibilityService.EligibleForFunding(importRecord))
+                            var eligibleForFunding = _fundingEligibilityService.EligibleForFunding(importRecord);
+                            if (!eligibleForFunding)
                             {
                                 // Not eligible for funding 
 
-                                processStatusName = Enum.ProcessStatus.NoActionRequired;
+                                processStatusName = Common.Enum.ProcessStatus.NoActionRequired;
                                 lifecycleStageName = LifeCycleStage.Changed;
                                 actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired);
                                 notes = "No Action required - Changed Qualification (Funding Criteria)";
@@ -326,14 +336,14 @@ namespace SFA.DAS.AODP.Jobs.Services
                             else
                             {
                                 notes = "Decision Required - Changed Qualification";
-                                if ((currentQualificationVersion.ProcessStatus.Name == Enum.ProcessStatus.Approved) ||
-                                        (currentQualificationVersion.ProcessStatus.Name == Enum.ProcessStatus.Rejected))
+                                if ((currentQualificationVersion.ProcessStatus.Name == Common.Enum.ProcessStatus.Approved) ||
+                                        (currentQualificationVersion.ProcessStatus.Name == Common.Enum.ProcessStatus.Rejected))
                                 {
 
                                     if (detectionResults.KeyFieldsChanged)
                                     {
                                         // Decision required as major changes
-                                        processStatusName = Enum.ProcessStatus.DecisionRequired;
+                                        processStatusName = Common.Enum.ProcessStatus.DecisionRequired;
                                         notes = "Decision Required - Changed Qualification (Key Fields)";
                                     }
                                     else
@@ -346,8 +356,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                                     lifecycleStageName = LifeCycleStage.Changed;
                                     actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.ActionRequired);                                    
                                 }
-                                else if ((currentQualificationVersion.ProcessStatus.Name == Enum.ProcessStatus.OnHold) ||
-                                        (currentQualificationVersion.ProcessStatus.Name == Enum.ProcessStatus.DecisionRequired))
+                                else if ((currentQualificationVersion.ProcessStatus.Name == Common.Enum.ProcessStatus.OnHold) ||
+                                        (currentQualificationVersion.ProcessStatus.Name == Common.Enum.ProcessStatus.DecisionRequired))
                                 {
                                     // Keep the current status as only changed dont matter when on hold/decision required
                                     processStatusName = currentQualificationVersion.ProcessStatus.Name;
@@ -355,7 +365,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                     if (detectionResults.KeyFieldsChanged)
                                     {                                        
                                         
-                                        notes = currentQualificationVersion.ProcessStatus.Name == Enum.ProcessStatus.OnHold ?
+                                        notes = currentQualificationVersion.ProcessStatus.Name == Common.Enum.ProcessStatus.OnHold ?
                                             "On Hold - Changed Qualification (Key Fields)" :
                                             "Decision Required - Changed Qualification (Key Fields)";                                        
                                     }
@@ -368,7 +378,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 }
                                 else
                                 {
-                                    processStatusName = Enum.ProcessStatus.DecisionRequired;
+                                    processStatusName = Common.Enum.ProcessStatus.DecisionRequired;
                                     lifecycleStageName = LifeCycleStage.Changed;
                                     actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.ActionRequired);                                   
                                 }
@@ -401,6 +411,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 processStatusName,
                                 importRecord,
                                 versionFieldChange,
+                                eligibleForFunding,
                                 existingVersion.Version + 1);
 
                             newQualificationVersions.Add(newQualificationVersion);
@@ -414,10 +425,27 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 if (qualificationToUpdate != null)
                                 {
                                     qualificationToUpdate.QualificationName = importRecord.Title;
+                                    updatedQualifications.Add(qualificationToUpdate);
                                 }
 
                             }
 
+                            var currentProcessStatus = currentQualificationVersion.ProcessStatus.Name;
+                            if (currentProcessStatus != Common.Enum.ProcessStatus.Approved 
+                                && currentProcessStatus != Common.Enum.ProcessStatus.Rejected)                                
+                            {
+                                var fundingsPresent = await CheckForPreviousFundings(currentQualificationVersion.Id);
+                                if (fundingsPresent)
+                                {
+                                    var tracker = new QualificationFundingTracker() 
+                                    { 
+                                        OldVersionId = currentQualificationVersion.Id,
+                                        NewVersionId = newQualificationVersion.Id
+                                    };
+
+                                    fundingsToBeUpdated.Add(tracker);
+                                }
+                            }
                             #endregion  
                         }
                     }
@@ -434,6 +462,18 @@ namespace SFA.DAS.AODP.Jobs.Services
                     Thread.Sleep(200);
                 }
 
+                if (fundingsToBeUpdated.Any())
+                {
+                    _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ImportApiData)}] -> Moving {fundingsToBeUpdated.Count} Qual Funding records from old versions to new");
+                    // Update any qualifications that need funding records moved from old version to new
+                    foreach (var tracker in fundingsToBeUpdated)
+                    {
+                        var updatedFunding = await UpdateFundings(tracker.OldVersionId, tracker.NewVersionId);
+                        var updatedFundingFeedback = await UpdateFundingFeedbacks(tracker.OldVersionId, tracker.NewVersionId);
+                    }
+                    await _applicationDbContext.SaveChangesAsync();
+                }
+
                 _processStopWatch.Stop();
                 _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ProcessQualificationsDataAsync)}] -> Processed {processedCount} records in {_processStopWatch.Elapsed.TotalSeconds:F2} seconds");
             }
@@ -445,7 +485,7 @@ namespace SFA.DAS.AODP.Jobs.Services
         }
 
         private QualificationVersions CreateQualificationVersion(Guid qualificationId, Guid organisationId, string lifecycleStage,
-            string processStatus, QualificationDTO qualificationData, VersionFieldChanges versionFieldChange, int? version)
+            string processStatus, QualificationDTO qualificationData, VersionFieldChanges versionFieldChange, bool eligibleForFunding, int? version)
         {
             string GetJoinedArrayOrEmpty(JsonElement? value)
             {
@@ -532,9 +572,42 @@ namespace SFA.DAS.AODP.Jobs.Services
                 NineteenPlus = qualificationData.NineteenPlus,
                 ImportStatus = qualificationData.ImportStatus,                           
                 VersionFieldChanges = versionFieldChange,
-                InsertedTimestamp = DateTime.Now
+                InsertedTimestamp = DateTime.Now,
+                EligibleForFunding = eligibleForFunding,
+                Name = qualificationData.Title,
+                FundedInEngland = qualificationData.IntentionToSeekFundingInEngland
             };
         }
 
+        private async Task<bool> CheckForPreviousFundings(Guid currentQualificationVersionId)
+        {
+            return await _applicationDbContext.QualificationFundings.Where(w => w.QualificationVersionId == currentQualificationVersionId).AnyAsync();
+        }
+
+        private async Task<List<QualificationFunding>> UpdateFundings(Guid currentQualificationVersionId, Guid newQualificationVersionId)
+        {
+            var fundings = await _applicationDbContext.QualificationFundings
+                            .Where(w => w.QualificationVersionId == currentQualificationVersionId)
+                            .ToListAsync();
+            foreach(var funding in fundings)
+            {
+                funding.QualificationVersionId = newQualificationVersionId;               
+            }
+
+            return fundings;
+        }
+
+        private async Task<List<QualificationFundingFeedback>> UpdateFundingFeedbacks(Guid currentQualificationVersionId, Guid newQualificationVersionId)
+        {
+            var fundingFeedbacks = await _applicationDbContext.QualificationFundingFeedbacks
+                            .Where(w => w.QualificationVersionId == currentQualificationVersionId)
+                            .ToListAsync();
+            foreach (var funding in fundingFeedbacks)
+            {
+                funding.QualificationVersionId = newQualificationVersionId;
+            }
+
+            return fundingFeedbacks;
+        }
     }
 }

@@ -1,6 +1,6 @@
 ﻿using SFA.DAS.AODP.Data.Entities;
 
-namespace SFA.DAS.AODP.Data.Repositories.Jobs
+namespace SFA.DAS.AODP.Infrastructure.Interfaces
 {
     public interface IJobsRepository
     {

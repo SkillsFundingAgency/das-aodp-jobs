@@ -13,6 +13,8 @@ using SFA.DAS.AODP.Models.Config;
 using System.Diagnostics.CodeAnalysis;
 using SFA.DAS.AODP.Data.Repositories.Jobs;
 using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
+using SFA.DAS.AODP.Infrastructure.Interfaces;
+using SFA.DAS.AODP.Infrastructure.Services;
 
 namespace SFA.DAS.AODP.Jobs.StartupExtensions;
 
@@ -45,6 +47,9 @@ public static class AddServiceRegistrationsExtension
         services.AddScoped<ISystemClockService, SystemClockService>();
         services.AddScoped<IJobConfigurationService, JobConfigurationService>();
         services.AddScoped<IChangeDetectionService, ChangeDetectionService>();
+        services.AddScoped<ISchedulerClientService, SchedulerClientService>();
+        services.AddScoped<IFundedQualificationWriter, FundedQualificationWriter>();
+        services.AddScoped<IQualificationsRepository, QualificationsRepository>();
 
         var aodpJobsConfiguration = configuration.GetSection(nameof(AodpJobsConfiguration)).Get<AodpJobsConfiguration>();
 

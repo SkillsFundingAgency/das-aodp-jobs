@@ -15,9 +15,11 @@ using AutoFixture;
 using RestEase;
 using SFA.DAS.AODP.Data.Repositories.Jobs;
 using Microsoft.EntityFrameworkCore;
-using SFA.DAS.AODP.Jobs.Enum;
 using Microsoft.AspNetCore.Components;
 using System.Text.Json;
+using SFA.DAS.AODP.Infrastructure.Interfaces;
+using SFA.DAS.AODP.Common.Enum;
+using SFA.DAS.AODP.Infrastructure.Services;
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 {
@@ -45,6 +47,12 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         private Guid ProcessStageHold = new Guid("00000000-0000-0000-0000-000000000005");
         private Guid ActionTypeNoAction = new Guid("00000000-0000-0000-0000-000000000001");
         private Guid ActionTypeDecision = new Guid("00000000-0000-0000-0000-000000000002");
+        private Guid FundingOfferId1 = new Guid("00000000-0000-0000-0000-000000000001");
+        private Guid FundingOfferId2 = new Guid("00000000-0000-0000-0000-000000000002");
+        private Guid FundingOfferId3 = new Guid("00000000-0000-0000-0000-000000000003");
+        private string FundingOffer1 = "Age1618";
+        private string FundingOffer2 = "Age1416";
+        private string FundingOffer3 = "LifelongLearningEntitlement";
 
         public OfqualImportServiceTests()
         {
@@ -222,8 +230,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .Include(i => i.ProcessStatus)
                                     .Where(w => w.QualificationId == insertedQualification.Id).Single();
             Assert.NotNull(insertedVersion);
-            Assert.Equal(Enum.ProcessStatus.NoActionRequired, insertedVersion.ProcessStatus.Name);
-            Assert.Equal(Enum.LifeCycleStage.New, insertedVersion.LifecycleStage.Name);
+            Assert.Equal(Common.Enum.ProcessStatus.NoActionRequired, insertedVersion.ProcessStatus.Name);
+            Assert.Equal(Common.Enum.LifeCycleStage.New, insertedVersion.LifecycleStage.Name);
 
             // new qualification discussion
             var insertedDiscussion = _dbContext.QualificationDiscussionHistory
@@ -274,8 +282,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .Include(i => i.ProcessStatus)
                                     .Where(w => w.QualificationId == insertedQualification.Id).Single();
             Assert.NotNull(insertedVersion);
-            Assert.Equal(Enum.ProcessStatus.DecisionRequired, insertedVersion.ProcessStatus.Name);
-            Assert.Equal(Enum.LifeCycleStage.New, insertedVersion.LifecycleStage.Name);
+            Assert.Equal(Common.Enum.ProcessStatus.DecisionRequired, insertedVersion.ProcessStatus.Name);
+            Assert.Equal(Common.Enum.LifeCycleStage.New, insertedVersion.LifecycleStage.Name);
 
             // new qualification discussion
             var insertedDiscussion = _dbContext.QualificationDiscussionHistory
@@ -327,8 +335,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .Include(i => i.ProcessStatus)
                                     .Where(w => w.QualificationId == insertedQualification.Id).First();
             Assert.NotNull(insertedVersion);
-            Assert.Equal(Enum.ProcessStatus.NoActionRequired, insertedVersion.ProcessStatus.Name);
-            Assert.Equal(Enum.LifeCycleStage.New, insertedVersion.LifecycleStage.Name);
+            Assert.Equal(Common.Enum.ProcessStatus.NoActionRequired, insertedVersion.ProcessStatus.Name);
+            Assert.Equal(Common.Enum.LifeCycleStage.New, insertedVersion.LifecycleStage.Name);
 
             // new qualification discussion
             var insertedDiscussion = _dbContext.QualificationDiscussionHistory
@@ -376,8 +384,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .FirstAsync();
             Assert.NotNull(insertedVersion);
             Assert.Equal(2, insertedVersion.Version);
-            Assert.Equal(Enum.ProcessStatus.NoActionRequired, insertedVersion.ProcessStatus.Name);
-            Assert.Equal(Enum.LifeCycleStage.Changed, insertedVersion.LifecycleStage.Name);
+            Assert.Equal(Common.Enum.ProcessStatus.NoActionRequired, insertedVersion.ProcessStatus.Name);
+            Assert.Equal(Common.Enum.LifeCycleStage.Changed, insertedVersion.LifecycleStage.Name);
 
             // new qualification discussion
             var insertedDiscussion = await _dbContext.QualificationDiscussionHistory
@@ -440,8 +448,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .FirstAsync();
             Assert.NotNull(insertedVersion);
             Assert.Equal(2, insertedVersion.Version);
-            Assert.Equal(Enum.ProcessStatus.DecisionRequired, insertedVersion.ProcessStatus.Name);
-            Assert.Equal(Enum.LifeCycleStage.Changed, insertedVersion.LifecycleStage.Name);
+            Assert.Equal(Common.Enum.ProcessStatus.DecisionRequired, insertedVersion.ProcessStatus.Name);
+            Assert.Equal(Common.Enum.LifeCycleStage.Changed, insertedVersion.LifecycleStage.Name);
 
             // new qualification discussion
             var insertedDiscussion = await _dbContext.QualificationDiscussionHistory
@@ -492,8 +500,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .FirstAsync();
             Assert.NotNull(insertedVersion);
             Assert.Equal(2, insertedVersion.Version);
-            Assert.Equal(Enum.ProcessStatus.DecisionRequired, insertedVersion.ProcessStatus.Name);
-            Assert.Equal(Enum.LifeCycleStage.Changed, insertedVersion.LifecycleStage.Name);
+            Assert.Equal(Common.Enum.ProcessStatus.DecisionRequired, insertedVersion.ProcessStatus.Name);
+            Assert.Equal(Common.Enum.LifeCycleStage.Changed, insertedVersion.LifecycleStage.Name);
 
             // new qualification discussion
             var insertedDiscussion = await _dbContext.QualificationDiscussionHistory
@@ -552,7 +560,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .Where(w => w.QualificationId == insertedQualification.Id && w.Version == 1)
                                     .FirstAsync();
             Assert.Equal(insertedVersion.ProcessStatus.Name, oldVersion.ProcessStatus.Name);
-            Assert.Equal(Enum.LifeCycleStage.Changed, insertedVersion.LifecycleStage.Name);
+            Assert.Equal(Common.Enum.LifeCycleStage.Changed, insertedVersion.LifecycleStage.Name);
 
             // new qualification discussion
             var insertedDiscussion = await _dbContext.QualificationDiscussionHistory
@@ -800,6 +808,146 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             Assert.Equal(1, latestVersion.Version);
         }
 
+        [Fact]
+        public async Task ProcessQualificationsDataAsync_ExistingRecord_CopyFunding()
+        {
+            //Arrange
+            var organisationId1 = 10001;
+            var qualificationNumber1 = "qan1";
+            var qualificationName1 = "Qual1";
+
+            await PopulateDbWithReferenceData();
+            await CreateQualificationRecordSet(organisationId1, qualificationNumber1, qualificationName1, processStatus: ProcessStageHold);
+            var _service = CreateImportServiceWithDb();
+
+            var qualification = await _dbContext.Qualification.Where(w => w.Qan == qualificationNumber1)
+                                        .Include(i => i.QualificationVersions)
+                                .SingleAsync();
+
+            await CreateFundingOffers(qualification.QualificationVersions.ToList());
+
+            var importRecord = this.CreateImportRecord(organisationId1, qualificationNumber1, qualificationName1);
+            var importRecords = new List<QualificationDTO>() { importRecord };
+
+            ApplyMockBehaviour(importRecord, importRecords, eligibleForFunding: true, changesPresent: true, keyFieldsChanged: true);
+
+            //Act
+            await _service.ProcessQualificationsDataAsync();
+
+            //Assert
+            // existing qualification
+            var insertedQualification = await _dbContext.Qualification.Where(w => w.Qan == qualificationNumber1).SingleAsync();            
+
+            // new qualification version
+            var insertedVersion = await _dbContext.QualificationVersions
+                                    .Include(i => i.ProcessStatus)
+                                    .OrderByDescending(o => o.Version)
+                                    .Where(w => w.QualificationId == insertedQualification.Id)
+                                    .FirstAsync();
+            Assert.NotNull(insertedVersion);
+            Assert.Equal(2, insertedVersion.Version);
+            
+            var oldVersion = await _dbContext.QualificationVersions
+                                    .Include(i => i.ProcessStatus)
+                                    .Include(i => i.LifecycleStage)
+                                    .Where(w => w.QualificationId == insertedQualification.Id && w.Version == 1)
+                                    .FirstAsync();
+            Assert.Equal(oldVersion.ProcessStatus.Name, insertedVersion.ProcessStatus.Name);
+            Assert.Equal(oldVersion.LifecycleStage.Name, insertedVersion.LifecycleStage.Name);
+
+            //Check funding offers have been copied
+            var fundings = await _dbContext.QualificationFundings.Where(w => w.QualificationVersionId == insertedVersion.Id).ToListAsync();
+            Assert.NotNull(fundings);
+            Assert.Equal(2, fundings.Count);
+
+            //Check funding offers feedbacks have been copied
+            var feedbacks = await _dbContext.QualificationFundingFeedbacks.Where(w => w.QualificationVersionId == insertedVersion.Id).ToListAsync();
+            Assert.NotNull(feedbacks);
+            Assert.Single(feedbacks);
+        }
+
+        [Fact]
+        public async Task ProcessQualificationsDataAsync_ExistingRecord_FundingsNotCopied_WhenApproved()
+        {
+            //Arrange
+            var organisationId1 = 10001;
+            var qualificationNumber1 = "qan1";
+            var qualificationName1 = "Qual1";
+
+            await PopulateDbWithReferenceData();
+            await CreateQualificationRecordSet(organisationId1, qualificationNumber1, qualificationName1, processStatus: ProcessStageApproved);
+            var _service = CreateImportServiceWithDb();
+
+            var qualification = await _dbContext.Qualification.Where(w => w.Qan == qualificationNumber1)
+                                        .Include(i => i.QualificationVersions)
+                                .SingleAsync();
+            await CreateFundingOffers(qualification.QualificationVersions.ToList());
+
+            var importRecord = this.CreateImportRecord(organisationId1, qualificationNumber1, qualificationName1);
+            var importRecords = new List<QualificationDTO>() { importRecord };
+
+            ApplyMockBehaviour(importRecord, importRecords, eligibleForFunding: true, changesPresent: true, keyFieldsChanged: true);
+
+            //Act
+            await _service.ProcessQualificationsDataAsync();
+
+            //Assert
+            // existing qualification
+            var insertedQualification = await _dbContext.Qualification.Where(w => w.Qan == qualificationNumber1).SingleAsync();
+
+            // new qualification version
+            var insertedVersion = await _dbContext.QualificationVersions
+                                    .Include(i => i.ProcessStatus)
+                                    .OrderByDescending(o => o.Version)
+                                    .Where(w => w.QualificationId == insertedQualification.Id)
+                                    .FirstAsync();
+            Assert.NotNull(insertedVersion);
+            Assert.Equal(2, insertedVersion.Version);
+            Assert.Equal(Common.Enum.ProcessStatus.DecisionRequired, insertedVersion.ProcessStatus.Name);
+            Assert.Equal(Common.Enum.LifeCycleStage.Changed, insertedVersion.LifecycleStage.Name);
+
+            //Check funding offers have NOT been copied
+            var fundings = await _dbContext.QualificationFundings.Where(w => w.QualificationVersionId == insertedVersion.Id).ToListAsync();
+            Assert.Empty(fundings);       
+
+            //Check funding offers feedbacks have NOT been copied
+            var feedbacks = await _dbContext.QualificationFundingFeedbacks.Where(w => w.QualificationVersionId == insertedVersion.Id).ToListAsync();
+            Assert.Empty(feedbacks);         
+        }
+
+        private async Task CreateFundingOffers(List<QualificationVersions> qualificationVersions)
+        {
+            var qualificationVersion = qualificationVersions.OrderByDescending(o => o.Version).First();
+           await _dbContext.QualificationFundings.AddAsync(new QualificationFunding()
+            {
+                Id = Guid.NewGuid(),
+                QualificationVersionId = qualificationVersion.Id,
+                FundingOfferId = FundingOfferId1,
+                StartDate = new DateOnly(2015, 06,01),
+                EndDate = new DateOnly(2030, 01,02),
+                Comments = "TestFunding1"
+            });
+
+            await _dbContext.QualificationFundings.AddAsync(new QualificationFunding()
+            {
+                Id = Guid.NewGuid(),
+                QualificationVersionId = qualificationVersion.Id,
+                FundingOfferId = FundingOfferId2,
+                StartDate = new DateOnly(2020, 03, 01),
+                EndDate = new DateOnly(2029, 04, 02),
+                Comments = "TestFunding2"
+            });
+
+            await _dbContext.QualificationFundingFeedbacks.AddAsync(new QualificationFundingFeedback()
+            {
+                Approved = true,
+                Id = Guid.NewGuid(),
+                QualificationVersionId = qualificationVersion.Id,
+                Comments = "TestFeedback"
+            });
+            await _dbContext.SaveChangesAsync();
+        }
+
         private OfqualImportService CreateImportServiceWithMocks()
         {            
             _actionTypeServiceMock = new Mock<IReferenceDataService>().Object;
@@ -928,18 +1076,24 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             await _dbContext.AddRangeAsync(new List<ActionType>() { actionType1, actionType2, actionType3});
             await _dbContext.SaveChangesAsync();
 
-            var processStatus1 = new Data.Entities.ProcessStatus() { Name = Enum.ProcessStatus.DecisionRequired, Id = ProcessStageDecision };
-            var processStatus2 = new Data.Entities.ProcessStatus() { Name = Enum.ProcessStatus.NoActionRequired, Id = ProcessStageNoAction };
-            var processStatus3 = new Data.Entities.ProcessStatus() { Name = Enum.ProcessStatus.OnHold, Id = ProcessStageHold };
-            var processStatus4 = new Data.Entities.ProcessStatus() { Name = Enum.ProcessStatus.Rejected, Id = ProcessStageRejected };
-            var processStatus5 = new Data.Entities.ProcessStatus() { Name = Enum.ProcessStatus.Approved, Id = ProcessStageApproved };
+            var processStatus1 = new Data.Entities.ProcessStatus() { Name = Common.Enum.ProcessStatus.DecisionRequired, Id = ProcessStageDecision };
+            var processStatus2 = new Data.Entities.ProcessStatus() { Name = Common.Enum.ProcessStatus.NoActionRequired, Id = ProcessStageNoAction };
+            var processStatus3 = new Data.Entities.ProcessStatus() { Name = Common.Enum.ProcessStatus.OnHold, Id = ProcessStageHold };
+            var processStatus4 = new Data.Entities.ProcessStatus() { Name = Common.Enum.ProcessStatus.Rejected, Id = ProcessStageRejected };
+            var processStatus5 = new Data.Entities.ProcessStatus() { Name = Common.Enum.ProcessStatus.Approved, Id = ProcessStageApproved };
             await _dbContext.AddRangeAsync(new List<Data.Entities.ProcessStatus>() { processStatus1, processStatus2, processStatus3, processStatus4, processStatus5 });
             await _dbContext.SaveChangesAsync();
 
-            var lifecycle1 = new Data.Entities.LifecycleStage() { Name = Enum.LifeCycleStage.New, Id = LifeCycleStageNew };
-            var lifecycle2 = new Data.Entities.LifecycleStage() { Name = Enum.LifeCycleStage.Changed, Id = LifeCycleStageChanged };
+            var lifecycle1 = new Data.Entities.LifecycleStage() { Name = Common.Enum.LifeCycleStage.New, Id = LifeCycleStageNew };
+            var lifecycle2 = new Data.Entities.LifecycleStage() { Name = Common.Enum.LifeCycleStage.Changed, Id = LifeCycleStageChanged };
             await _dbContext.AddRangeAsync(new List<Data.Entities.LifecycleStage>() { lifecycle1, lifecycle2 });
-            await _dbContext.SaveChangesAsync();            
+            await _dbContext.SaveChangesAsync();
+
+            var fundingOffer1 = new Data.Entities.FundingOffer() { Id = FundingOfferId1, Name = FundingOffer1 };
+            var fundingOffer2 = new Data.Entities.FundingOffer() { Id = FundingOfferId2, Name = FundingOffer2 };
+            var fundingOffer3 = new Data.Entities.FundingOffer() { Id = FundingOfferId3, Name = FundingOffer3 };
+            await _dbContext.AddRangeAsync(new List<Data.Entities.FundingOffer>() { fundingOffer1, fundingOffer2, fundingOffer3 });
+            await _dbContext.SaveChangesAsync();
         }
     }
 

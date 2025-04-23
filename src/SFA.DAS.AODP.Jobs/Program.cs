@@ -15,11 +15,15 @@ builder.Services.AddLogging(builder =>
 {
     builder.AddFilter<ApplicationInsightsLoggerProvider>(string.Empty, LogLevel.Information);
     builder.AddFilter<ApplicationInsightsLoggerProvider>("Microsoft", LogLevel.Information);
-
+    builder.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Warning);
     builder.AddFilter(typeof(Program).Namespace, LogLevel.Information);
+
+#if DEBUG
     builder.SetMinimumLevel(LogLevel.Trace);
     builder.AddConsole();
-
+#else
+    builder.SetMinimumLevel(LogLevel.Information);
+#endif
 });
 
 builder.Services
