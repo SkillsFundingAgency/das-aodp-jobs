@@ -169,4 +169,142 @@ public class ScheduledImportJobRunnerTests
         _jobConfigurationService.VerifyAll();
         _schedulerClientService.VerifyAll();
     }
+
+    [Fact]
+    public async Task Run_Should_Execute_PldnsJob()
+    {
+        // Arrange
+        var userName = "PldnsUser";
+        var regulatedJobControl = new RegulatedJobControl() { JobId = Guid.NewGuid(), JobRunId = Guid.NewGuid(), JobEnabled = true, ProcessStagingData = true, RunApiImport = true };
+        var fundedJobControl = new FundedJobControl() { JobId = Guid.NewGuid(), JobRunId = Guid.NewGuid(), JobEnabled = true, ImportFundedCsv = true, ImportArchivedCsv = true };
+        var pldnsControl = new PldnsImportControl() { JobId = Guid.NewGuid(), JobRunId = Guid.NewGuid(), ImportPldns = true, JobEnabled = true };
+        var defundingListImportControl = new DefundingListImportControl() { JobId = Guid.NewGuid(), JobRunId = Guid.NewGuid(), ImportDefundingList = true, JobEnabled = true };
+
+        var lastRegulatedJobRun = new JobRunControl() { Id = Guid.NewGuid(), JobId = regulatedJobControl.JobId, Status = JobStatus.Completed.ToString(), User = userName };
+        var lastFundedJobRun = new JobRunControl() { Id = Guid.NewGuid(), JobId = fundedJobControl.JobId, Status = JobStatus.Completed.ToString(), User = userName };
+        var lastPldnsJobRun = new JobRunControl() { Id = Guid.NewGuid(), JobId = pldnsControl.JobId, Status = JobStatus.Requested.ToString(), User = userName };
+
+        _jobConfigurationService.Setup(s => s.ReadRegulatedJobConfiguration()).ReturnsAsync(regulatedJobControl).Verifiable();
+        _jobConfigurationService.Setup(s => s.ReadFundedJobConfiguration()).ReturnsAsync(fundedJobControl).Verifiable();
+        _jobConfigurationService.Setup(s => s.ReadPldnsImportConfiguration()).ReturnsAsync(pldnsControl).Verifiable();
+        _jobConfigurationService.Setup(s => s.GetLastJobRunAsync(JobNames.RegulatedQualifications.ToString())).ReturnsAsync(lastRegulatedJobRun).Verifiable();
+        _jobConfigurationService.Setup(s => s.GetLastJobRunAsync(JobNames.FundedQualifications.ToString())).ReturnsAsync(lastFundedJobRun).Verifiable();
+        _jobConfigurationService.Setup(s => s.GetLastJobRunAsync(JobNames.Pldns.ToString())).ReturnsAsync(lastPldnsJobRun).Verifiable();
+        _jobConfigurationService.Setup(s => s.UpdateJobRun(userName, pldnsControl.JobId, lastPldnsJobRun.Id, 0, Common.Enum.JobStatus.RequestSent)).Verifiable();
+        _schedulerClientService.Setup(s => s.ExecuteFunction(It.Is<JobRunControl>(j => j.Id == lastPldnsJobRun.Id), "importPldns", "api/importPldns")).ReturnsAsync(true).Verifiable();
+        _jobConfigurationService.Setup(s => s.ReadDefundingListImportConfiguration()).ReturnsAsync(defundingListImportControl).Verifiable();
+
+        // Act
+        var result = await _function.Run(new TimerInfo());
+
+        // Assert
+        Assert.IsType<OkObjectResult>(result);
+        _jobConfigurationService.VerifyAll();
+        _schedulerClientService.VerifyAll();
+    }
+
+    [Fact]
+    public async Task Run_Should_Return_BadRequest_When_Pldns_Function_Call_Fails()
+    {
+        // Arrange
+        var userName = "PldnsUser";
+        var regulatedJobControl = new RegulatedJobControl() { JobId = Guid.NewGuid(), JobRunId = Guid.NewGuid(), JobEnabled = true, ProcessStagingData = true, RunApiImport = true };
+        var fundedJobControl = new FundedJobControl() { JobId = Guid.NewGuid(), JobRunId = Guid.NewGuid(), JobEnabled = true, ImportFundedCsv = true, ImportArchivedCsv = true };
+        var pldnsControl = new PldnsImportControl() { JobId = Guid.NewGuid(), JobRunId = Guid.NewGuid(), ImportPldns = true, JobEnabled = true };
+        var defundingListImportControl = new DefundingListImportControl() { JobId = Guid.NewGuid(), JobRunId = Guid.NewGuid(), ImportDefundingList = true, JobEnabled = true };
+
+        var lastRegulatedJobRun = new JobRunControl() { Id = Guid.NewGuid(), JobId = regulatedJobControl.JobId, Status = JobStatus.Completed.ToString(), User = userName };
+        var lastFundedJobRun = new JobRunControl() { Id = Guid.NewGuid(), JobId = fundedJobControl.JobId, Status = JobStatus.Completed.ToString(), User = userName };
+        var lastPldnsJobRun = new JobRunControl() { Id = Guid.NewGuid(), JobId = pldnsControl.JobId, Status = JobStatus.Requested.ToString(), User = userName };
+
+        _jobConfigurationService.Setup(s => s.ReadRegulatedJobConfiguration()).ReturnsAsync(regulatedJobControl).Verifiable();
+        _jobConfigurationService.Setup(s => s.ReadFundedJobConfiguration()).ReturnsAsync(fundedJobControl).Verifiable();
+        _jobConfigurationService.Setup(s => s.ReadPldnsImportConfiguration()).ReturnsAsync(pldnsControl).Verifiable();
+        _jobConfigurationService.Setup(s => s.GetLastJobRunAsync(JobNames.RegulatedQualifications.ToString())).ReturnsAsync(lastRegulatedJobRun).Verifiable();
+        _jobConfigurationService.Setup(s => s.GetLastJobRunAsync(JobNames.FundedQualifications.ToString())).ReturnsAsync(lastFundedJobRun).Verifiable();
+        _jobConfigurationService.Setup(s => s.GetLastJobRunAsync(JobNames.Pldns.ToString())).ReturnsAsync(lastPldnsJobRun).Verifiable();
+        _jobConfigurationService.Setup(s => s.UpdateJobRun(userName, pldnsControl.JobId, lastPldnsJobRun.Id, 0, Common.Enum.JobStatus.RequestSent)).Verifiable();
+        _jobConfigurationService.Setup(s => s.UpdateJobRun(userName, pldnsControl.JobId, lastPldnsJobRun.Id, 0, Common.Enum.JobStatus.Error)).Verifiable();
+        _schedulerClientService.Setup(s => s.ExecuteFunction(It.Is<JobRunControl>(j => j.Id == lastPldnsJobRun.Id), "importPldns", "api/importPldns")).ReturnsAsync(false).Verifiable();
+        _jobConfigurationService.Setup(s => s.ReadDefundingListImportConfiguration()).ReturnsAsync(defundingListImportControl).Verifiable();
+
+        // Act
+        var result = await _function.Run(new TimerInfo());
+
+        // Assert
+        Assert.IsType<BadRequestObjectResult>(result);
+        _jobConfigurationService.VerifyAll();
+        _schedulerClientService.VerifyAll();
+    }
+
+    [Fact]
+    public async Task Run_Should_Execute_DefundingListJob()
+    {
+        // Arrange
+        var userName = "DefundUser";
+        var regulatedJobControl = new RegulatedJobControl() { JobId = Guid.NewGuid(), JobRunId = Guid.NewGuid(), JobEnabled = true, ProcessStagingData = true, RunApiImport = true };
+        var fundedJobControl = new FundedJobControl() { JobId = Guid.NewGuid(), JobRunId = Guid.NewGuid(), JobEnabled = true, ImportFundedCsv = true, ImportArchivedCsv = true };
+        var pldnsControl = new PldnsImportControl() { JobId = Guid.NewGuid(), JobRunId = Guid.NewGuid(), ImportPldns = true, JobEnabled = true };
+        var defundingListImportControl = new DefundingListImportControl() { JobId = Guid.NewGuid(), JobRunId = Guid.NewGuid(), ImportDefundingList = true, JobEnabled = true };
+
+        var lastRegulatedJobRun = new JobRunControl() { Id = Guid.NewGuid(), JobId = regulatedJobControl.JobId, Status = JobStatus.Completed.ToString(), User = userName };
+        var lastFundedJobRun = new JobRunControl() { Id = Guid.NewGuid(), JobId = fundedJobControl.JobId, Status = JobStatus.Completed.ToString(), User = userName };
+        var lastPldnsJobRun = new JobRunControl() { Id = Guid.NewGuid(), JobId = pldnsControl.JobId, Status = JobStatus.Completed.ToString(), User = userName };
+        var lastDefundingJobRun = new JobRunControl() { Id = Guid.NewGuid(), JobId = defundingListImportControl.JobId, Status = JobStatus.Requested.ToString(), User = userName };
+
+        _jobConfigurationService.Setup(s => s.ReadRegulatedJobConfiguration()).ReturnsAsync(regulatedJobControl).Verifiable();
+        _jobConfigurationService.Setup(s => s.ReadFundedJobConfiguration()).ReturnsAsync(fundedJobControl).Verifiable();
+        _jobConfigurationService.Setup(s => s.ReadPldnsImportConfiguration()).ReturnsAsync(pldnsControl).Verifiable();
+        _jobConfigurationService.Setup(s => s.GetLastJobRunAsync(JobNames.RegulatedQualifications.ToString())).ReturnsAsync(lastRegulatedJobRun).Verifiable();
+        _jobConfigurationService.Setup(s => s.GetLastJobRunAsync(JobNames.FundedQualifications.ToString())).ReturnsAsync(lastFundedJobRun).Verifiable();
+        _jobConfigurationService.Setup(s => s.GetLastJobRunAsync(JobNames.Pldns.ToString())).ReturnsAsync(lastPldnsJobRun).Verifiable();
+        _jobConfigurationService.Setup(s => s.GetLastJobRunAsync(JobNames.DefundingList.ToString())).ReturnsAsync(lastDefundingJobRun).Verifiable();
+        _jobConfigurationService.Setup(s => s.UpdateJobRun(userName, defundingListImportControl.JobId, lastDefundingJobRun.Id, 0, Common.Enum.JobStatus.RequestSent)).Verifiable();
+        _schedulerClientService.Setup(s => s.ExecuteFunction(It.Is<JobRunControl>(j => j.Id == lastDefundingJobRun.Id), "importDefundingList", "api/importDefundingList")).ReturnsAsync(true).Verifiable();
+        _jobConfigurationService.Setup(s => s.ReadDefundingListImportConfiguration()).ReturnsAsync(defundingListImportControl).Verifiable();
+
+        // Act
+        var result = await _function.Run(new TimerInfo());
+
+        // Assert
+        Assert.IsType<OkObjectResult>(result);
+        _jobConfigurationService.VerifyAll();
+        _schedulerClientService.VerifyAll();
+    }
+
+    [Fact]
+    public async Task Run_Should_Return_BadRequest_When_DefundingList_Function_Call_Fails()
+    {
+        // Arrange
+        var userName = "DefundUser";
+        var regulatedJobControl = new RegulatedJobControl() { JobId = Guid.NewGuid(), JobRunId = Guid.NewGuid(), JobEnabled = true, ProcessStagingData = true, RunApiImport = true };
+        var fundedJobControl = new FundedJobControl() { JobId = Guid.NewGuid(), JobRunId = Guid.NewGuid(), JobEnabled = true, ImportFundedCsv = true, ImportArchivedCsv = true };
+        var pldnsControl = new PldnsImportControl() { JobId = Guid.NewGuid(), JobRunId = Guid.NewGuid(), ImportPldns = true, JobEnabled = true };
+        var defundingListImportControl = new DefundingListImportControl() { JobId = Guid.NewGuid(), JobRunId = Guid.NewGuid(), ImportDefundingList = true, JobEnabled = true };
+
+        var lastRegulatedJobRun = new JobRunControl() { Id = Guid.NewGuid(), JobId = regulatedJobControl.JobId, Status = JobStatus.Completed.ToString(), User = userName };
+        var lastFundedJobRun = new JobRunControl() { Id = Guid.NewGuid(), JobId = fundedJobControl.JobId, Status = JobStatus.Completed.ToString(), User = userName };
+        var lastPldnsJobRun = new JobRunControl() { Id = Guid.NewGuid(), JobId = pldnsControl.JobId, Status = JobStatus.Completed.ToString(), User = userName };
+        var lastDefundingJobRun = new JobRunControl() { Id = Guid.NewGuid(), JobId = defundingListImportControl.JobId, Status = JobStatus.Requested.ToString(), User = userName };
+
+        _jobConfigurationService.Setup(s => s.ReadRegulatedJobConfiguration()).ReturnsAsync(regulatedJobControl).Verifiable();
+        _jobConfigurationService.Setup(s => s.ReadFundedJobConfiguration()).ReturnsAsync(fundedJobControl).Verifiable();
+        _jobConfigurationService.Setup(s => s.ReadPldnsImportConfiguration()).ReturnsAsync(pldnsControl).Verifiable();
+        _jobConfigurationService.Setup(s => s.GetLastJobRunAsync(JobNames.RegulatedQualifications.ToString())).ReturnsAsync(lastRegulatedJobRun).Verifiable();
+        _jobConfigurationService.Setup(s => s.GetLastJobRunAsync(JobNames.FundedQualifications.ToString())).ReturnsAsync(lastFundedJobRun).Verifiable();
+        _jobConfigurationService.Setup(s => s.GetLastJobRunAsync(JobNames.Pldns.ToString())).ReturnsAsync(lastPldnsJobRun).Verifiable();
+        _jobConfigurationService.Setup(s => s.GetLastJobRunAsync(JobNames.DefundingList.ToString())).ReturnsAsync(lastDefundingJobRun).Verifiable();
+        _jobConfigurationService.Setup(s => s.UpdateJobRun(userName, defundingListImportControl.JobId, lastDefundingJobRun.Id, 0, Common.Enum.JobStatus.RequestSent)).Verifiable();
+        _jobConfigurationService.Setup(s => s.UpdateJobRun(userName, defundingListImportControl.JobId, lastDefundingJobRun.Id, 0, Common.Enum.JobStatus.Error)).Verifiable();
+        _schedulerClientService.Setup(s => s.ExecuteFunction(It.Is<JobRunControl>(j => j.Id == lastDefundingJobRun.Id), "importDefundingList", "api/importDefundingList")).ReturnsAsync(false).Verifiable();
+        _jobConfigurationService.Setup(s => s.ReadDefundingListImportConfiguration()).ReturnsAsync(defundingListImportControl).Verifiable();
+
+        // Act
+        var result = await _function.Run(new TimerInfo());
+
+        // Assert
+        Assert.IsType<BadRequestObjectResult>(result);
+        _jobConfigurationService.VerifyAll();
+        _schedulerClientService.VerifyAll();
+    }
 }

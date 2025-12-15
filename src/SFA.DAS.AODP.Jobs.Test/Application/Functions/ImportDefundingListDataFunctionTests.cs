@@ -27,6 +27,9 @@ public class ImportDefundingListDataFunctionTests
     private readonly AodpJobsConfiguration _config;
     private readonly ImportDefundingListDataFunction _function;
     private readonly FunctionContext _functionContext;
+    private static readonly string[] stringArray =
+                    // row values: QAN, Title, InScope, Comments
+                    ["QAN-001", " Title one ", "0", "comment 1"];
 
     public ImportDefundingListDataFunctionTests()
     {
@@ -54,13 +57,11 @@ public class ImportDefundingListDataFunctionTests
     {
         // Arrange - create spreadsheet with target sheet, header and multiple data rows using different in-scope representations
         using var ms = CreateDefundingWorkbookStream(includeTargetSheet: true, headerRowIndex: 2, dataRows: new[]
-        {
-                // row values: QAN, Title, InScope, Comments
-                new[] { "QAN-001", " Title one ", "0", "comment 1" },       
-                new[] { "QAN-002", "Title two", "1", "" },                
-                new[] { "QAN-003", "Title three", "Excluded", "c3" },     
-                new[] { "QAN-004", "  ", "", "    " },              
-                new[] { "QAN-005", "Title five", "Yes", "ok" }          
+        { stringArray,       
+                ["QAN-002", "Title two", "1", ""],                
+                ["QAN-003", "Title three", "Excluded", "c3"],     
+                ["QAN-004", "  ", "", "    "],              
+                ["QAN-005", "Title five", "Yes", "ok"]          
             });
 
         ms.Position = 0;
@@ -125,7 +126,7 @@ public class ImportDefundingListDataFunctionTests
 
         var first = captured.Single(x => x.Qan == "QAN-001");
         Assert.False(first.InScope);
-        Assert.Equal("Title one", first.Title.Trim());
+        Assert.Equal("Title one", first.Title!.Trim());
 
         var second = captured.Single(x => x.Qan == "QAN-002");
         Assert.True(second.InScope);

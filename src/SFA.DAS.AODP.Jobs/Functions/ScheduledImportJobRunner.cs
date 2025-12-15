@@ -165,7 +165,12 @@ namespace SFA.DAS.AODP.Jobs.Functions
                 if (exectuePldnsImports)
                 {
                     var requestedJobRun = await _jobConfigurationService.GetLastJobRunAsync(JobNames.Pldns.ToString());
-                    if (requestedJobRun.Id != Guid.Empty && requestedJobRun.Status == JobStatus.Requested.ToString())
+
+                    if (requestedJobRun.Id == Guid.Empty)
+                    {
+                        _logger.LogInformation($"[{nameof(ScheduledImportJobRunner)}] -> No requested PLDNS import job runs found.");
+                    }
+                    else if (requestedJobRun.Status == JobStatus.Requested.ToString())
                     {
                         _logger.LogInformation($"[{nameof(ScheduledImportJobRunner)}] -> Found requested PLDNS import job run. Triggering job.");
                         await _jobConfigurationService.UpdateJobRun(requestedJobRun.User, requestedJobRun.JobId, requestedJobRun.Id, requestedJobRun.RecordsProcessed ?? 0, JobStatus.RequestSent);
@@ -177,24 +182,28 @@ namespace SFA.DAS.AODP.Jobs.Functions
                             return new BadRequestObjectResult("Call to pldnsImport failed");
                         }
                     }
-                    else
-                    {
-                        _logger.LogInformation($"[{nameof(ScheduledImportJobRunner)}] -> No requested PLDNS import job runs found.");
-                    }
-                    // Cleanup operation
-                    if (requestedJobRun.Id != Guid.Empty && requestedJobRun.Status == JobStatus.RequestSent.ToString())
+                    else if (requestedJobRun.Status == JobStatus.RequestSent.ToString())
                     {
                         if (requestedJobRun.StartTime < _systemClockService.UtcNow.AddHours(-4))
                         {
                             await _jobConfigurationService.UpdateJobRun(requestedJobRun.User, requestedJobRun.JobId, requestedJobRun.Id, requestedJobRun.RecordsProcessed ?? 0, JobStatus.Error);
                         }
                     }
+                    else
+                    {
+                        _logger.LogInformation($"[{nameof(ScheduledImportJobRunner)}] -> No requested PLDNS import job runs found.");
+                    }
                 }
 
                 if (exectueDefundingListImports)
                 {
                     var requestedJobRun = await _jobConfigurationService.GetLastJobRunAsync(JobNames.DefundingList.ToString());
-                    if (requestedJobRun.Id != Guid.Empty && requestedJobRun.Status == JobStatus.Requested.ToString())
+
+                    if (requestedJobRun.Id == Guid.Empty)
+                    {
+                        _logger.LogInformation($"[{nameof(ScheduledImportJobRunner)}] -> No requested Defunding list import job runs found.");
+                    }
+                    else if (requestedJobRun.Status == JobStatus.Requested.ToString())
                     {
                         _logger.LogInformation($"[{nameof(ScheduledImportJobRunner)}] -> Found requested Defunding list import job run. Triggering job.");
                         await _jobConfigurationService.UpdateJobRun(requestedJobRun.User, requestedJobRun.JobId, requestedJobRun.Id, requestedJobRun.RecordsProcessed ?? 0, JobStatus.RequestSent);
@@ -206,17 +215,16 @@ namespace SFA.DAS.AODP.Jobs.Functions
                             return new BadRequestObjectResult("Call to importDefundingList failed");
                         }
                     }
-                    else
-                    {
-                        _logger.LogInformation($"[{nameof(ScheduledImportJobRunner)}] -> No requested Defunding list import job runs found.");
-                    }
-                    // Cleanup operation
-                    if (requestedJobRun.Id != Guid.Empty && requestedJobRun.Status == JobStatus.RequestSent.ToString())
+                    else if (requestedJobRun.Status == JobStatus.RequestSent.ToString())
                     {
                         if (requestedJobRun.StartTime < _systemClockService.UtcNow.AddHours(-4))
                         {
                             await _jobConfigurationService.UpdateJobRun(requestedJobRun.User, requestedJobRun.JobId, requestedJobRun.Id, requestedJobRun.RecordsProcessed ?? 0, JobStatus.Error);
                         }
+                    }
+                    else
+                    {
+                        _logger.LogInformation($"[{nameof(ScheduledImportJobRunner)}] -> No requested Defunding list import job runs found.");
                     }
                 }
             }

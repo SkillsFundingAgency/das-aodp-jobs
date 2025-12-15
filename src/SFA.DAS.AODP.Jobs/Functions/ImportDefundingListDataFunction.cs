@@ -39,7 +39,7 @@ public class ImportDefundingListDataFunction
     public async Task<IActionResult> ImportDefundingList(
         [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "api/importDefundingList/{username}")] HttpRequestData req, string username = "", CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation($"[{nameof(ImportDefundingListDataFunction)}] -> ImportDefundingList triggered by {username}");
+        _logger.LogInformation("[{Function}] -> ImportDefundingList triggered by {Username}", nameof(ImportDefundingListDataFunction), username);
 
         var totalImported = await ImportDefundingList(cancellationToken);
 
@@ -50,14 +50,14 @@ public class ImportDefundingListDataFunction
         await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, lastJobRun.Id, totalImported, JobStatus.Completed);
 
         var msg = $"[{nameof(ImportDefundingListDataFunction)}] -> {totalImported} records imported.";
-        _logger.LogInformation(msg);
+        _logger.LogInformation("[{Function}] -> {TotalImported} records imported.", nameof(ImportDefundingListDataFunction), totalImported);
         return new OkObjectResult(msg);
     }
 
     private async Task<int> ImportDefundingList(CancellationToken cancellationToken)
     {
         string? importFileUrl = _config.DefundingListImportUrl;
-        await using var ms = await _blobStorageFileService.DownloadFileAsync(importFileUrl, cancellationToken);
+        await using var ms = await _blobStorageFileService.DownloadFileAsync(importFileUrl!, cancellationToken);
 
         ms.Position = 0;
 

@@ -18,8 +18,7 @@ public class ImportRepositoryTests
             .Options;
 
         await using var context = new ApplicationDbContext(options);
-        var loggerMock = new Mock<ILogger<ImportRepository>>();
-        var repo = new ImportRepository(context, loggerMock.Object);
+        var repo = new ImportRepository(context);
 
         var items = new List<DefundingList>
             {
@@ -46,8 +45,7 @@ public class ImportRepositoryTests
             .Options;
 
         await using var context = new ApplicationDbContext(options);
-        var loggerMock = new Mock<ILogger<ImportRepository>>();
-        var repo = new ImportRepository(context, loggerMock.Object);
+        var repo = new ImportRepository(context);
 
         var items = new List<Pldns>
             {
@@ -68,8 +66,7 @@ public class ImportRepositoryTests
     {
         // Arrange - mock IApplicationDbContext, items null => early return
         var contextMock = new Mock<IApplicationDbContext>();
-        var loggerMock = new Mock<ILogger<ImportRepository>>();
-        var repo = new ImportRepository(contextMock.Object, loggerMock.Object);
+        var repo = new ImportRepository(contextMock.Object);
 
         // Act
         await repo.BulkInsertAsync<object>(null!, CancellationToken.None);
@@ -83,92 +80,9 @@ public class ImportRepositoryTests
     {
         // Arrange - context is not ApplicationDbContext
         var contextMock = new Mock<IApplicationDbContext>();
-        var loggerMock = new Mock<ILogger<ImportRepository>>();
-        var repo = new ImportRepository(contextMock.Object, loggerMock.Object);
+        var repo = new ImportRepository(contextMock.Object);
 
         // Act / Assert
         await Assert.ThrowsAsync<InvalidOperationException>(() => repo.DeleteDuplicateAsync("sp", null, CancellationToken.None));
     }
-
-    //[Fact]
-    //public async Task DeleteDuplicateAsync_WhenSqlReturnsDeletedRows_ReturnsParsedInt()
-    //{
-    //    // Arrange - use Sqlite in-memory connection so we can execute SQL and return a scalar row
-    //    var connection = new SqliteConnection("DataSource=:memory:");
-    //    await connection.OpenAsync();
-
-    //    var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-    //        .UseSqlite(connection)
-    //        .Options;
-
-    //    await using (var context = new ApplicationDbContext(options))
-    //    {
-    //        // Ensure database created (not strictly required for this raw SQL)
-    //        await context.Database.EnsureCreatedAsync();
-
-    //        var loggerMock = new Mock<ILogger<ImportRepository>>();
-    //        var repo = new ImportRepository(context, loggerMock.Object);
-
-    //        // We will pass raw SELECT as spName. The repository sets CommandType = StoredProcedure,
-    //        // but Sqlite will still execute the command text.
-    //        var result = await repo.DeleteDuplicateAsync("SELECT 7 AS DeletedRows", null, CancellationToken.None);
-
-    //        Assert.Equal(7, result);
-    //    }
-
-    //    await connection.CloseAsync();
-    //}
-
-    //[Fact]
-    //public async Task DeleteDuplicateAsync_WhenSqlReturnsNoRows_ReturnsZero()
-    //{
-    //    var connection = new SqliteConnection("DataSource=:memory:");
-    //    await connection.OpenAsync();
-
-    //    var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-    //        .UseSqlite(connection)
-    //        .Options;
-
-    //    await using (var context = new ApplicationDbContext(options))
-    //    {
-    //        await context.Database.EnsureCreatedAsync();
-
-    //        var loggerMock = new Mock<ILogger<ImportRepository>>();
-    //        var repo = new ImportRepository(context, loggerMock.Object);
-
-    //        // Query returns no rows
-    //        var result = await repo.DeleteDuplicateAsync("SELECT NULL AS DeletedRows WHERE 0=1", null, CancellationToken.None);
-
-    //        Assert.Equal(0, result);
-    //    }
-
-    //    await connection.CloseAsync();
-    //}
-
-    //[Fact]
-    //public async Task DeleteDuplicateAsync_WhenDeletedRowsNotInt_ReturnsZero()
-    //{
-    //    var connection = new SqliteConnection("DataSource=:memory:");
-    //    await connection.OpenAsync();
-
-    //    var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-    //        .UseSqlite(connection)
-    //        .Options;
-
-    //    await using (var context = new ApplicationDbContext(options))
-    //    {
-    //        await context.Database.EnsureCreatedAsync();
-
-    //        var loggerMock = new Mock<ILogger<ImportRepository>>();
-    //        var repo = new ImportRepository(context, loggerMock.Object);
-
-    //        // Use parameter in SQL so we can exercise parameter usage.
-    //        // If parameter value is non-numeric, parsing will fail and method should return 0.
-    //        var result = await repo.DeleteDuplicateAsync("SELECT @Qan AS DeletedRows", "not-an-int", CancellationToken.None);
-
-    //        Assert.Equal(0, result);
-    //    }
-
-    //    await connection.CloseAsync();
-    //}
 }

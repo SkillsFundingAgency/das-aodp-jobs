@@ -2,6 +2,6 @@
 
 public class BlobStorageSettings
 {
-    public string ConnectionString { get; set; }
-    public string FileUploadContainerName { get; set; }
+    public required string ConnectionString { get; set; }
+    public required string FileUploadContainerName { get; set; }
 }

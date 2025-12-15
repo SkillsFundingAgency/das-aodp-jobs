@@ -10,12 +10,10 @@ namespace SFA.DAS.AODP.Infrastructure.Repositories;
 public class ImportRepository : IImportRepository
 {
     private readonly IApplicationDbContext _context;
-    private readonly ILogger<ImportRepository> _logger;
 
-    public ImportRepository(IApplicationDbContext context, ILogger<ImportRepository> logger)
+    public ImportRepository(IApplicationDbContext context)
     {
         _context = context;
-        _logger = logger;
     }
 
     public async Task BulkInsertAsync<T>(IEnumerable<T> items, CancellationToken cancellationToken = default)

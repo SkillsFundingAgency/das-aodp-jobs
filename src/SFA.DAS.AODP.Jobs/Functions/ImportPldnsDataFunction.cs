@@ -42,9 +42,7 @@ public class ImportPldnsDataFunction
     public async Task<IActionResult> ImportPldns(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "api/importPldns/{username}")] HttpRequestData req, string username = "", CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation($"[{nameof(ImportPldnsDataFunction)}] -> ImportPldns triggered by {username}");
-
-
+        _logger.LogInformation("[{Function}] -> ImportPldns triggered by {Username}", nameof(ImportPldnsDataFunction), username);
         try
         {
             var totalImported = await ImportPldns(cancellationToken);
@@ -56,7 +54,7 @@ public class ImportPldnsDataFunction
             await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, lastJobRun.Id, totalImported, JobStatus.Completed);
 
             var msg = $"[{nameof(ImportPldnsDataFunction)}] -> {totalImported} records imported.";
-            _logger.LogInformation(msg);
+            _logger.LogInformation("[{Function}] -> {TotalImported} records imported.", nameof(ImportPldnsDataFunction), totalImported);
             return new OkObjectResult(msg);
         }
         catch (ApiException ex)
@@ -79,7 +77,7 @@ public class ImportPldnsDataFunction
     private async Task<int> ImportPldns(CancellationToken cancellationToken)
     {
         string? importFileUrl = _config.PldnsImportUrl;
-        await using var ms = await _blobStorageFileService.DownloadFileAsync(importFileUrl, cancellationToken);
+        await using var ms = await _blobStorageFileService.DownloadFileAsync(importFileUrl!, cancellationToken);
         ms.Position = 0;
 
         using var document = SpreadsheetDocument.Open(ms, false);
