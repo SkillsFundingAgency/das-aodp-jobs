@@ -97,6 +97,42 @@ namespace SFA.DAS.AODP.Jobs.Services
 
             return jobRunControl;
         }
+
+        public async Task<PldnsImportControl> ReadPldnsImportConfiguration()
+        {
+            var jobControl = new PldnsImportControl();
+            var jobRecord = await _jobsRepository.GetJobByNameAsync(JobNames.Pldns.ToString());
+            jobControl.JobEnabled = jobRecord?.Enabled ?? false;
+            jobControl.JobId = jobRecord?.Id ?? Guid.Empty;
+            jobControl.Status = jobRecord.Status;
+            jobControl.JobRunId = jobRecord?.Id ?? Guid.Empty;
+            if (jobControl.JobId != Guid.Empty)
+            {
+                var configEntries = await _jobsRepository.GetJobConfigurationsByIdAsync(jobControl.JobId);
+                var importPldnsValue = configEntries.FirstOrDefault(f => f.Name == JobConfiguration.ImportPldns.ToString())?.Value ?? "false";
+                bool.TryParse(importPldnsValue, out jobControl.ImportPldns);
+            }
+
+            return jobControl;
+        }
+
+        public async Task<DefundingListImportControl> ReadDefundingListImportConfiguration()
+        {
+            var jobControl = new DefundingListImportControl();
+            var jobRecord = await _jobsRepository.GetJobByNameAsync(JobNames.DefundingList.ToString());
+            jobControl.JobEnabled = jobRecord?.Enabled ?? false;
+            jobControl.JobId = jobRecord?.Id ?? Guid.Empty;
+            jobControl.Status = jobRecord.Status;
+            jobControl.JobRunId = jobRecord?.Id ?? Guid.Empty;
+            if (jobControl.JobId != Guid.Empty)
+            {
+                var configEntries = await _jobsRepository.GetJobConfigurationsByIdAsync(jobControl.JobId);
+                var importDefundingListValue = configEntries.FirstOrDefault(f => f.Name == JobConfiguration.ImportDefundingList.ToString())?.Value ?? "false";
+                bool.TryParse(importDefundingListValue, out jobControl.ImportDefundingList);
+            }
+
+            return jobControl;
+        }
     }
 
     public class RegulatedJobControl
@@ -115,6 +151,24 @@ namespace SFA.DAS.AODP.Jobs.Services
         public Guid JobRunId;
         public bool ImportFundedCsv;
         public bool ImportArchivedCsv;
+        public bool JobEnabled;
+        public string Status;
+    }
+
+    public class PldnsImportControl
+    {
+        public Guid JobId;
+        public Guid JobRunId;
+        public bool ImportPldns;
+        public bool JobEnabled;
+        public string Status;
+    }
+
+    public class DefundingListImportControl
+    {
+        public Guid JobId;
+        public Guid JobRunId;
+        public bool ImportDefundingList;
         public bool JobEnabled;
         public string Status;
     }

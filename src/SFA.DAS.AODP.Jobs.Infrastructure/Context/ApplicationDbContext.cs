@@ -43,6 +43,9 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public virtual DbSet<QualificationFundingFeedback> QualificationFundingFeedbacks { get; set; }
 
+        public virtual DbSet<Pldns> Pldns { get; set; }
+        public virtual DbSet<DefundingList> DefundingLists { get; set; }
+
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             return base.SaveChangesAsync(cancellationToken);
