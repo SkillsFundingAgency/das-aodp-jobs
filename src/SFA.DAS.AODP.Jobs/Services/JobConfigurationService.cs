@@ -1,4 +1,7 @@
-﻿using SFA.DAS.AODP.Common.Enum;
+﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
+using SFA.DAS.AODP.Common.Enum;
 using SFA.DAS.AODP.Infrastructure.Interfaces;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
@@ -38,7 +41,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             jobControl.JobId = jobRecord?.Id ?? Guid.Empty;
             jobControl.RunApiImport = false;
             jobControl.ProcessStagingData = false;
-            jobControl.Status = jobRecord.Status;
+            jobControl.Status = jobRecord?.Status ?? string.Empty;
 
             if (jobControl.JobId != Guid.Empty)
             {
@@ -60,7 +63,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             jobControl.JobId = jobRecord?.Id ?? Guid.Empty;
             jobControl.ImportFundedCsv = false;
             jobControl.ImportArchivedCsv = false;
-            jobControl.Status = jobRecord.Status;
+            jobControl.Status = jobRecord?.Status ?? string.Empty;
 
             if (jobControl.JobId != Guid.Empty)
             {
@@ -82,7 +85,6 @@ namespace SFA.DAS.AODP.Jobs.Services
 
         public async Task<JobRunControl> GetLastJobRunAsync(string jobName)
         {
-           
             var jobRunRecord = await _jobsRepository.GetLastJobRunsAsync(jobName);
             var jobRunControl = new JobRunControl()
             {
@@ -144,7 +146,7 @@ namespace SFA.DAS.AODP.Jobs.Services
         public bool RunApiImport;
         public bool ProcessStagingData;
         public bool JobEnabled;
-        public string Status;
+        public string Status = string.Empty;
     }
 
     public class FundedJobControl
@@ -154,7 +156,7 @@ namespace SFA.DAS.AODP.Jobs.Services
         public bool ImportFundedCsv;
         public bool ImportArchivedCsv;
         public bool JobEnabled;
-        public string Status;
+        public string Status = string.Empty;
     }
 
     public class PldnsImportControl
@@ -163,7 +165,7 @@ namespace SFA.DAS.AODP.Jobs.Services
         public Guid JobRunId;
         public bool ImportPldns;
         public bool JobEnabled;
-        public string Status;
+        public string Status = string.Empty;
     }
 
     public class DefundingListImportControl
@@ -172,16 +174,16 @@ namespace SFA.DAS.AODP.Jobs.Services
         public Guid JobRunId;
         public bool ImportDefundingList;
         public bool JobEnabled;
-        public string Status;
+        public string Status = string.Empty;
     }
 
     public class JobRunControl
     {
         public Guid Id;
-        public string Status;
+        public string Status = string.Empty;
         public DateTime StartTime;
         public DateTime? EndTime;
-        public string User;
+        public string User = string.Empty;
         public int? RecordsProcessed;
         public Guid JobId;
     }

@@ -1,5 +1,4 @@
 ﻿using Azure.Storage.Blobs;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Models.Config;
@@ -8,7 +7,6 @@ namespace SFA.DAS.AODP.Jobs.Services;
 
 public class BlobStorageFileService : IBlobStorageFileService
 {
-    private readonly BlobStorageSettings _blobStorageSettings;
     private readonly BlobServiceClient _blobServiceClient;
     private readonly IHttpClientFactory _httpClientFactory;
 
@@ -17,7 +15,6 @@ public class BlobStorageFileService : IBlobStorageFileService
         IHttpClientFactory httpClientFactory)
     {
         _blobServiceClient = blobServiceClient;
-        _blobStorageSettings = settings.Value ?? throw new ArgumentNullException(nameof(settings));
         _httpClientFactory = httpClientFactory;
     }
 
@@ -27,7 +24,7 @@ public class BlobStorageFileService : IBlobStorageFileService
             throw new ArgumentException("Filename must be provided.", nameof(filename));
 
         var response = await GetDataFromUrl(filename);
-        var approvedResponseStream = await response.Content.ReadAsStreamAsync();
+        var approvedResponseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
         return approvedResponseStream;
     }
 

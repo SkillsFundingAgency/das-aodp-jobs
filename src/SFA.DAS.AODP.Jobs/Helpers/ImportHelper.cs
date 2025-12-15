@@ -61,6 +61,31 @@ public static class ImportHelper
         return null;
     }
 
+    public static Dictionary<string, string> BuildHeaderMap(Row headerRow, SharedStringTable? sharedStrings)
+    {
+        var headerMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var cell in headerRow.Elements<Cell>())
+        {
+            var col = GetColumnName(cell.CellReference?.Value);
+            var txt = GetCellText(cell, sharedStrings);
+            if (!string.IsNullOrWhiteSpace(col) && !string.IsNullOrWhiteSpace(txt))
+                headerMap[col!] = txt.Trim();
+        }
+        return headerMap;
+    }
+
+    public static string? GetColumnName(string? cellReference)
+    {
+        if (string.IsNullOrWhiteSpace(cellReference)) return null;
+        var sb = new StringBuilder();
+        foreach (var ch in cellReference)
+        {
+            if (char.IsLetter(ch)) sb.Append(ch);
+            else break;
+        }
+        return sb.ToString();
+    }
+
     private static string GetTypedCellValue(Cell cell, string value, SharedStringTable? sharedStrings)
     {
         var dataType = cell.DataType?.Value;

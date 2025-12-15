@@ -106,7 +106,7 @@ public class ImportPldnsDataFunction
         int headerIndex = FindHeaderIndex(rows, sharedStrings);
         var headerRow = rows[headerIndex];
 
-        var headerMap = BuildHeaderMap(headerRow, sharedStrings);
+        var headerMap = ImportHelper.BuildHeaderMap(headerRow, sharedStrings);
         var columns = MapColumns(headerMap);
 
         var culture = new CultureInfo("en-GB");
@@ -164,19 +164,6 @@ public class ImportPldnsDataFunction
         }
 
         return headerListIndex;
-    }
-
-    private static Dictionary<string, string> BuildHeaderMap(Row headerRow, SharedStringTable? sharedStrings)
-    {
-        var headerMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var cell in headerRow.Elements<Cell>())
-        {
-            var col = GetColumnName(cell.CellReference?.Value);
-            var txt = ImportHelper.GetCellText(cell, sharedStrings);
-            if (!string.IsNullOrWhiteSpace(col) && !string.IsNullOrWhiteSpace(txt))
-                headerMap[col!] = txt.Trim();
-        }
-        return headerMap;
     }
 
     private sealed record ColumnNames(
@@ -347,18 +334,6 @@ public class ImportPldnsDataFunction
         return null;
     }
 
-    private static string? GetColumnName(string? cellReference)
-    {
-        if (string.IsNullOrWhiteSpace(cellReference)) return null;
-        var sb = new StringBuilder();
-        foreach (var ch in cellReference)
-        {
-            if (char.IsLetter(ch)) sb.Append(ch);
-            else break;
-        }
-        return sb.ToString();
-    }
-
     private static DateTime? TryParseDate(string? txt, CultureInfo culture, string[] formats)
     {
         if (string.IsNullOrWhiteSpace(txt)) return null;
@@ -376,7 +351,7 @@ public class ImportPldnsDataFunction
     {
         foreach (var cell in rowCells)
         {
-            var col = GetColumnName(cell.CellReference?.Value);
+            var col = ImportHelper.GetColumnName(cell.CellReference?.Value);
             if (string.IsNullOrWhiteSpace(col)) continue;
             var text = ImportHelper.GetCellText(cell, sharedStrings)?.Trim() ?? string.Empty;
             if (!cellMap.ContainsKey(col)) cellMap[col] = text;

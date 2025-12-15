@@ -87,7 +87,7 @@ public class ImportDefundingListDataFunction
         var (headerRow, headerIndex) = DetectHeaderRow(rows, sharedStrings);
 
         // Build header map
-        var headerMap = BuildHeaderMap(headerRow, sharedStrings);
+        var headerMap = ImportHelper.BuildHeaderMap(headerRow, sharedStrings);
 
         // Parse data rows into items
         var items = ParseDataRows(rows, headerIndex + 1, headerMap, worksheetPart, sharedStrings);
@@ -137,19 +137,6 @@ public class ImportDefundingListDataFunction
         }
 
         return (headerRow, headerListIndex);
-    }
-
-    private static Dictionary<string, string> BuildHeaderMap(Row headerRow, SharedStringTable? sharedStrings)
-    {
-        var headerMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var cell in headerRow.Elements<Cell>())
-        {
-            var col = GetColumnName(cell.CellReference?.Value);
-            var txt = ImportHelper.GetCellText(cell, sharedStrings);
-            if (!string.IsNullOrWhiteSpace(col) && !string.IsNullOrWhiteSpace(txt))
-                headerMap[col!] = txt.Trim();
-        }
-        return headerMap;
     }
 
     private static List<DefundingList> ParseDataRows(List<Row> rows, int startIndex, IDictionary<string, string> headerMap, WorksheetPart worksheetPart, SharedStringTable? sharedStrings)
@@ -226,18 +213,6 @@ public class ImportDefundingListDataFunction
         if (bool.TryParse(inScopeStr, out var b)) return b;
         if (int.TryParse(inScopeStr, out var i)) return i != 0;
         return true;
-    }
-
-    private static string? GetColumnName(string? cellReference)
-    {
-        if (string.IsNullOrWhiteSpace(cellReference)) return null;
-        var sb = new StringBuilder();
-        foreach (var ch in cellReference)
-        {
-            if (char.IsLetter(ch)) sb.Append(ch);
-            else break;
-        }
-        return sb.ToString();
     }
 
     private static string GetCellTextByColumn(WorksheetPart worksheetPart, string rowIndex, string? column, SharedStringTable? sharedStrings)
