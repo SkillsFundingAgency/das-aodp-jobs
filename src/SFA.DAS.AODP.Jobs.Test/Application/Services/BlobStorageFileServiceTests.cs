@@ -19,7 +19,6 @@ public class BlobStorageFileServiceTests
         var service = new BlobStorageFileService(
             Mock.Of<BlobServiceClient>(),
             Options.Create(new BlobStorageSettings { ConnectionString = "x", FileUploadContainerName = "c" }),
-            Mock.Of<ILogger<BlobStorageFileService>>(),
             httpFactoryMock.Object);
 
         // Act & Assert
@@ -36,7 +35,6 @@ public class BlobStorageFileServiceTests
         var service = new BlobStorageFileService(
             Mock.Of<BlobServiceClient>(),
             Options.Create(new BlobStorageSettings { ConnectionString = "x", FileUploadContainerName = "c" }),
-            Mock.Of<ILogger<BlobStorageFileService>>(),
             httpFactoryMock.Object);
 
         // Act & Assert
@@ -70,7 +68,6 @@ public class BlobStorageFileServiceTests
         var service = new BlobStorageFileService(
             Mock.Of<BlobServiceClient>(),
             Options.Create(new BlobStorageSettings { ConnectionString = "x", FileUploadContainerName = "c" }),
-            Mock.Of<ILogger<BlobStorageFileService>>(),
             httpFactoryMock.Object);
 
         var fileUrl = "https://example.test/files/test.xlsx";
@@ -106,7 +103,6 @@ public class BlobStorageFileServiceTests
         var service = new BlobStorageFileService(
             Mock.Of<BlobServiceClient>(),
             Options.Create(new BlobStorageSettings { ConnectionString = "x", FileUploadContainerName = "c" }),
-            Mock.Of<ILogger<BlobStorageFileService>>(),
             httpFactoryMock.Object);
 
         var fileUrl = "https://example.test/files/test.xlsx";

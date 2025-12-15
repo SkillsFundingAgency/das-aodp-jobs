@@ -59,17 +59,17 @@ public class ImportPldnsDataFunction
         }
         catch (ApiException ex)
         {
-            _logger.LogError(ex, $"[{nameof(ImportPldnsDataFunction)}] -> ImportPldns unexpected api exception: {ex.Message}");
+            _logger.LogError(ex, "[{Function}] -> ImportPldns unexpected api exception: {Message}", nameof(ImportPldnsDataFunction), ex.Message);
             return new StatusCodeResult((int)ex.StatusCode);
         }
         catch (SystemException ex)
         {
-            _logger.LogError(ex, $"[{nameof(ImportPldnsDataFunction)}] -> ImportPldns unexpected system exception: {ex.Message}");
+            _logger.LogError(ex, "[{Function}] -> ImportPldns unexpected system exception: {Message}", nameof(ImportPldnsDataFunction), ex.Message);
             return new StatusCodeResult(500);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"[{nameof(ImportPldnsDataFunction)}] -> ImportPldns failed: {ex.Message}");
+            _logger.LogError(ex, "[{Function}] -> ImportPldns failed: {Message}", nameof(ImportPldnsDataFunction), ex.Message);
             return new StatusCodeResult(500);
         }
     }

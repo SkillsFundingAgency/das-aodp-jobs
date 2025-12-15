@@ -10,18 +10,14 @@ public class BlobStorageFileService : IBlobStorageFileService
 {
     private readonly BlobStorageSettings _blobStorageSettings;
     private readonly BlobServiceClient _blobServiceClient;
-    private BlobContainerClient? _blobContainerClient;
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly ILogger<BlobStorageFileService> _logger;
 
     public BlobStorageFileService(BlobServiceClient blobServiceClient, 
         IOptions<BlobStorageSettings> settings,
-        ILogger<BlobStorageFileService> logger, 
         IHttpClientFactory httpClientFactory)
     {
         _blobServiceClient = blobServiceClient;
         _blobStorageSettings = settings.Value ?? throw new ArgumentNullException(nameof(settings));
-        _logger = logger;
         _httpClientFactory = httpClientFactory;
     }
 

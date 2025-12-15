@@ -104,13 +104,14 @@ namespace SFA.DAS.AODP.Jobs.Services
             var jobRecord = await _jobsRepository.GetJobByNameAsync(JobNames.Pldns.ToString());
             jobControl.JobEnabled = jobRecord?.Enabled ?? false;
             jobControl.JobId = jobRecord?.Id ?? Guid.Empty;
-            jobControl.Status = jobRecord.Status;
+            jobControl.Status = jobRecord?.Status ?? string.Empty;
             jobControl.JobRunId = jobRecord?.Id ?? Guid.Empty;
             if (jobControl.JobId != Guid.Empty)
             {
                 var configEntries = await _jobsRepository.GetJobConfigurationsByIdAsync(jobControl.JobId);
                 var importPldnsValue = configEntries.FirstOrDefault(f => f.Name == JobConfiguration.ImportPldns.ToString())?.Value ?? "false";
-                bool.TryParse(importPldnsValue, out jobControl.ImportPldns);
+                bool importPldnsParsed = bool.TryParse(importPldnsValue, out bool importPldns);
+                jobControl.ImportPldns = importPldnsParsed && importPldns;
             }
 
             return jobControl;
@@ -122,13 +123,14 @@ namespace SFA.DAS.AODP.Jobs.Services
             var jobRecord = await _jobsRepository.GetJobByNameAsync(JobNames.DefundingList.ToString());
             jobControl.JobEnabled = jobRecord?.Enabled ?? false;
             jobControl.JobId = jobRecord?.Id ?? Guid.Empty;
-            jobControl.Status = jobRecord.Status;
+            jobControl.Status = jobRecord?.Status ?? string.Empty;
             jobControl.JobRunId = jobRecord?.Id ?? Guid.Empty;
             if (jobControl.JobId != Guid.Empty)
             {
                 var configEntries = await _jobsRepository.GetJobConfigurationsByIdAsync(jobControl.JobId);
                 var importDefundingListValue = configEntries.FirstOrDefault(f => f.Name == JobConfiguration.ImportDefundingList.ToString())?.Value ?? "false";
-                bool.TryParse(importDefundingListValue, out jobControl.ImportDefundingList);
+                bool importDefundingListParsed = bool.TryParse(importDefundingListValue, out bool importDefundingList);
+                jobControl.ImportDefundingList = importDefundingListParsed && importDefundingList;
             }
 
             return jobControl;
