@@ -1,9 +1,5 @@
 ﻿using DocumentFormat.OpenXml.Spreadsheet;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace SFA.DAS.AODP.Jobs.Helpers;
 
@@ -129,4 +125,55 @@ public static class ImportHelper
             "0" => "FALSE",
             _ => value
         };
+
+    // New helpers moved from import functions to avoid duplication
+    public static IEnumerable<Row> GetRowsFromWorksheet(DocumentFormat.OpenXml.Packaging.WorksheetPart worksheetPart)
+    {
+        var sheetData = worksheetPart.Worksheet.Elements<SheetData>().FirstOrDefault();
+        if (sheetData == null) yield break;
+        foreach (var row in sheetData.Elements<Row>()) yield return row;
+    }
+
+    public static (Row headerRow, int headerIndex) DetectHeaderRow(List<Row> rows, SharedStringTable? sharedStrings, string[] headerKeywords, int defaultRowIndex = 1, int minMatches = 1)
+    {
+        // choose sensible default header row
+        var headerRow = rows.Count > defaultRowIndex ? rows[defaultRowIndex] : rows[0];
+        int headerListIndex = rows.IndexOf(headerRow);
+
+        for (int r = 0; r < Math.Min(rows.Count, 12); r++)
+        {
+            var cellTexts = rows[r].Elements<Cell>()
+                .Select(c => GetCellText(c, sharedStrings).Trim())
+                .Where(t => !string.IsNullOrWhiteSpace(t))
+                .Select(t => t.ToLowerInvariant())
+                .ToList();
+
+            if (cellTexts.Count == 0) continue;
+
+            var matches = cellTexts.Count(ct => headerKeywords.Any(k => ct.Contains(k)));
+            if (matches >= minMatches)
+            {
+                headerRow = rows[r];
+                headerListIndex = r;
+                break;
+            }
+        }
+
+        return (headerRow, headerListIndex);
+    }
+
+    public static string GetCellTextByColumn(DocumentFormat.OpenXml.Packaging.WorksheetPart worksheetPart, string rowIndex, string? column, SharedStringTable? sharedStrings)
+    {
+        if (string.IsNullOrWhiteSpace(column) || string.IsNullOrWhiteSpace(rowIndex)) return string.Empty;
+        var address = $"{column}{rowIndex}";
+        var cell = worksheetPart.Worksheet.Descendants<Cell>().FirstOrDefault(c => string.Equals((c.CellReference ?? "").Value, address, StringComparison.OrdinalIgnoreCase));
+        if (cell == null) return string.Empty;
+        return GetCellText(cell, sharedStrings)?.Trim() ?? string.Empty;
+    }
+
+    public static string GetValue(DocumentFormat.OpenXml.Packaging.WorksheetPart worksheetPart, string rowIndex, string? column, SharedStringTable? sharedStrings)
+    {
+        if (string.IsNullOrWhiteSpace(column) || string.IsNullOrWhiteSpace(rowIndex)) return string.Empty;
+        return GetCellTextByColumn(worksheetPart, rowIndex, column, sharedStrings)?.Trim() ?? string.Empty;
+    }
 }

@@ -103,8 +103,15 @@ public class ImportPldnsDataFunction
             return 0;
         }
 
-        int headerIndex = FindHeaderIndex(rows, sharedStrings);
-        var headerRow = rows[headerIndex];
+        var headerKeywords = new[] {
+                "text qan","list updated","note",
+                "pldns 14-16","pldns 16-19","pldns local flex",
+                "legal entitlement","digital entitlement","esf l3/l4",
+                "pldns loans","lifelong learning entitlement","level 3 free courses",
+                "pldns cof","start date"
+            };
+
+        var (headerRow, headerIndex) = ImportHelper.DetectHeaderRow(rows, sharedStrings, headerKeywords, defaultRowIndex: 1, minMatches: 1);
 
         var headerMap = ImportHelper.BuildHeaderMap(headerRow, sharedStrings);
         var columns = MapColumns(headerMap);
@@ -130,40 +137,6 @@ public class ImportPldnsDataFunction
         return workbookPart.Workbook.Sheets!
             .Cast<Sheet?>()
             .FirstOrDefault(s => string.Equals((s?.Name!.Value ?? string.Empty).Trim(), targetSheetName, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static int FindHeaderIndex(List<Row> rows, SharedStringTable? sharedStrings)
-    {
-        var headerRow = rows.Count > 1 ? rows[1] : rows[0];
-        int headerListIndex = rows.IndexOf(headerRow);
-
-        var headerKeywords = new[] {
-                "text qan","list updated","note",
-                "pldns 14-16","pldns 16-19","pldns local flex",
-                "legal entitlement","digital entitlement","esf l3/l4",
-                "pldns loans","lifelong learning entitlement","level 3 free courses",
-                "pldns cof","start date"
-            };
-
-        for (int r = 0; r < Math.Min(rows.Count, 12); r++)
-        {
-            var cellTexts = rows[r].Elements<Cell>()
-                .Select(c => ImportHelper.GetCellText(c, sharedStrings).Trim())
-                .Where(t => !string.IsNullOrWhiteSpace(t))
-                .Select(t => t.ToLowerInvariant())
-                .ToList();
-
-            if (cellTexts.Count == 0) continue;
-
-            var matches = cellTexts.Count(ct => headerKeywords.Any(k => ct.Contains(k)));
-            if (matches >= 1)
-            {
-                headerListIndex = r;
-                break;
-            }
-        }
-
-        return headerListIndex;
     }
 
     private sealed record ColumnNames(

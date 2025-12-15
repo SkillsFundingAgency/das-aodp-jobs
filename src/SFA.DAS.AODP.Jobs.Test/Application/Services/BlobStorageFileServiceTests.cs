@@ -15,10 +15,7 @@ public class BlobStorageFileServiceTests
     {
         // Arrange
         var httpFactoryMock = new Mock<IHttpClientFactory>();
-        var service = new BlobStorageFileService(
-            Mock.Of<BlobServiceClient>(),
-            Options.Create(new BlobStorageSettings { ConnectionString = "x", FileUploadContainerName = "c" }),
-            httpFactoryMock.Object);
+        var service = new BlobStorageFileService(httpFactoryMock.Object);
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<ArgumentException>(() => service.DownloadFileAsync(null!));
@@ -31,10 +28,7 @@ public class BlobStorageFileServiceTests
     {
         // Arrange
         var httpFactoryMock = new Mock<IHttpClientFactory>();
-        var service = new BlobStorageFileService(
-            Mock.Of<BlobServiceClient>(),
-            Options.Create(new BlobStorageSettings { ConnectionString = "x", FileUploadContainerName = "c" }),
-            httpFactoryMock.Object);
+        var service = new BlobStorageFileService(httpFactoryMock.Object);
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<ArgumentException>(() => service.DownloadFileAsync("   "));
@@ -64,10 +58,7 @@ public class BlobStorageFileServiceTests
         var httpFactoryMock = new Mock<IHttpClientFactory>();
         httpFactoryMock.Setup(f => f.CreateClient("xlsx")).Returns(httpClient);
 
-        var service = new BlobStorageFileService(
-            Mock.Of<BlobServiceClient>(),
-            Options.Create(new BlobStorageSettings { ConnectionString = "x", FileUploadContainerName = "c" }),
-            httpFactoryMock.Object);
+        var service = new BlobStorageFileService(httpFactoryMock.Object);
 
         var fileUrl = "https://example.test/files/test.xlsx";
 
@@ -99,10 +90,7 @@ public class BlobStorageFileServiceTests
         var httpFactoryMock = new Mock<IHttpClientFactory>();
         httpFactoryMock.Setup(f => f.CreateClient("xlsx")).Returns(httpClient);
 
-        var service = new BlobStorageFileService(
-            Mock.Of<BlobServiceClient>(),
-            Options.Create(new BlobStorageSettings { ConnectionString = "x", FileUploadContainerName = "c" }),
-            httpFactoryMock.Object);
+        var service = new BlobStorageFileService(httpFactoryMock.Object);
 
         var fileUrl = "https://example.test/files/test.xlsx";
 

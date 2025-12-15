@@ -77,14 +77,15 @@ public class ImportDefundingListDataFunction
         }
 
         var worksheetPart = (WorksheetPart)workbookPart.GetPartById(chosenSheet.Id!);
-        var rows = GetRowsFromWorksheet(worksheetPart).ToList();
+        var rows = ImportHelper.GetRowsFromWorksheet(worksheetPart).ToList();
         if (rows.Count <= 1)
         {
             return 0;
         }
 
         // Detect header row
-        var (headerRow, headerIndex) = DetectHeaderRow(rows, sharedStrings);
+        var headerKeywords = new[] { "qualification", "qan", "title", "award", "guided", "sector", "route", "funding", "in scope", "comments" };
+        var (headerRow, headerIndex) = ImportHelper.DetectHeaderRow(rows, sharedStrings, headerKeywords, defaultRowIndex: 6, minMatches: 2);
 
         // Build header map
         var headerMap = ImportHelper.BuildHeaderMap(headerRow, sharedStrings);
@@ -101,42 +102,6 @@ public class ImportDefundingListDataFunction
         await _repository.DeleteDuplicateAsync("[dbo].[proc_DeleteDuplicateDefundingLists]", null, cancellationToken);
 
         return items.Count;
-    }
-
-    private static IEnumerable<Row> GetRowsFromWorksheet(WorksheetPart worksheetPart)
-    {
-        var sheetData = worksheetPart.Worksheet.Elements<SheetData>().FirstOrDefault();
-        if (sheetData == null) yield break;
-        foreach (var row in sheetData.Elements<Row>()) yield return row;
-    }
-
-    private static (Row headerRow, int headerIndex) DetectHeaderRow(List<Row> rows, SharedStringTable? sharedStrings)
-    {
-        Row headerRow = rows.Count > 6 ? rows[6] : rows[0];
-        int headerListIndex = rows.IndexOf(headerRow);
-
-        var headerKeywords = new[] { "qualification", "qan", "title", "award", "guided", "sector", "route", "funding", "in scope", "comments" };
-
-        for (int r = 0; r < Math.Min(rows.Count, 12); r++)
-        {
-            var cellTexts = rows[r].Elements<Cell>()
-                .Select(c => ImportHelper.GetCellText(c, sharedStrings).Trim())
-                .Where(t => !string.IsNullOrWhiteSpace(t))
-                .Select(t => t.ToLowerInvariant())
-                .ToList();
-
-            if (cellTexts.Count == 0) continue;
-
-            var matches = cellTexts.Count(ct => headerKeywords.Any(k => ct.Contains(k)));
-            if (matches >= 2)
-            {
-                headerRow = rows[r];
-                headerListIndex = r;
-                break;
-            }
-        }
-
-        return (headerRow, headerListIndex);
     }
 
     private static List<DefundingList> ParseDataRows(List<Row> rows, int startIndex, IDictionary<string, string> headerMap, WorksheetPart worksheetPart, SharedStringTable? sharedStrings)
@@ -166,20 +131,20 @@ public class ImportDefundingListDataFunction
             var row = localRows[i];
             var rowIndex = row.RowIndex?.Value.ToString() ?? (i + 1).ToString();
 
-            var qNumber = GetValue(worksheetPart, rowIndex, qCol, sharedStrings);
+            var qNumber = ImportHelper.GetValue(worksheetPart, rowIndex, qCol, sharedStrings);
             if (string.IsNullOrWhiteSpace(qNumber))
             {
                 continue;
             }
 
-            var title = GetValue(worksheetPart, rowIndex, titleCol, sharedStrings);
-            var awardingOrg = GetValue(worksheetPart, rowIndex, awardingCol, sharedStrings);
-            var glh = GetValue(worksheetPart, rowIndex, glhCol, sharedStrings);
-            var ssa = GetValue(worksheetPart, rowIndex, ssaCol, sharedStrings);
-            var route = GetValue(worksheetPart, rowIndex, routeCol, sharedStrings);
-            var fundingOffer = GetValue(worksheetPart, rowIndex, fundingCol, sharedStrings);
-            var inScopeStr = GetValue(worksheetPart, rowIndex, inScopeCol, sharedStrings);
-            var comments = GetValue(worksheetPart, rowIndex, commentsCol, sharedStrings);
+            var title = ImportHelper.GetValue(worksheetPart, rowIndex, titleCol, sharedStrings);
+            var awardingOrg = ImportHelper.GetValue(worksheetPart, rowIndex, awardingCol, sharedStrings);
+            var glh = ImportHelper.GetValue(worksheetPart, rowIndex, glhCol, sharedStrings);
+            var ssa = ImportHelper.GetValue(worksheetPart, rowIndex, ssaCol, sharedStrings);
+            var route = ImportHelper.GetValue(worksheetPart, rowIndex, routeCol, sharedStrings);
+            var fundingOffer = ImportHelper.GetValue(worksheetPart, rowIndex, fundingCol, sharedStrings);
+            var inScopeStr = ImportHelper.GetValue(worksheetPart, rowIndex, inScopeCol, sharedStrings);
+            var comments = ImportHelper.GetValue(worksheetPart, rowIndex, commentsCol, sharedStrings);
 
             var inScope = ParseInScope(inScopeStr);
 
@@ -215,18 +180,4 @@ public class ImportDefundingListDataFunction
         return true;
     }
 
-    private static string GetCellTextByColumn(WorksheetPart worksheetPart, string rowIndex, string? column, SharedStringTable? sharedStrings)
-    {
-        if (string.IsNullOrWhiteSpace(column) || string.IsNullOrWhiteSpace(rowIndex)) return string.Empty;
-        var address = $"{column}{rowIndex}";
-        var cell = worksheetPart.Worksheet.Descendants<Cell>().FirstOrDefault(c => string.Equals((c.CellReference ?? "").Value, address, StringComparison.OrdinalIgnoreCase));
-        if (cell == null) return string.Empty;
-        return ImportHelper.GetCellText(cell, sharedStrings)?.Trim() ?? string.Empty;
-    }
-
-    private static string GetValue(WorksheetPart worksheetPart, string rowIndex, string? column, SharedStringTable? sharedStrings)
-    {
-        if (string.IsNullOrWhiteSpace(column) || string.IsNullOrWhiteSpace(rowIndex)) return string.Empty;
-        return GetCellTextByColumn(worksheetPart, rowIndex, column, sharedStrings)?.Trim() ?? string.Empty;
-    }
 }

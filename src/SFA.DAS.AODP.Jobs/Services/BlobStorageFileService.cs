@@ -1,20 +1,13 @@
-﻿using Azure.Storage.Blobs;
-using Microsoft.Extensions.Options;
-using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Models.Config;
+﻿using SFA.DAS.AODP.Jobs.Interfaces;
 
 namespace SFA.DAS.AODP.Jobs.Services;
 
 public class BlobStorageFileService : IBlobStorageFileService
 {
-    private readonly BlobServiceClient _blobServiceClient;
     private readonly IHttpClientFactory _httpClientFactory;
 
-    public BlobStorageFileService(BlobServiceClient blobServiceClient, 
-        IOptions<BlobStorageSettings> settings,
-        IHttpClientFactory httpClientFactory)
+    public BlobStorageFileService(IHttpClientFactory httpClientFactory)
     {
-        _blobServiceClient = blobServiceClient;
         _httpClientFactory = httpClientFactory;
     }
 
