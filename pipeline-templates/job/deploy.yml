@@ -31,8 +31,6 @@ jobs:
               LoggingRedisConnectionString: $(LoggingRedisConnectionString)
               ConfigurationStorageConnectionString: $(ConfigurationStorageConnectionString)
               SharedStorageAccountConnectionString: $(SharedStorageAccountConnectionString)
-              PldnsImportStorageBlobKey: $(PldnsImportStorageBlobKey)
-              DefundingListStorageBlobKey: $(DefundingListStorageBlobKey)
         - template: azure-pipelines-templates/deploy/step/generate-config.yml@das-platform-building-blocks
           parameters:
             EnvironmentName: $(EnvironmentName)
@@ -43,8 +41,10 @@ jobs:
             TargetFileName: '*.schema.json'
             TableName: Configuration
             ConfigurationSecrets:
-               OfqualApiSecret: $(OfqualApiSecret)
-               FunctionHostKey: $(FunctionHostKey)
+              OfqualApiSecret: $(OfqualApiSecret)
+              FunctionHostKey: $(FunctionHostKey)
+              PldnsImportStorageBlobKey: $(PldnsImportStorageBlobKey)
+              DefundingListStorageBlobKey: $(DefundingListStorageBlobKey)
 
         - template: azure-pipelines-templates/deploy/step/function-deploy.yml@das-platform-building-blocks
           parameters:
