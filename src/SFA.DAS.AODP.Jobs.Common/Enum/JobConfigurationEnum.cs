@@ -5,6 +5,8 @@
         ProcessStagingData,
         ApiImport,
         ImportFundedCsv,
-        ImportArchivedCsv
+        ImportArchivedCsv,
+        ImportPldns,
+        ImportDefundingList
     }
 }

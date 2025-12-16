@@ -18,6 +18,10 @@
 
         public string? ArchivedFundedQualificationsImportUrl { get; set; }
 
+        public string? PldnsImportUrl { get; set; }
+
+        public string? DefundingListImportUrl { get; set; }
+
         public string? ConfigurationStorageConnectionString { get; set; }
 
         public string? ConfigNames { get; set; }
