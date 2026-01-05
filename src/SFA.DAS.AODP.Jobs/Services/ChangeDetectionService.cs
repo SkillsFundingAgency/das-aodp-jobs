@@ -2,6 +2,7 @@
 using SFA.DAS.AODP.Jobs.Extensions;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Models.Qualification;
+using System.Text.RegularExpressions;
 
 namespace SFA.DAS.AODP.Jobs.Services
 {
@@ -108,16 +109,35 @@ namespace SFA.DAS.AODP.Jobs.Services
             fields = fields.AppendIf(newRecord.Type != qualificationVersion.Type, "Type");
             fields = fields.AppendIf(newRecord.TypeId != qualificationVersion.TypeId, "Type");
             fields = fields.AppendIf(newRecord.UiLastUpdatedDate != qualificationVersion.UiLastUpdatedDate, "UiLastUpdatedDate");
-            fields = fields.AppendIf(newRecord.IntentionToSeekFundingInEngland != qualificationVersion.FundedInEngland, "FundedInEngland");
 
             var results = new DetectionResults() { Fields = fields, ChangesPresent = fields.Any() };
 
             if (results.ChangesPresent)
             {
-                results.KeyFieldsChanged = results.Fields.Intersect(_keyFields).Any();               
+                var keyFieldsChanged = results.Fields.Intersect(_keyFields).ToList();
+
+                if (keyFieldsChanged.Contains("Title") && IsWhitespaceChange(newRecord.Title, qualification.QualificationName))
+                {
+                    keyFieldsChanged.RemoveAll(f => f == "Title");
+                }
+
+                results.KeyFieldsChanged = keyFieldsChanged.Any();
             }
 
             return results;
+        }
+
+        private static string Normalize(string? s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return string.Empty;
+            s = s.Replace('\u00A0', ' ');              // NBSP -> space
+            return Regex.Replace(s.Trim(), @"\s+", " "); // collapse whitespace
+        }
+
+        private static bool IsWhitespaceChange(string? newValue, string? oldValue)
+        {
+            return string.Equals(Normalize(newValue), Normalize(oldValue), StringComparison.OrdinalIgnoreCase)
+                   && !string.Equals(newValue ?? "", oldValue ?? "", StringComparison.Ordinal);
         }
     }
 }

@@ -574,8 +574,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                 VersionFieldChanges = versionFieldChange,
                 InsertedTimestamp = DateTime.Now,
                 EligibleForFunding = eligibleForFunding,
-                Name = qualificationData.Title,
-                FundedInEngland = qualificationData.IntentionToSeekFundingInEngland
+                Name = qualificationData.Title
             };
         }
 
