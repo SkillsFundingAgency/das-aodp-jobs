@@ -78,6 +78,7 @@ public class ImportPldnsDataFunction
     {
         string? importFileUrl = _config.PldnsImportUrl;
         await using var ms = await _blobStorageFileService.DownloadFileAsync(importFileUrl!, cancellationToken);
+        _logger.LogInformation("[{Function}] -> ImportPldns - Downloaded the Pldns file", nameof(ImportPldnsDataFunction));
         ms.Position = 0;
 
         using var document = SpreadsheetDocument.Open(ms, false);
@@ -87,6 +88,7 @@ public class ImportPldnsDataFunction
         var sheet = FindSheet(workbookPart, "PLDNS V12F");
         if (sheet == null)
         {
+            _logger.LogWarning("[{Function}] -> ImportPldns - Sheet {SheetName} not found", nameof(ImportPldnsDataFunction), "PLDNS V12F");
             return 0;
         }
 
@@ -94,6 +96,7 @@ public class ImportPldnsDataFunction
         var sheetData = worksheetPart.Worksheet.Elements<SheetData>().FirstOrDefault();
         if (sheetData == null)
         {
+            _logger.LogWarning("[{Function}] -> ImportPldns - Sheet data is null for sheet {SheetName}", nameof(ImportPldnsDataFunction), "PLDNS V12F");
             return 0;
         }
 
@@ -122,12 +125,16 @@ public class ImportPldnsDataFunction
         var items = ParseRowsToEntities(rows, headerIndex + 1, sharedStrings, columns, culture, dateFormats);
         if (items.Count == 0)
         {
+            _logger.LogWarning("[{Function}] -> ImportPldns - No records available to import.", nameof(ImportPldnsDataFunction));
             return 0;
         }
 
+        _logger.LogInformation("[{Function}] -> ImportPldns - Parsed {RecordCount} records to import.", nameof(ImportPldnsDataFunction), items.Count);
         var totalImported = await InsertBatchesAsync(items, cancellationToken);
+        _logger.LogInformation("[{Function}] -> ImportPldns - Inserted {TotalImported} records.", nameof(ImportPldnsDataFunction), totalImported);
 
         await _repository.DeleteDuplicateAsync("[dbo].[proc_DeleteDuplicatePldns]", null, cancellationToken);
+        _logger.LogInformation("[{Function}] -> ImportPldns - Removed duplicate records after import.", nameof(ImportPldnsDataFunction));
 
         return totalImported;
     }
