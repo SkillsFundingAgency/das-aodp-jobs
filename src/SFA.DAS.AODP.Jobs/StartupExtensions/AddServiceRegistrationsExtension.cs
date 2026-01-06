@@ -40,7 +40,7 @@ public static class AddServiceRegistrationsExtension
         services.Configure<BlobStorageSettings>(configuration.GetSection("BlobStorageSettings"));
         services.AddSingleton(cfg => cfg.GetRequiredService<IOptions<BlobStorageSettings>>().Value);
 
-        services.AddHttpClient();
+        services.AddHttpClient("default", clinet => clinet.Timeout = TimeSpan.FromMinutes(5));
         services.AddScoped<IApplicationDbContext, ApplicationDbContext>();
         services.AddScoped<IJobsRepository, JobsRepository>();
         services.AddScoped<IQualificationsService, QualificationsService>();
