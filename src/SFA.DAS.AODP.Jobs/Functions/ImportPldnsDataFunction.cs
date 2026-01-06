@@ -118,11 +118,14 @@ public class ImportPldnsDataFunction
 
         var headerMap = ImportHelper.BuildHeaderMap(headerRow, sharedStrings);
         var columns = MapColumns(headerMap);
+        _logger.LogInformation("[{Function}] -> ImportPldns - Mapped columns for import.", nameof(ImportPldnsDataFunction));
 
         var culture = new CultureInfo("en-GB");
         var dateFormats = new[] { "dd/MM/yyyy", "d/M/yyyy", "yyyy-MM-dd", "dd MMM yyyy" };
 
         var items = ParseRowsToEntities(rows, headerIndex + 1, sharedStrings, columns, culture, dateFormats);
+        _logger.LogInformation("[{Function}] -> ImportPldns - Parsed rows to entities.", nameof(ImportPldnsDataFunction));
+
         if (items.Count == 0)
         {
             _logger.LogWarning("[{Function}] -> ImportPldns - No records available to import.", nameof(ImportPldnsDataFunction));
@@ -294,6 +297,7 @@ public class ImportPldnsDataFunction
 
             var batchItems = items.Skip(batch * BatchSize).Take(BatchSize).ToList();
             await _repository.BulkInsertAsync(batchItems, cancellationToken);
+            _logger.LogInformation("[{Function}] -> Inserted batch {BatchNumber} with {BatchCount} records.", nameof(ImportPldnsDataFunction), batch + 1, batchItems.Count);
             totalImported += batchItems.Count;
         }
         return totalImported;
