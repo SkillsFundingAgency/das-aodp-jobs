@@ -23,7 +23,7 @@ public class ImportPldnsDataFunction
     private readonly IJobConfigurationService _jobConfigurationService;
     private readonly IImportRepository _repository;
     private readonly IBlobStorageFileService _blobStorageFileService;
-    private const int BatchSize = 1000;
+    private const int BatchSize = 3000;
 
     public ImportPldnsDataFunction(ILogger<ImportPldnsDataFunction> logger,
             AodpJobsConfiguration config,
