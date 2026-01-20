@@ -36,8 +36,10 @@ var app = builder.Build();
 
 app.Run();
 
+#pragma warning disable S1118
 // Bit of a workaround for now, as we use top level statements for the Program.cs and the compiler automatically generates a Program class under the hood, we need a way to assign them [ExcludeFromCodeCoverage] attribute so having a partial class solves this
 [ExcludeFromCodeCoverage]
 public partial class Program
 {
 }
+#pragma warning restore S1118
