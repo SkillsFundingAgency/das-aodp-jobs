@@ -84,7 +84,6 @@ public class ImportDefundingListDataFunctionTests
 
         _importRepositoryMock
             .Setup(r => r.DeleteDuplicateAsync("[dbo].[proc_DeleteDuplicateDefundingLists]", null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(0)
             .Verifiable();
 
         var control = new DefundingListImportControl

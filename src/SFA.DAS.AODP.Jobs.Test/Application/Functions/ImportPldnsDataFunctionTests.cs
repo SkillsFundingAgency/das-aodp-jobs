@@ -77,7 +77,6 @@ public class ImportPldnsDataFunctionTests
 
         _importRepositoryMock
             .Setup(r => r.DeleteDuplicateAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(0)
             .Verifiable();
 
         var control = new PldnsImportControl

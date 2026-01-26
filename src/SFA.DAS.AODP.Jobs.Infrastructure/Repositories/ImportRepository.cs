@@ -1,19 +1,19 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Infrastructure.Interfaces;
-using System.Data;
 
 namespace SFA.DAS.AODP.Infrastructure.Repositories;
 
 public class ImportRepository : IImportRepository
 {
     private readonly IApplicationDbContext _context;
+    private readonly ILogger<ImportRepository> _logger;
 
-    public ImportRepository(IApplicationDbContext context)
+    public ImportRepository(IApplicationDbContext context, ILogger<ImportRepository> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     public async Task BulkInsertAsync<T>(IEnumerable<T> items, CancellationToken cancellationToken = default)
@@ -32,34 +32,17 @@ public class ImportRepository : IImportRepository
         await _context.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<int> DeleteDuplicateAsync(string spName, string? qan = null, CancellationToken cancellationToken = default)
+    public async Task DeleteDuplicateAsync(string spName, string? qan = null, CancellationToken cancellationToken = default)
     {
-        if (!(_context is ApplicationDbContext dbContext))
-            throw new InvalidOperationException("Unable to execute stored procedure: unexpected DbContext type.");
-
-        var conn = dbContext.Database.GetDbConnection();
-        await using var cmd = conn.CreateCommand();
-        cmd.CommandText = spName;
-        cmd.CommandType = CommandType.StoredProcedure;
-
-        var param = cmd.CreateParameter();
-        param.ParameterName = "@Qan";
-        param.Value = (object?)qan ?? DBNull.Value;
-        cmd.Parameters.Add(param);
-
-        if (conn.State != ConnectionState.Open)
-            await conn.OpenAsync(cancellationToken);
-
-        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
-        if (await reader.ReadAsync(cancellationToken))
+        try
         {
-            var deleted = reader["DeletedRows"];
-            if (deleted != DBNull.Value && int.TryParse(deleted.ToString(), out var deletedCount))
-            {
-                return deletedCount;
-            }
+            var qanParam = qan != null ? $"'{qan}'" : "NULL";
+            var sql = $"EXEC {spName} @qan = {qanParam}";
+            await _context.DeleteDuplicateAsync(sql, cancellationToken: cancellationToken);
         }
-
-        return 0;
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error while deleting duplicates from {spName}: {ex.Message}");
+        }
     }
 }

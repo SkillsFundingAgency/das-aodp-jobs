@@ -60,5 +60,10 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         {
             await this.Database.ExecuteSqlRawAsync($"EXEC [dbo].[Truncate_QualificationImportStaging]");
         }
+
+        public async Task DeleteDuplicateAsync(string sql, CancellationToken cancellationToken = default)
+        {
+            await this.Database.ExecuteSqlRawAsync(sql, cancellationToken);
+        }
     }
 }

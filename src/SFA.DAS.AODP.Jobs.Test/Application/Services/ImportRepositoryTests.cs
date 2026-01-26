@@ -9,6 +9,8 @@ namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Services;
 
 public class ImportRepositoryTests
 {
+    private readonly Mock<ILogger<ImportRepository>> _loggerMock = new();
+
     [Fact]
     public async Task BulkInsertAsync_WithDefundingList_AddsEntitiesAndSaves()
     {
@@ -18,7 +20,7 @@ public class ImportRepositoryTests
             .Options;
 
         await using var context = new ApplicationDbContext(options);
-        var repo = new ImportRepository(context);
+        var repo = new ImportRepository(context, _loggerMock.Object);
 
         var items = new List<DefundingList>
             {
@@ -45,7 +47,7 @@ public class ImportRepositoryTests
             .Options;
 
         await using var context = new ApplicationDbContext(options);
-        var repo = new ImportRepository(context);
+        var repo = new ImportRepository(context, _loggerMock.Object);
 
         var items = new List<Pldns>
             {
@@ -66,23 +68,12 @@ public class ImportRepositoryTests
     {
         // Arrange - mock IApplicationDbContext, items null => early return
         var contextMock = new Mock<IApplicationDbContext>();
-        var repo = new ImportRepository(contextMock.Object);
+        var repo = new ImportRepository(contextMock.Object, _loggerMock.Object);
 
         // Act
         await repo.BulkInsertAsync<object>(null!, CancellationToken.None);
 
         // Assert - SaveChangesAsync should not be invoked
         contextMock.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task DeleteDuplicateAsync_WithNonApplicationDbContext_ThrowsInvalidOperationException()
-    {
-        // Arrange - context is not ApplicationDbContext
-        var contextMock = new Mock<IApplicationDbContext>();
-        var repo = new ImportRepository(contextMock.Object);
-
-        // Act / Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() => repo.DeleteDuplicateAsync("sp", null, CancellationToken.None));
     }
 }

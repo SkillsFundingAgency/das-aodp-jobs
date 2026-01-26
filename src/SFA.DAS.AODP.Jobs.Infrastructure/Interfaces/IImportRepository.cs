@@ -4,5 +4,5 @@ public interface IImportRepository
 {
     Task BulkInsertAsync<T>(IEnumerable<T> items, CancellationToken cancellationToken = default);
 
-    Task<int> DeleteDuplicateAsync(string spName, string? qan = null, CancellationToken cancellationToken = default);
+    Task DeleteDuplicateAsync(string spName, string? qan = null, CancellationToken cancellationToken = default);
 }

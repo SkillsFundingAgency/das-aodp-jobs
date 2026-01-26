@@ -28,5 +28,7 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
         Task Truncate_FundedQualifications();
         Task Truncate_QualificationImportStaging();
+
+        Task DeleteDuplicateAsync(string sql, CancellationToken cancellationToken = default);
     }
 }
