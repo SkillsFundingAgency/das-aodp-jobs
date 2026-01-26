@@ -8,6 +8,9 @@ namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Helpers;
 
 public class ImportHelperTests
 {
+    private static readonly string[] s_notPresentKeywords = new[] { "notpresent" };
+    private static readonly string[] s_keywordKeywords = new[] { "keyword" };
+
     [Fact]
     public void GetCellText_NullCell_ReturnsEmpty()
     {
@@ -244,8 +247,8 @@ public class ImportHelperTests
         var rows = new List<Row> { r0, r1, r2 };
 
         // Act
-        var (headerRow1, idx1) = ImportHelper.DetectHeaderRow(rows, null, new[] { "notpresent" }, defaultRowIndex: 1, minMatches: 1);
-        var (headerRow2, idx2) = ImportHelper.DetectHeaderRow(rows, null, new[] { "keyword" }, defaultRowIndex: 1, minMatches: 1);
+        var (headerRow1, idx1) = ImportHelper.DetectHeaderRow(rows, null, s_notPresentKeywords, defaultRowIndex: 1, minMatches: 1);
+        var (headerRow2, idx2) = ImportHelper.DetectHeaderRow(rows, null, s_keywordKeywords, defaultRowIndex: 1, minMatches: 1);
 
         // Assert
         Assert.Equal(1, idx1);

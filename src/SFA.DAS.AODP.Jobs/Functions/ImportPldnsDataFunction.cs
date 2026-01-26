@@ -79,7 +79,6 @@ public class ImportPldnsDataFunction
     {
         string? importFileUrl = _config.PldnsImportUrl;
         await using var ms = await _blobStorageFileService.DownloadFileAsync(importFileUrl!, cancellationToken);
-        _logger.LogInformation("[{Function}] -> ImportPldns - Downloaded the Pldns file", nameof(ImportPldnsDataFunction));
         ms.Position = 0;
 
         using var document = SpreadsheetDocument.Open(ms, false);
@@ -119,13 +118,11 @@ public class ImportPldnsDataFunction
 
         var headerMap = ImportHelper.BuildHeaderMap(headerRow, sharedStrings);
         var columns = MapColumns(headerMap);
-        _logger.LogInformation("[{Function}] -> ImportPldns - Mapped columns for import.", nameof(ImportPldnsDataFunction));
 
         var culture = new CultureInfo("en-GB");
         var dateFormats = new[] { "dd/MM/yyyy", "d/M/yyyy", "yyyy-MM-dd", "dd MMM yyyy" };
 
         var items = ParseRowsToEntities(rows, headerIndex + 1, sharedStrings, columns, culture, dateFormats);
-        _logger.LogInformation("[{Function}] -> ImportPldns - Parsed rows to entities.", nameof(ImportPldnsDataFunction));
 
         if (items.Count == 0)
         {
@@ -133,12 +130,9 @@ public class ImportPldnsDataFunction
             return 0;
         }
 
-        _logger.LogInformation("[{Function}] -> ImportPldns - Parsed {RecordCount} records to import.", nameof(ImportPldnsDataFunction), items.Count);
         var totalImported = await InsertBatchesAsync(items, cancellationToken);
-        _logger.LogInformation("[{Function}] -> ImportPldns - Inserted {TotalImported} records.", nameof(ImportPldnsDataFunction), totalImported);
 
         await _repository.DeleteDuplicateAsync("[dbo].[proc_DeleteDuplicatePldns]", null, cancellationToken);
-        _logger.LogInformation("[{Function}] -> ImportPldns - Removed duplicate records after import.", nameof(ImportPldnsDataFunction));
 
         return totalImported;
     }

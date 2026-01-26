@@ -42,7 +42,7 @@ public class ImportRepository : IImportRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error while deleting duplicates from {spName}: {ex.Message}");
+            _logger.LogError(ex, "Error while deleting duplicates from {SpName}", spName);
         }
     }
 }
