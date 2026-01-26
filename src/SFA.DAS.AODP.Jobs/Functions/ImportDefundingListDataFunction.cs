@@ -35,6 +35,7 @@ public class ImportDefundingListDataFunction
         _blobStorageFileService = blobStorageFileService;
     }
 
+    // Todo - Merge with ImportPldnDataFunction as they are almost identical apart from the data being imported
     [Function("ImportDefundingListDataFunction")]
     public async Task<IActionResult> ImportDefundingList(
         [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "api/importDefundingList/{username}")] HttpRequestData req, string username = "", CancellationToken cancellationToken = default)
