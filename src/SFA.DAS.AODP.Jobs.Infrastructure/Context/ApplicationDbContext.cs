@@ -43,6 +43,9 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public virtual DbSet<QualificationFundingFeedback> QualificationFundingFeedbacks { get; set; }
 
+        public virtual DbSet<Pldns> Pldns { get; set; }
+        public virtual DbSet<DefundingList> DefundingLists { get; set; }
+
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             return base.SaveChangesAsync(cancellationToken);
@@ -56,6 +59,11 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         public async Task Truncate_QualificationImportStaging()
         {
             await this.Database.ExecuteSqlRawAsync($"EXEC [dbo].[Truncate_QualificationImportStaging]");
+        }
+
+        public async Task DeleteDuplicateAsync(string sql, CancellationToken cancellationToken = default)
+        {
+            await this.Database.ExecuteSqlRawAsync(sql, cancellationToken);
         }
     }
 }

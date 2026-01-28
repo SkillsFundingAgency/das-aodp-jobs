@@ -22,9 +22,13 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         DbSet<QualificationFunding> QualificationFundings { get; set; }
         DbSet<FundingOffer> FundingOffers { get; set; }
         DbSet<QualificationFundingFeedback> QualificationFundingFeedbacks { get; set; }
+        DbSet<Pldns> Pldns { get; set; }
+        DbSet<DefundingList> DefundingLists { get; set; }
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
         Task Truncate_FundedQualifications();
         Task Truncate_QualificationImportStaging();
+
+        Task DeleteDuplicateAsync(string sql, CancellationToken cancellationToken = default);
     }
 }
