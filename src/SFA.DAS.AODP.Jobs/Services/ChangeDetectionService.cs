@@ -130,8 +130,13 @@ namespace SFA.DAS.AODP.Jobs.Services
         private static string Normalize(string? s)
         {
             if (string.IsNullOrWhiteSpace(s)) return string.Empty;
-            s = s.Replace('\u00A0', ' ');              // NBSP -> space
-            return Regex.Replace(s.Trim(), @"\s+", " "); // collapse whitespace
+            s = s.Replace('\u00A0', ' ');              
+            return Regex.Replace(
+                s.Trim(),
+                @"\s+",
+                " ",
+                RegexOptions.None,
+                TimeSpan.FromMilliseconds(50)); 
         }
 
         private static bool IsWhitespaceChange(string? newValue, string? oldValue)
