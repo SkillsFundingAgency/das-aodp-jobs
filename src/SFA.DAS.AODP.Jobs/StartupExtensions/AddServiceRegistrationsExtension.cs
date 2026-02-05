@@ -17,6 +17,8 @@ using SFA.DAS.AODP.Jobs.Services.CSV;
 using SFA.DAS.AODP.Models.Config;
 using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
 using System.Diagnostics.CodeAnalysis;
+using Azure.Core;
+using Azure.Identity;
 
 namespace SFA.DAS.AODP.Jobs.StartupExtensions;
 
@@ -85,6 +87,25 @@ public static class AddServiceRegistrationsExtension
         sqlServerOptions => sqlServerOptions.CommandTimeout(60)));
 
         services.AddAutoMapper(typeof(MapperProfile));
+
+        services.AddOptions<QaaApiConfiguration>().Bind(configuration.GetSection(QaaApiConfiguration.SectionName));
+        services.AddHttpClient<IQaaApiClient, QaaApiClient>((sp, client) =>
+        {
+            var qaaApiConfiguration = sp.GetRequiredService<IOptions<QaaApiConfiguration>>().Value;
+
+            client.BaseAddress = new Uri(qaaApiConfiguration.BaseUrl);
+        })
+        .AddHttpMessageHandler<QaaApiAuthenticationHandler>();
+
+        services.AddKeyedSingleton<TokenCredential>("QaaApi", (sp, _) =>
+        {
+            var qaaApiConfiguration = sp.GetRequiredService<IOptions<QaaApiConfiguration>>().Value;
+            return new ClientSecretCredential(
+                tenantId: qaaApiConfiguration.Authentication.TenantId,
+                clientId: qaaApiConfiguration.Authentication.ClientId,
+                clientSecret: qaaApiConfiguration.Authentication.ClientSecret
+            );
+        });
 
         return services;
     }
