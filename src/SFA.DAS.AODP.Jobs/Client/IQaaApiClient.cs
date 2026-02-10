@@ -235,12 +235,23 @@ public sealed class QaaApiAuthenticationHandler(ITokenProvider tokenProvider) : 
 
 public interface IQaaRepository
 {
-    Task<IList<QaaQualification>> GetAllAsync( CancellationToken cancellationToken);
-    Task<QaaQualification> CreateAsync(QaaQualificationResponse qualificationResponse, CancellationToken cancellationToken);
+    Task<IList<QaaQualifications>> GetAllAsync( CancellationToken cancellationToken);
+    Task<QaaQualifications> CreateAsync(QaaQualificationResponse qualificationResponse, CancellationToken cancellationToken);
     Task UpdateAsync(QaaQualificationResponse qualificationResponse, CancellationToken cancellationToken);
 }
 
-public class QaaQualification
+public class QaaQualifications
 {
-    public string AimCode { get; protected set; }
+    public Guid Id { get; protected set; }
+
+    public Guid QualificationId { get; protected set; }
+
+    public string QualificationName { get; protected set; } = null!;
+}
+
+public class RegulatedQaaQualification
+{
+    public Guid Id { get; set; }
+
+    public QaaQualifications Qualification { get; set; } = null!;
 }
