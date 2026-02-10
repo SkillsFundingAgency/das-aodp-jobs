@@ -45,6 +45,8 @@ jobs:
               FunctionHostKey: $(FunctionHostKey)
               PldnsImportStorageBlobKey: $(PldnsImportStorageBlobKey)
               DefundingListStorageBlobKey: $(DefundingListStorageBlobKey)
+              ArchivedFundedQualificationsImportUrl: $(ArchivedFundedQualificationsImportUrl)
+              FundedQualificationsImportUrl: $(FundedQualificationsImportUrl)
         - template: azure-pipelines-templates/deploy/step/function-deploy.yml@das-platform-building-blocks
           parameters:
             ServiceConnection: ${{ parameters.ServiceConnection }}
