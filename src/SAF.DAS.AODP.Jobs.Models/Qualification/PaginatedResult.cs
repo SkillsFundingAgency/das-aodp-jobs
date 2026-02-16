@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace SFA.DAS.AODP.Data
+namespace SFA.DAS.AODP.Models.Qualification
 {
     public class PaginatedResult<T>
     {

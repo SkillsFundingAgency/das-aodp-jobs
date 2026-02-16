@@ -1,10 +1,5 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using SFA.DAS.AODP.Common.Enum;
-using SFA.DAS.AODP.Infrastructure.Interfaces;
-using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
+﻿using SFA.DAS.AODP.Common.Enum;
+using SFA.DAS.AODP.Jobs.Models.Jobs;
 
 namespace SFA.DAS.AODP.Jobs.Services
 {
@@ -33,10 +28,40 @@ namespace SFA.DAS.AODP.Jobs.Services
             }
         }
 
+        public async Task<JobControl> ReadJobConfiguration(JobNames jobName)
+        {
+            return jobName switch
+            {
+                JobNames.RegulatedQualifications => await ReadRegulatedJobConfiguration(),
+                JobNames.FundedQualifications => await ReadFundedJobConfiguration(),
+                JobNames.Pldns => await ReadPldnsImportConfiguration(),
+                JobNames.DefundingList => await ReadDefundingListImportConfiguration(),
+                JobNames.QaaQualifications => await ReadQaaQualificationJobConfiguration(),
+                _ => throw new ArgumentOutOfRangeException(nameof(jobName), jobName, null)
+            };
+        }
+
+        public async Task<QaaQualificationJobControl> ReadQaaQualificationJobConfiguration()
+        {
+            var jobControl = new QaaQualificationJobControl();
+            var jobRecord = await _jobsRepository.GetJobByNameAsync(nameof(JobNames.QaaQualifications));
+            jobControl.JobEnabled = jobRecord?.Enabled ?? false;
+            jobControl.JobId = jobRecord?.Id ?? Guid.Empty;
+            jobControl.Status = jobRecord?.Status ?? string.Empty;
+
+            if (jobControl.JobId != Guid.Empty)
+            {
+                var runApiImport = jobRecord!.JobConfigurations.FirstOrDefault(o => o.Name == nameof(JobConfiguration.ImportQaaQualifications))?.Value ?? "false";
+                jobControl.RunApiImport = bool.Parse(runApiImport);
+            }
+
+            return jobControl;
+        }
+
         public async Task<RegulatedJobControl> ReadRegulatedJobConfiguration()
         {
             var jobControl = new RegulatedJobControl();
-            var jobRecord = await _jobsRepository.GetJobByNameAsync(JobNames.RegulatedQualifications.ToString());
+            var jobRecord = await _jobsRepository.GetJobByNameAsync(nameof(JobNames.RegulatedQualifications));
             jobControl.JobEnabled = jobRecord?.Enabled ?? false;
             jobControl.JobId = jobRecord?.Id ?? Guid.Empty;
             jobControl.RunApiImport = false;
@@ -46,10 +71,11 @@ namespace SFA.DAS.AODP.Jobs.Services
             if (jobControl.JobId != Guid.Empty)
             {
                 var configEntries = await _jobsRepository.GetJobConfigurationsByIdAsync(jobControl.JobId);
-                var runApiImportValue = configEntries.FirstOrDefault(f => f.Name == JobConfiguration.ApiImport.ToString())?.Value ?? "false";
-                bool.TryParse(runApiImportValue, out jobControl.RunApiImport);
-                var processStagingDataValue = configEntries.FirstOrDefault(f => f.Name == JobConfiguration.ProcessStagingData.ToString())?.Value ?? "false";
-                bool.TryParse(processStagingDataValue, out jobControl.ProcessStagingData);
+                var runApiImportValue = configEntries.FirstOrDefault(f => f.Name == nameof(JobConfiguration.ApiImport))?.Value ?? "false";
+                var processStagingDataValue = configEntries.FirstOrDefault(f => f.Name == nameof(JobConfiguration.ProcessStagingData))?.Value ?? "false";
+                
+                jobControl.RunApiImport = bool.Parse(runApiImportValue);
+                jobControl.ProcessStagingData = bool.Parse(processStagingDataValue);
             }
 
             return jobControl;
@@ -58,7 +84,7 @@ namespace SFA.DAS.AODP.Jobs.Services
         public async Task<FundedJobControl> ReadFundedJobConfiguration()
         {
             var jobControl = new FundedJobControl();
-            var jobRecord = await _jobsRepository.GetJobByNameAsync(JobNames.FundedQualifications.ToString());
+            var jobRecord = await _jobsRepository.GetJobByNameAsync(nameof(JobNames.FundedQualifications));
             jobControl.JobEnabled = jobRecord?.Enabled ?? false;
             jobControl.JobId = jobRecord?.Id ?? Guid.Empty;
             jobControl.ImportFundedCsv = false;
@@ -68,10 +94,11 @@ namespace SFA.DAS.AODP.Jobs.Services
             if (jobControl.JobId != Guid.Empty)
             {
                 var configEntries = await _jobsRepository.GetJobConfigurationsByIdAsync(jobControl.JobId);
-                var importFundedCsvValue = configEntries.FirstOrDefault(f => f.Name == JobConfiguration.ImportFundedCsv.ToString())?.Value ?? "false";
-                bool.TryParse(importFundedCsvValue, out jobControl.ImportFundedCsv);
-                var ImportArchivedCsvValue = configEntries.FirstOrDefault(f => f.Name == JobConfiguration.ImportArchivedCsv.ToString())?.Value ?? "false";
-                bool.TryParse(ImportArchivedCsvValue, out jobControl.ImportArchivedCsv);
+                var importFundedCsvValue = configEntries.FirstOrDefault(f => f.Name == nameof(JobConfiguration.ImportFundedCsv))?.Value ?? "false";
+                var importArchivedCsvValue = configEntries.FirstOrDefault(f => f.Name == nameof(JobConfiguration.ImportArchivedCsv))?.Value ?? "false";
+                
+                jobControl.ImportFundedCsv = bool.Parse(importFundedCsvValue);
+                jobControl.ImportArchivedCsv = bool.Parse(importArchivedCsvValue);
             }
 
             return jobControl;
@@ -103,7 +130,7 @@ namespace SFA.DAS.AODP.Jobs.Services
         public async Task<PldnsImportControl> ReadPldnsImportConfiguration()
         {
             var jobControl = new PldnsImportControl();
-            var jobRecord = await _jobsRepository.GetJobByNameAsync(JobNames.Pldns.ToString());
+            var jobRecord = await _jobsRepository.GetJobByNameAsync(nameof(JobNames.Pldns));
             jobControl.JobEnabled = jobRecord?.Enabled ?? false;
             jobControl.JobId = jobRecord?.Id ?? Guid.Empty;
             jobControl.Status = jobRecord?.Status ?? string.Empty;
@@ -111,7 +138,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             if (jobControl.JobId != Guid.Empty)
             {
                 var configEntries = await _jobsRepository.GetJobConfigurationsByIdAsync(jobControl.JobId);
-                var importPldnsValue = configEntries.FirstOrDefault(f => f.Name == JobConfiguration.ImportPldns.ToString())?.Value ?? "false";
+                var importPldnsValue = configEntries.FirstOrDefault(f => f.Name == nameof(JobConfiguration.ImportPldns))?.Value ?? "false";
                 bool importPldnsParsed = bool.TryParse(importPldnsValue, out bool importPldns);
                 jobControl.ImportPldns = importPldnsParsed && importPldns;
             }
@@ -122,7 +149,7 @@ namespace SFA.DAS.AODP.Jobs.Services
         public async Task<DefundingListImportControl> ReadDefundingListImportConfiguration()
         {
             var jobControl = new DefundingListImportControl();
-            var jobRecord = await _jobsRepository.GetJobByNameAsync(JobNames.DefundingList.ToString());
+            var jobRecord = await _jobsRepository.GetJobByNameAsync(nameof(JobNames.DefundingList));
             jobControl.JobEnabled = jobRecord?.Enabled ?? false;
             jobControl.JobId = jobRecord?.Id ?? Guid.Empty;
             jobControl.Status = jobRecord?.Status ?? string.Empty;
@@ -130,61 +157,12 @@ namespace SFA.DAS.AODP.Jobs.Services
             if (jobControl.JobId != Guid.Empty)
             {
                 var configEntries = await _jobsRepository.GetJobConfigurationsByIdAsync(jobControl.JobId);
-                var importDefundingListValue = configEntries.FirstOrDefault(f => f.Name == JobConfiguration.ImportDefundingList.ToString())?.Value ?? "false";
+                var importDefundingListValue = configEntries.FirstOrDefault(f => f.Name == nameof(JobConfiguration.ImportDefundingList))?.Value ?? "false";
                 bool importDefundingListParsed = bool.TryParse(importDefundingListValue, out bool importDefundingList);
                 jobControl.ImportDefundingList = importDefundingListParsed && importDefundingList;
             }
 
             return jobControl;
         }
-    }
-
-    public class RegulatedJobControl
-    {
-        public Guid JobId;
-        public Guid JobRunId;
-        public bool RunApiImport;
-        public bool ProcessStagingData;
-        public bool JobEnabled;
-        public string Status = string.Empty;
-    }
-
-    public class FundedJobControl
-    {
-        public Guid JobId;
-        public Guid JobRunId;
-        public bool ImportFundedCsv;
-        public bool ImportArchivedCsv;
-        public bool JobEnabled;
-        public string Status = string.Empty;
-    }
-
-    public class PldnsImportControl
-    {
-        public Guid JobId;
-        public Guid JobRunId;
-        public bool ImportPldns;
-        public bool JobEnabled;
-        public string Status = string.Empty;
-    }
-
-    public class DefundingListImportControl
-    {
-        public Guid JobId;
-        public Guid JobRunId;
-        public bool ImportDefundingList;
-        public bool JobEnabled;
-        public string Status = string.Empty;
-    }
-
-    public class JobRunControl
-    {
-        public Guid Id;
-        public string Status = string.Empty;
-        public DateTime StartTime;
-        public DateTime? EndTime;
-        public string User = string.Empty;
-        public int? RecordsProcessed;
-        public Guid JobId;
     }
 }

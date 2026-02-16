@@ -1,4 +1,4 @@
-﻿using SFA.DAS.AODP.Jobs.Services;
+﻿using SFA.DAS.AODP.Jobs.Models.Jobs;
 
 namespace SFA.DAS.AODP.Jobs.Interfaces
 {

@@ -39,6 +39,7 @@
 		  <PrivateAssets>all</PrivateAssets>
 		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+		<PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.3.0" />
 		<PackageReference Include="RestEase" Version="1.6.4" />
 		<PackageReference Include="SFA.DAS.Configuration.AzureTableStorage" Version="17.1.113" />
 		<PackageReference Include="System.Data.SqlClient" Version="4.9.0" />
@@ -60,8 +61,16 @@
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<CopyToPublishDirectory>Never</CopyToPublishDirectory>
 		</None>
+		<None Update="appsettings.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<CopyToPublishDirectory>Never</CopyToPublishDirectory>
+		</None>
 	</ItemGroup>
 	<ItemGroup>
 		<Using Include="System.Threading.ExecutionContext" Alias="ExecutionContext" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="Functions\Abstractions\" />
+	  <Folder Include="LoggerMessages\" />
 	</ItemGroup>
 </Project>

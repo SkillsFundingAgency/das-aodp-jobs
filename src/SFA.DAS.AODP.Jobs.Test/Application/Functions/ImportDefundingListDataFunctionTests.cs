@@ -11,7 +11,7 @@ using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Infrastructure.Interfaces;
 using SFA.DAS.AODP.Jobs.Functions;
 using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Jobs.Services;
+using SFA.DAS.AODP.Jobs.Models.Jobs;
 using SFA.DAS.AODP.Models.Config;
 using System.Net;
 using System.Security.Claims;

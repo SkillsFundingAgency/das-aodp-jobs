@@ -7,6 +7,7 @@
         ImportFundedCsv,
         ImportArchivedCsv,
         ImportPldns,
-        ImportDefundingList
+        ImportDefundingList,
+        ImportQaaQualifications
     }
 }

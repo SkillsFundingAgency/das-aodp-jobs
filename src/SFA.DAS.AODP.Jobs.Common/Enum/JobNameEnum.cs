@@ -5,6 +5,7 @@
         RegulatedQualifications,
         FundedQualifications,
         Pldns,
-        DefundingList
+        DefundingList,
+        QaaQualifications
     }
 }

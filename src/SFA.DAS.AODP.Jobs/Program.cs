@@ -31,7 +31,7 @@ public class Program
         builder.Services.AddServiceRegistrations(configuration);
 
         var app = builder.Build();
-
+        
         app.Run();
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using SFA.DAS.AODP.Data.Entities;
 
 namespace SFA.DAS.AODP.Infrastructure.Context
@@ -24,6 +25,11 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         DbSet<QualificationFundingFeedback> QualificationFundingFeedbacks { get; set; }
         DbSet<Pldns> Pldns { get; set; }
         DbSet<DefundingList> DefundingLists { get; set; }
+        DbSet<RegulatedQaaQualification> RegulatedQaaQualification { get; set; }
+
+        void StartingBulkInsert();
+
+        void FinishedBulkInsert();
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
         Task Truncate_FundedQualifications();

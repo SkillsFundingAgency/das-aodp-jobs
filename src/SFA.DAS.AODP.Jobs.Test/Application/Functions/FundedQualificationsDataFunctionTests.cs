@@ -10,7 +10,7 @@ using SFA.DAS.AODP.Functions;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Infrastructure.Interfaces;
 using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Jobs.Services;
+using SFA.DAS.AODP.Jobs.Models.Jobs;
 using SFA.DAS.AODP.Jobs.Services.CSV;
 using SFA.DAS.AODP.Jobs.Test.Mocks;
 using SFA.DAS.AODP.Models.Config;

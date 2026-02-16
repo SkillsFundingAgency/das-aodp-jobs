@@ -5,7 +5,7 @@ using Moq;
 using SFA.DAS.AODP.Common.Enum;
 using SFA.DAS.AODP.Jobs.Functions;
 using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Jobs.Services;
+using SFA.DAS.AODP.Jobs.Models.Jobs;
 using SFA.DAS.AODP.Models.Config;
 using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
 

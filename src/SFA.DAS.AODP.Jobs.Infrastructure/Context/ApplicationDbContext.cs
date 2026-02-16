@@ -44,7 +44,25 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         public virtual DbSet<QualificationFundingFeedback> QualificationFundingFeedbacks { get; set; }
 
         public virtual DbSet<Pldns> Pldns { get; set; }
+        
         public virtual DbSet<DefundingList> DefundingLists { get; set; }
+        
+        public virtual DbSet<RegulatedQaaQualification> RegulatedQaaQualification { get; set; }
+
+        public void StartingBulkInsert() => ChangeTracker.AutoDetectChangesEnabled = false;
+
+        public void FinishedBulkInsert() => ChangeTracker.AutoDetectChangesEnabled = true;
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<RegulatedQaaQualification>()
+                .Property(q => q.SectorSubjectArea)
+                .HasConversion(
+                    ssaTier => ssaTier.Name,
+                    ssaName => SectorSubjectArea.FromName(ssaName));
+        }
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {

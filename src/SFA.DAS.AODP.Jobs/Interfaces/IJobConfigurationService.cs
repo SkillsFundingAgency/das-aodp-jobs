@@ -1,5 +1,5 @@
 ﻿using SFA.DAS.AODP.Common.Enum;
-using SFA.DAS.AODP.Jobs.Services;
+using SFA.DAS.AODP.Jobs.Models.Jobs;
 
 namespace SFA.DAS.AODP.Jobs.Interfaces
 {
@@ -9,6 +9,9 @@ namespace SFA.DAS.AODP.Jobs.Interfaces
         Task<FundedJobControl> ReadFundedJobConfiguration();
         Task<PldnsImportControl> ReadPldnsImportConfiguration();
         Task<DefundingListImportControl> ReadDefundingListImportConfiguration();
+        Task<QaaQualificationJobControl> ReadQaaQualificationJobConfiguration();
+        
+        Task<JobControl> ReadJobConfiguration(JobNames jobName);
         Task UpdateJobRun(string username, Guid jobId, Guid jobRunId, int totalRecords, JobStatus status);
         Task<Guid> InsertJobRunAsync(Guid jobId, string userName, JobStatus status);
         Task<JobRunControl> GetLastJobRunAsync(string jobName);
