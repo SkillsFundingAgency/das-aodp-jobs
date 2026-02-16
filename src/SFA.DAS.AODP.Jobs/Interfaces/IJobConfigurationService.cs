@@ -9,8 +9,6 @@ namespace SFA.DAS.AODP.Jobs.Interfaces
         Task<FundedJobControl> ReadFundedJobConfiguration();
         Task<PldnsImportControl> ReadPldnsImportConfiguration();
         Task<DefundingListImportControl> ReadDefundingListImportConfiguration();
-        Task<QaaQualificationJobControl> ReadQaaQualificationJobConfiguration();
-        
         Task<JobControl> ReadJobConfiguration(JobNames jobName);
         Task UpdateJobRun(string username, Guid jobId, Guid jobRunId, int totalRecords, JobStatus status);
         Task<Guid> InsertJobRunAsync(Guid jobId, string userName, JobStatus status);

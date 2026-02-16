@@ -1,7 +1,4 @@
-﻿using SFA.DAS.AODP.Common.Enum;
-using SFA.DAS.AODP.Jobs.Models.Jobs;
-
-namespace SFA.DAS.AODP.Jobs.Services
+﻿namespace SFA.DAS.AODP.Jobs.Services
 {
     public class JobConfigurationService : IJobConfigurationService
     {
@@ -28,9 +25,8 @@ namespace SFA.DAS.AODP.Jobs.Services
             }
         }
 
-        public async Task<JobControl> ReadJobConfiguration(JobNames jobName)
-        {
-            return jobName switch
+        public async Task<JobControl> ReadJobConfiguration(JobNames jobName) =>
+            jobName switch
             {
                 JobNames.RegulatedQualifications => await ReadRegulatedJobConfiguration(),
                 JobNames.FundedQualifications => await ReadFundedJobConfiguration(),
@@ -39,24 +35,6 @@ namespace SFA.DAS.AODP.Jobs.Services
                 JobNames.QaaQualifications => await ReadQaaQualificationJobConfiguration(),
                 _ => throw new ArgumentOutOfRangeException(nameof(jobName), jobName, null)
             };
-        }
-
-        public async Task<QaaQualificationJobControl> ReadQaaQualificationJobConfiguration()
-        {
-            var jobControl = new QaaQualificationJobControl();
-            var jobRecord = await _jobsRepository.GetJobByNameAsync(nameof(JobNames.QaaQualifications));
-            jobControl.JobEnabled = jobRecord?.Enabled ?? false;
-            jobControl.JobId = jobRecord?.Id ?? Guid.Empty;
-            jobControl.Status = jobRecord?.Status ?? string.Empty;
-
-            if (jobControl.JobId != Guid.Empty)
-            {
-                var runApiImport = jobRecord!.JobConfigurations.FirstOrDefault(o => o.Name == nameof(JobConfiguration.ImportQaaQualifications))?.Value ?? "false";
-                jobControl.RunApiImport = bool.Parse(runApiImport);
-            }
-
-            return jobControl;
-        }
 
         public async Task<RegulatedJobControl> ReadRegulatedJobConfiguration()
         {
@@ -160,6 +138,23 @@ namespace SFA.DAS.AODP.Jobs.Services
                 var importDefundingListValue = configEntries.FirstOrDefault(f => f.Name == nameof(JobConfiguration.ImportDefundingList))?.Value ?? "false";
                 bool importDefundingListParsed = bool.TryParse(importDefundingListValue, out bool importDefundingList);
                 jobControl.ImportDefundingList = importDefundingListParsed && importDefundingList;
+            }
+
+            return jobControl;
+        }
+
+        private async Task<QaaQualificationJobControl> ReadQaaQualificationJobConfiguration()
+        {
+            var jobControl = new QaaQualificationJobControl();
+            var jobRecord = await _jobsRepository.GetJobByNameAsync(nameof(JobNames.QaaQualifications));
+            jobControl.JobEnabled = jobRecord?.Enabled ?? false;
+            jobControl.JobId = jobRecord?.Id ?? Guid.Empty;
+            jobControl.Status = jobRecord?.Status ?? string.Empty;
+
+            if (jobControl.JobId != Guid.Empty)
+            {
+                var runApiImport = jobRecord!.JobConfigurations.FirstOrDefault(o => o.Name == nameof(JobConfiguration.ImportQaaQualifications))?.Value ?? "false";
+                jobControl.RunApiImport = bool.Parse(runApiImport);
             }
 
             return jobControl;
