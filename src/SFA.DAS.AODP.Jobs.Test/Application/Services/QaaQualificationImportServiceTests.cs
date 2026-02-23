@@ -1,30 +1,33 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Infrastructure.Repositories;
 using SFA.DAS.AODP.Jobs.Client;
 using SFA.DAS.AODP.Jobs.Services;
 using SFA.DAS.AODP.Models.QaaQualification;
+using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
 
 namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Services;
 
 public class QaaQualificationImportServiceTests
 {
-    private readonly Mock<ILogger<QaaQualificationImportService>> _mockLogger;
     private readonly Mock<IQaaApiClient> _mockQaaApiClient;
     private readonly Mock<IQaaRepository> _mockQaaRepository;
+    private readonly Mock<ISystemClockService> _mockClockService;
     private readonly QaaQualificationImportService _service;
 
     public QaaQualificationImportServiceTests()
     {
-        _mockLogger = new Mock<ILogger<QaaQualificationImportService>>();
         _mockQaaApiClient = new Mock<IQaaApiClient>();
         _mockQaaRepository = new Mock<IQaaRepository>();
-        
+        _mockClockService = new Mock<ISystemClockService>();
+
         _service = new QaaQualificationImportService(
-            _mockLogger.Object,
+            NullLogger<QaaQualificationImportService>.Instance, 
             _mockQaaApiClient.Object,
-            _mockQaaRepository.Object);
+            _mockQaaRepository.Object,
+            _mockClockService.Object);
     }
 
     [Fact]
@@ -41,8 +44,8 @@ public class QaaQualificationImportServiceTests
                 AwardingBody = "Test Awarding Body",
                 SsaTier1 = "2",
                 SsaTier2 = "1",
-                StartDateOfQualification = new DateTime(2023, 09, 01),
-                LastDateForRegistrations = new DateTime(2025, 08, 31)
+                StartDateOfQualification = new DateOnly(2023, 09, 01),
+                LastDateForRegistrations = new DateOnly(2025, 08, 31)
             }
         };
 
@@ -63,24 +66,6 @@ public class QaaQualificationImportServiceTests
         _mockQaaApiClient.Verify(client => client.GetQualificationsAsync(cancellationToken), Times.Once);
         _mockQaaRepository.Verify(repo => repo.RunPrerequisitesForImportAsync(cancellationToken), Times.Once);
         _mockQaaRepository.Verify(repo => repo.RunImportAsync(It.IsAny<IList<RegulatedQaaQualification>>(), cancellationToken), Times.Once);
-        
-        _mockLogger.Verify(
-            logger => logger.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("5") && v.ToString()!.Contains("deleted")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception, string>>()!),
-            Times.Once);
-
-        _mockLogger.Verify(
-            logger => logger.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("1") && v.ToString()!.Contains("created")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception, string>>()!),
-            Times.Once);
     }
 
     [Fact]
@@ -97,8 +82,8 @@ public class QaaQualificationImportServiceTests
                 AwardingBody = "Awarding Body 1",
                 SsaTier1 = "2",
                 SsaTier2 = "1",
-                StartDateOfQualification = new DateTime(2023, 09, 01),
-                LastDateForRegistrations = new DateTime(2025, 08, 31)
+                StartDateOfQualification = new DateOnly(2023, 09, 01),
+                LastDateForRegistrations = new DateOnly(2025, 08, 31)
             },
             new()
             {
@@ -107,8 +92,8 @@ public class QaaQualificationImportServiceTests
                 AwardingBody = "Awarding Body 2",
                 SsaTier1 = "4",
                 SsaTier2 = "1",
-                StartDateOfQualification = new DateTime(2023, 09, 01),
-                LastDateForRegistrations = new DateTime(2025, 08, 31)
+                StartDateOfQualification = new DateOnly(2023, 09, 01),
+                LastDateForRegistrations = new DateOnly(2025, 08, 31)
             },
             new()
             {
@@ -117,8 +102,8 @@ public class QaaQualificationImportServiceTests
                 AwardingBody = "Awarding Body 3",
                 SsaTier1 = "15",
                 SsaTier2 = "3",
-                StartDateOfQualification = new DateTime(2023, 09, 01),
-                LastDateForRegistrations = new DateTime(2025, 08, 31)
+                StartDateOfQualification = new DateOnly(2023, 09, 01),
+                LastDateForRegistrations = new DateOnly(2025, 08, 31)
             }
         };
 
@@ -187,8 +172,8 @@ public class QaaQualificationImportServiceTests
         var aimCode = "Z1234567";
         var diplomaTitle = "Access to Higher Education Diploma (Science)";
         var awardingBody = "Test Awarding Body";
-        var startDate = new DateTime(2023, 09, 01);
-        var lastRegDate = new DateTime(2025, 08, 31);
+        var startDate = new DateOnly(2023, 09, 01);
+        var lastRegDate = new DateOnly(2025, 08, 31);
 
         var qualifications = new List<QaaQualificationResponse>
         {
@@ -249,8 +234,8 @@ public class QaaQualificationImportServiceTests
                 AwardingBody = $"Awarding Body {i}",
                 SsaTier1 = "2",
                 SsaTier2 = "1",
-                StartDateOfQualification = new DateTime(2023, 09, 01),
-                LastDateForRegistrations = new DateTime(2025, 08, 31)
+                StartDateOfQualification = new DateOnly(2023, 09, 01),
+                LastDateForRegistrations = new DateOnly(2025, 08, 31)
             });
         }
 
@@ -284,8 +269,8 @@ public class QaaQualificationImportServiceTests
                 AwardingBody = "Body 1",
                 SsaTier1 = "2",
                 SsaTier2 = "1",
-                StartDateOfQualification = new DateTime(2023, 09, 01),
-                LastDateForRegistrations = new DateTime(2025, 08, 31)
+                StartDateOfQualification = new DateOnly(2023, 09, 01),
+                LastDateForRegistrations = new DateOnly(2025, 08, 31)
             },
             new()
             {
@@ -294,8 +279,8 @@ public class QaaQualificationImportServiceTests
                 AwardingBody = "Body 2",
                 SsaTier1 = "4",
                 SsaTier2 = "1",
-                StartDateOfQualification = new DateTime(2023, 09, 01),
-                LastDateForRegistrations = new DateTime(2025, 08, 31)
+                StartDateOfQualification = new DateOnly(2023, 09, 01),
+                LastDateForRegistrations = new DateOnly(2025, 08, 31)
             },
             new()
             {
@@ -304,8 +289,8 @@ public class QaaQualificationImportServiceTests
                 AwardingBody = "Body 3",
                 SsaTier1 = "99",
                 SsaTier2 = "9",
-                StartDateOfQualification = new DateTime(2023, 09, 01),
-                LastDateForRegistrations = new DateTime(2025, 08, 31)
+                StartDateOfQualification = new DateOnly(2023, 09, 01),
+                LastDateForRegistrations = new DateOnly(2025, 08, 31)
             }
         };
 

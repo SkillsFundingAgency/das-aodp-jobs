@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SFA.DAS.Configuration.AzureTableStorage;
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 
 namespace SFA.DAS.AODP.Jobs.StartupExtensions;
 
@@ -15,6 +16,7 @@ public static class ConfigurationExtensions
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json")
             .AddJsonFile("local.settings.json", true)
+            .AddUserSecrets(Assembly.GetExecutingAssembly())
             .AddEnvironmentVariables();
 
         configBuilder

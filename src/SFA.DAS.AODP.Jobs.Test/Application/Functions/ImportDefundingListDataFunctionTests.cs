@@ -260,7 +260,7 @@ public class ImportDefundingListDataFunctionTests
             var header = new Row { RowIndex = (uint)headerRowIndex };
             header.Append(CreateInlineTextCell($"A{headerRowIndex}", "Qualification number"));
             header.Append(CreateInlineTextCell($"B{headerRowIndex}", "Title"));
-            header.Append(CreateInlineTextCell($"C{headerRowIndex}", "In Scope"));
+            header.Append(CreateInlineTextCell($"C{headerRowIndex}", "In Scopes"));
             header.Append(CreateInlineTextCell($"D{headerRowIndex}", "Comments"));
             sheetData.Append(header);
 

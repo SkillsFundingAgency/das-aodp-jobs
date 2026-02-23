@@ -20,4 +20,8 @@
     <ProjectReference Include="..\SFA.DAS.AODP.Data\SFA.DAS.AODP.Data.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="QaaQualification\Converters\" />
+  </ItemGroup>
+
 </Project>

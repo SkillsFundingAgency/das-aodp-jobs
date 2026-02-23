@@ -7,8 +7,6 @@ namespace SFA.DAS.AODP.Models.QaaQualification;
 /// </summary>
 public record QaaQualificationResponse
 {
-    // TODO[HS]: Need to check with QAA what they define as a duplicate diploma, is it just the AIM Code or is it a combination of other fields? As from my own understanding of other similar qualification data from other sources the AIM Code can be the same for different qualifications if they are different versions or types across different awarding bodies.
-
     /// <summary>
     /// National Learning Aim identifier for this Access to Higher Education Diploma.
     /// Used by funding/ILR/MIS systems as the definitive unique key for the qualification
@@ -49,22 +47,25 @@ public record QaaQualificationResponse
     /// The first date on which learners can be registered against this qualification specification.
     /// Often aligns with a new specification cycle or funding year.
     /// </summary>
+    [JsonConverter(typeof(QaaMonthYearToFirstDayDateOnlyConverter))]
     [JsonPropertyName("Start_date_of_qualification")]
-    public DateTime StartDateOfQualification { get; set; }
+    public DateOnly StartDateOfQualification { get; set; }
 
     /// <summary>
     /// The last date providers are permitted to register new learners on this qualification.
     /// After this date, only existing learners can continue towards certification.
     /// </summary>
+    [JsonConverter(typeof(QaaMonthYearToLastDayDateOnlyConverter))]
     [JsonPropertyName("Last_date_for_registrations")]
-    public DateTime LastDateForRegistrations { get; set; }
+    public DateOnly LastDateForRegistrations { get; set; }
 
     /// <summary>
     /// The final date by which certifications must be claimed for learners registered on this qualification.
     /// Past this date, no further awards can be issued under this specification.
     /// </summary>
     [JsonPropertyName("Last_date_for_certifications")]
-    public DateTime LastDateForCertifications { get; set; }
+    [JsonConverter(typeof(QaaMonthYearToLastDayDateOnlyConverter))]
+    public DateOnly LastDateForCertifications { get; set; }
 
     /// <summary>
     /// Current lifecycle state of the qualification (e.g., Active, Review, Withdrawn).
@@ -77,5 +78,5 @@ public record QaaQualificationResponse
     /// The date the qualification was formally discontinued/withdrawn (if applicable).
     /// </summary>
     [JsonPropertyName("Discontinued_date")]
-    public DateTime? DiscontinuedDate { get; set; }
+    public DateOnly? DiscontinuedDate { get; set; }
 }

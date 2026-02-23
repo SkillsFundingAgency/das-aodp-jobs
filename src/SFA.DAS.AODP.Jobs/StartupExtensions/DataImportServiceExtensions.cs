@@ -1,5 +1,4 @@
 ﻿using SFA.DAS.AODP.Infrastructure.Authentication;
-using QaaApiAuthenticationHandler = SFA.DAS.AODP.Jobs.Client.QaaApiAuthenticationHandler;
 
 namespace SFA.DAS.AODP.Jobs.StartupExtensions;
 
@@ -33,18 +32,13 @@ public static class DataImportServiceExtensions
         services.AddOptions<QaaApiConfiguration>().Bind(configuration.GetSection(QaaApiConfiguration.SectionName));
         services.AddTransient<QaaApiAuthenticationHandler>();
 
-        if (configuration["EnvironmentName"]! == "LOCAL")
-        {
-            services.AddTransient<IQaaApiClient, StubQaaClient>();
-        }
-        else
-        {
             services.AddHttpClient<IQaaApiClient, QaaApiClient>((sp, client) =>
                 {
                     var qaaApiConfiguration = sp.GetRequiredService<IOptions<QaaApiConfiguration>>().Value;
 
                     client.BaseAddress = new Uri(qaaApiConfiguration.BaseUrl);
                 })
+                .RedactLoggedHeaders(["Authorization"])
                 .AddHttpMessageHandler<QaaApiAuthenticationHandler>()
                 .AddStandardResilienceHandler();
 
@@ -57,48 +51,12 @@ public static class DataImportServiceExtensions
                     clientSecret: qaaApiConfiguration.Authentication.ClientSecret
                 );
             });
-        }
+        
 
         services.AddTransient<IQaaQualificationImportService, QaaQualificationImportService>();
         services.AddTransient<IQaaRepository, QaaRepository>();
         services.AddSingleton<ITokenProvider, TokenProvider>();
 
         return services;
-    }
-}
-
-public class StubQaaClient : IQaaApiClient
-{
-    public async Task<IList<QaaQualificationResponse>> GetQualificationsAsync(CancellationToken cancellationToken)
-    {
-        return new List<QaaQualificationResponse>
-        {
-            new()
-            {
-                AimCode = "123456",
-                AwardingBody = "Ascend Learning",
-                DiplomaTitle = "Level 3 Diploma in Business Administration",
-                SsaTier1 = "1",
-                SsaTier2 = "1",
-                StartDateOfQualification = new DateTime(2020, 1, 1),
-                LastDateForRegistrations = new DateTime(2025, 12, 31),
-                LastDateForCertifications = new DateTime(2026, 12, 31),
-                AwardStatus = "Active",
-                DiscontinuedDate = null
-            },
-            new()
-            {
-                AimCode = "456789",
-                AwardingBody = "Ascend Learning",
-                DiplomaTitle = "Level 3 Diploma in Construction",
-                SsaTier1 = "1",
-                SsaTier2 = "4",
-                StartDateOfQualification = new DateTime(2020, 1, 1),
-                LastDateForRegistrations = new DateTime(2025, 12, 31),
-                LastDateForCertifications = new DateTime(2026, 12, 31),
-                AwardStatus = "Active",
-                DiscontinuedDate = null
-            }
-        };
     }
 }

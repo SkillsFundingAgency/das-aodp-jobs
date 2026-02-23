@@ -61,16 +61,30 @@ public record SectorSubjectArea
     public static readonly SectorSubjectArea LawAndLegalServices = new("15.5", "Law and legal services");
     public static readonly SectorSubjectArea NotSpecified = new("99.9", "Not Specified");
 
+    /// <summary>
+    /// The concatenated tiers representation of the descriptive name for the sector subject area.
+    /// </summary>
     public string Code { get; set; }
 
+    /// <summary>
+    /// The descriptive name that represents the code.
+    /// </summary>
     public string Name { get; set; }
 
+    /// <summary>
+    /// Default private constructor.
+    /// </summary>
+    /// <param name="code">The code representation for the sector subject area i.e. 1.2</param>
+    /// <param name="name">The descriptive name for the code.</param>
     private SectorSubjectArea(string code, string name)
     {
         Code = code;
         Name = name;
     }
 
+    /// <summary>
+    /// Defines a lookup to return the correct predefined instance of a sector subject area using the code as a lookup.
+    /// </summary>
     private static readonly IReadOnlyDictionary<string, SectorSubjectArea> CodeLookup = new List<SectorSubjectArea>
     {
         MedicineAndDentistry, NursingAndAllied, HealthAndSocialCare, PublicServices, ChildDevelopment,
@@ -87,17 +101,39 @@ public record SectorSubjectArea
         MarketingAndSales, LawAndLegalServices, NotSpecified
     }.ToDictionary(x => x.Code);
 
+    /// <summary>
+    /// Provides a read-only mapping from sector subject area names to their corresponding <see
+    /// cref="SectorSubjectArea"/> instances.
+    /// </summary>
+    /// <remarks>This dictionary enables efficient lookup of sector subject areas by their name. The keys are
+    /// the unique names of each sector subject area as defined in the <see cref="CodeLookup"/> collection.</remarks>
     private static readonly IReadOnlyDictionary<string, SectorSubjectArea> NameLookup =
         CodeLookup.Values.ToDictionary(x => x.Name);
 
+    /// <summary>
+    /// Creates a SectorSubjectArea instance based on the specified tier 1 and tier 2 codes.
+    /// </summary>
+    /// <param name="tier1">The primary sector code used to identify the subject area. Cannot be null.</param>
+    /// <param name="tier2">The secondary sector code used to further specify the subject area. Cannot be null.</param>
+    /// <returns>A SectorSubjectArea corresponding to the combined tier 1 and tier 2 codes. Returns NotSpecified if the
+    /// combination does not match a known subject area.</returns>
     public static SectorSubjectArea FromTiers(string tier1, string tier2)
     {
         var lookupCode = $"{tier1}.{tier2}";
         return CodeLookup.GetValueOrDefault(lookupCode, NotSpecified);
     }
 
+    /// <summary>
+    /// Retrieves the corresponding SectorSubjectArea value for the specified name.
+    /// </summary>
+    /// <param name="name">The name of the sector subject area to look up. The comparison is case-sensitive. Cannot be null.</param>
+    /// <returns>The SectorSubjectArea value that matches the specified name, or NotSpecified if the name is not recognized.</returns>
     public static SectorSubjectArea FromName(string name) =>
         NameLookup.GetValueOrDefault(name, NotSpecified);
 
+    /// <summary>
+    /// Returns a string that represents the current object.
+    /// </summary>
+    /// <returns>A string that represents the current object.</returns>
     public override string ToString() => Name;
 }

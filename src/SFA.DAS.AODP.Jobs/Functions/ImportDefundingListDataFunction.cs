@@ -124,7 +124,7 @@ public class ImportDefundingListDataFunction
         string? ssaCol = ImportHelper.FindColumn(headerMap, "Sector Subject Area Tier 2");
         string? routeCol = ImportHelper.FindColumn(headerMap, "Relevant route");
         string? fundingCol = ImportHelper.FindColumn(headerMap, "Funding offer");
-        string? inScopeCol = ImportHelper.FindColumn(headerMap, "InScope", "In Scope");
+        string? inScopeCol = ImportHelper.FindColumn(headerMap, "InScope", "In Scopes");
         string? commentsCol = ImportHelper.FindColumn(headerMap, "Comments");
 
         for (int i = startIndex; i < total; i++)

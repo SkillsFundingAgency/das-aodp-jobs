@@ -57,7 +57,7 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error downloading CSV file from url: {UrlFilePath}", urlFilePath);
+                _logger.LogError(ex, "FailedToCallQaaApi downloading CSV file from url: {UrlFilePath}", urlFilePath);
             }
             return records;
         }
@@ -113,7 +113,7 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error reading CSV record");
+                    _logger.LogError(ex, "FailedToCallQaaApi reading CSV record");
                     skippedCount++;
                 }
             }

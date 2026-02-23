@@ -1,4 +1,5 @@
 ﻿using SFA.DAS.AODP.Data.Entities;
+using SFA.DAS.AODP.Jobs.Functions;
 
 namespace SFA.DAS.AODP.Jobs.Services;
 
@@ -7,11 +8,14 @@ namespace SFA.DAS.AODP.Jobs.Services;
 /// </summary>
 /// <param name="logger">The logger to log to.</param>
 /// <param name="qaaApiClient">The named HttpClient client interface.</param>
-public class QaaQualificationImportService(ILogger<QaaQualificationImportService> logger, IQaaApiClient qaaApiClient, IQaaRepository qaaRepository) : IQaaQualificationImportService
+/// <param name="qaaRepository">Defines the data access layer to manage access to Qaa data.</param>
+/// <param name="clockService">Provides an abstraction to retrieve the current datetime.</param>
+public class QaaQualificationImportService(ILogger<QaaQualificationImportService> logger, IQaaApiClient qaaApiClient, IQaaRepository qaaRepository, ISystemClockService clockService) : IQaaQualificationImportService
 {
     private readonly ILogger<QaaQualificationImportService> _logger = logger;
     private readonly IQaaApiClient _qaaApiClient = qaaApiClient;
     private readonly IQaaRepository _qaaRepository = qaaRepository;
+    private readonly ISystemClockService _clockService = clockService;
 
     /// <inheritdoc/>.
     public async Task<int> ImportDataAsync(CancellationToken cancellationToken)
@@ -21,47 +25,44 @@ public class QaaQualificationImportService(ILogger<QaaQualificationImportService
         {
             var proposedQualifications = await _qaaApiClient.GetQualificationsAsync(cancellationToken);
 
-            if (proposedQualifications.Any())
+            if (!proposedQualifications.Any())
             {
-                var rowsDeleted = await _qaaRepository.RunPrerequisitesForImportAsync(cancellationToken);
-
-                _logger.LogInformation("{RowsDeleted} were deleted, ready for fresh import", rowsDeleted);
-
-                var qualificationsToCreate = new List<RegulatedQaaQualification>();
-
-                foreach (var proposedQualification in proposedQualifications)
-                {
-                    var ssa = SectorSubjectArea.FromTiers(proposedQualification.SsaTier1, proposedQualification.SsaTier2)!;
-
-                    var regulatedQualification = RegulatedQaaQualification.Create(
-                        proposedQualification.AimCode,
-                        proposedQualification.DiplomaTitle, 
-                        proposedQualification.AwardingBody,
-                        proposedQualification.StartDateOfQualification,
-                        proposedQualification.LastDateForRegistrations,
-                        ssa);
-
-                    qualificationsToCreate.Add(regulatedQualification);
-                }
-
-                if (qualificationsToCreate.Count <= 0)
-                {
-                    _logger.LogInformation("No qualifications found to import, nothing to do.");
-                }
-                else
-                {
-                    await _qaaRepository.RunImportAsync(qualificationsToCreate, cancellationToken);
-                    totalCountOfRecordsProcessed = qualificationsToCreate.Count;
-
-                    _logger.LogInformation("Finished import, created {NumberOfRecordsCreated}", qualificationsToCreate.Count);
-                }
+                _logger.NoQaaQualificationsFound();
+                return 0;
             }
 
-            _logger.LogInformation("No qualifications found from QAA Api, nothing to do.");
+            var dateOfSnapshot = _clockService.UtcNow;
+            var rowsDeleted = await _qaaRepository.RunPrerequisitesForImportAsync(cancellationToken);
+
+            _logger.DeletedExistingRows(rowsDeleted);
+
+            var qualificationsToCreate = new List<RegulatedQaaQualification>();
+
+            foreach (var proposedQualification in proposedQualifications)
+            {
+                var ssa = SectorSubjectArea.FromTiers(proposedQualification.SsaTier1, proposedQualification.SsaTier2)!;
+
+                var regulatedQualification = RegulatedQaaQualification.Create(
+                    dateOfSnapshot,
+                    proposedQualification.AimCode,
+                    proposedQualification.DiplomaTitle, 
+                    proposedQualification.AwardingBody,
+                    proposedQualification.StartDateOfQualification,
+                    proposedQualification.LastDateForRegistrations,
+                    ssa);
+
+                qualificationsToCreate.Add(regulatedQualification);
+            }
+
+            await _qaaRepository.RunImportAsync(qualificationsToCreate, cancellationToken);
+            totalCountOfRecordsProcessed = qualificationsToCreate.Count;
+
+            _logger.FinishedImport(totalCountOfRecordsProcessed);
+            
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "Could not call the Qaa API, got status {Status}", ex.StatusCode);
+            _logger.FailedToCallQaaApi(ex);
             throw;
         }
        

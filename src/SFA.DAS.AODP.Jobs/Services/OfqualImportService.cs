@@ -479,7 +479,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"[{nameof(OfqualImportService)}] -> [{nameof(ProcessQualificationsDataAsync)}] -> Error processing qualifications.");
+                _logger.LogError(ex, $"[{nameof(OfqualImportService)}] -> [{nameof(ProcessQualificationsDataAsync)}] -> FailedToCallQaaApi processing qualifications.");
                 throw;
             }
         }
