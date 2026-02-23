@@ -1,5 +1,8 @@
-﻿namespace SFA.DAS.AODP.Models.Config;
+﻿using System.Diagnostics.CodeAnalysis;
 
+namespace SFA.DAS.AODP.Models.Config;
+
+[ExcludeFromCodeCoverage]
 public sealed record ClientCredentialsAuthenticationConfiguration
 {
     public required string? TenantId { get; init; }

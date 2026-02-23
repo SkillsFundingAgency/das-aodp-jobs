@@ -9,6 +9,11 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options) { }
 
+        protected ApplicationDbContext()
+        {
+            
+        }
+
         public virtual DbSet<ActionType> ActionType { get; set; }
 
         public virtual DbSet<LifecycleStage> LifecycleStages { get; set; }
@@ -49,9 +54,9 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         
         public virtual DbSet<RegulatedQaaQualification> RegulatedQaaQualification { get; set; }
 
-        public void StartingBulkInsert() => ChangeTracker.AutoDetectChangesEnabled = false;
+        public virtual void StartingBulkInsert() => ChangeTracker.AutoDetectChangesEnabled = false;
 
-        public void FinishedBulkInsert() => ChangeTracker.AutoDetectChangesEnabled = true;
+        public virtual void FinishedBulkInsert() => ChangeTracker.AutoDetectChangesEnabled = true;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

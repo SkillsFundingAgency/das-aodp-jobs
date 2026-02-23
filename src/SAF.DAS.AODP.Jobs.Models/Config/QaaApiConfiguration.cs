@@ -1,8 +1,11 @@
-﻿namespace SFA.DAS.AODP.Models.Config;
+﻿using System.Diagnostics.CodeAnalysis;
+
+namespace SFA.DAS.AODP.Models.Config;
 
 /// <summary>
 /// Defines configuration QAA API client.
 /// </summary>
+[ExcludeFromCodeCoverage]
 public sealed record QaaApiConfiguration
 {
     /// <summary>
