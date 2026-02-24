@@ -1,7 +1,3 @@
-using Microsoft.AspNetCore.Mvc;
-using SFA.DAS.AODP.Common.Enum;
-using SFA.DAS.AODP.Jobs.Models.Jobs;
-
 namespace SFA.DAS.AODP.Jobs.Functions;
 
 /// <summary>

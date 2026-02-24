@@ -1,5 +1,3 @@
-using SFA.DAS.AODP.Data.Entities;
-
 namespace SFA.DAS.AODP.Jobs.UnitTests.Entities;
 
 public class RegulatedQaaQualificationTests

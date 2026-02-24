@@ -39,9 +39,8 @@ public class JobFunctionRunner(
 
             var lastJobRun = await jobConfigurationService.GetLastJobRunAsync(jobName.ToString());
 
-            if (lastJobRun is not null
-                && lastJobRun.Id != Guid.Empty
-                && lastJobRun.Status is not nameof(JobStatus.Running))
+            if (lastJobRun.Id != Guid.Empty && 
+                lastJobRun.Status is not nameof(JobStatus.Running))
             {
                 jobControl.JobRunId = lastJobRun.Id;
                 await jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, 0,
@@ -49,8 +48,7 @@ public class JobFunctionRunner(
             }
             else
             {
-                jobControl.JobRunId =
-                    await jobConfigurationService.InsertJobRunAsync(jobControl.JobId, username, JobStatus.Running);
+                jobControl.JobRunId = await jobConfigurationService.InsertJobRunAsync(jobControl.JobId, username, JobStatus.Running);
             }
 
             sw.Start();

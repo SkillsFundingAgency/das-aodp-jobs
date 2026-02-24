@@ -1,33 +1,24 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
-using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Infrastructure.Repositories;
-using SFA.DAS.AODP.Jobs.Client;
-using SFA.DAS.AODP.Jobs.Services;
-using SFA.DAS.AODP.Models.QaaQualification;
-using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
-
 namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Services;
 
 public class QaaQualificationImportServiceTests
 {
     private readonly Mock<IQaaApiClient> _mockQaaApiClient;
     private readonly Mock<IQaaRepository> _mockQaaRepository;
-    private readonly Mock<ISystemClockService> _mockClockService;
     private readonly QaaQualificationImportService _service;
 
     public QaaQualificationImportServiceTests()
     {
         _mockQaaApiClient = new Mock<IQaaApiClient>();
         _mockQaaRepository = new Mock<IQaaRepository>();
-        _mockClockService = new Mock<ISystemClockService>();
+        var mockClockService = new Mock<ISystemClockService>();
 
         _service = new QaaQualificationImportService(
             NullLogger<QaaQualificationImportService>.Instance, 
             _mockQaaApiClient.Object,
             _mockQaaRepository.Object,
-            _mockClockService.Object);
+            mockClockService.Object);
     }
 
     [Fact]

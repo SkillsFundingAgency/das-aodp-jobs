@@ -3,6 +3,7 @@ using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Infrastructure.Interfaces;
 using SFA.DAS.AODP.Jobs.Services;
 using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
+using JobConfiguration = SFA.DAS.AODP.Data.Entities.JobConfiguration;
 
 namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Services;
 

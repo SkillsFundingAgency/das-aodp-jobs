@@ -1,7 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker.Http;
-using SFA.DAS.AODP.Common.Enum;
-using System.Diagnostics;
 
 namespace SFA.DAS.AODP.Functions.Functions
 {
