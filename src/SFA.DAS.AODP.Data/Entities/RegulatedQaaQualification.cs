@@ -9,11 +9,11 @@ public class RegulatedQaaQualification
 
     public DateTime DateOfDataSnapshot { get; private set; }
 
-    public string AimCode { get; private set; }
+    public string AimCode { get; private set; } = null!;
 
-    public string QualificationTitle { get; private set; }
+    public string QualificationTitle { get; private set; } = null!;
 
-    public string AwardingBody { get; private set; }
+    public string AwardingBody { get; private set; } = null!;
 
     public string Level { get; private set; } = null!;
 
