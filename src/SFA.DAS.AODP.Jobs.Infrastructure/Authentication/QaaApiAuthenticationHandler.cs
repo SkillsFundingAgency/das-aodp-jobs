@@ -4,7 +4,7 @@
 /// Defines a handler to add in the required authentication header with a bearer token to requests.
 /// </summary>
 /// <param name="tokenProvider"></param>
-public sealed class QaaApiAuthenticationHandler(ITokenProvider tokenProvider) : DelegatingHandler
+public class QaaApiAuthenticationHandler(ITokenProvider tokenProvider) : DelegatingHandler
 {
     private readonly ITokenProvider _tokenProvider = tokenProvider;
 

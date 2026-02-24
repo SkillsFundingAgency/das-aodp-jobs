@@ -5,6 +5,7 @@ namespace SFA.DAS.AODP.Jobs.StartupExtensions;
 /// <summary>
 /// Provides extension methods for <see cref="IServiceCollection"/> to register data import related services into the DI container.
 /// </summary>
+[ExcludeFromCodeCoverage]
 public static class DataImportServiceExtensions
 {
     /// <summary>

@@ -14,8 +14,6 @@ public class JobFunctionRunnerTests
         _runner = new JobFunctionRunner(loggerMock.Object, _jobConfigurationServiceMock.Object);
     }
 
-    #region Happy Path Tests
-
     [Fact]
     public async Task RunAsync_Should_Insert_New_JobRun_And_Complete_Successfully_With_Correct_Record_Count()
     {
@@ -122,10 +120,6 @@ public class JobFunctionRunnerTests
             Times.Once);
     }
 
-    #endregion
-
-    #region Early Exit Tests
-
     [Fact]
     public async Task RunAsync_Should_Return_JobDisabled_When_JobEnabled_Is_False()
     {
@@ -199,10 +193,6 @@ public class JobFunctionRunnerTests
             x => x.GetLastJobRunAsync(It.IsAny<string>()),
             Times.Never);
     }
-
-    #endregion
-
-    #region Exception Handling Tests
 
     [Fact]
     public async Task RunAsync_Should_Handle_ApiException_And_Return_StatusCode()
@@ -360,10 +350,6 @@ public class JobFunctionRunnerTests
             Times.Once);
     }
 
-    #endregion
-
-    #region Cancellation Token Tests
-
     [Fact]
     public async Task RunAsync_Should_Pass_CancellationToken_To_Import_Delegate()
     {
@@ -414,10 +400,6 @@ public class JobFunctionRunnerTests
         Assert.IsType<OkObjectResult>(result);
     }
 
-    #endregion
-
-    #region JobControl Parameter Tests
-
     [Fact]
     public async Task RunAsync_Should_Pass_Updated_JobControl_With_JobRunId_To_Delegate()
     {
@@ -467,10 +449,6 @@ public class JobFunctionRunnerTests
         Assert.Equal(jobRunId, receivedJobControl.JobRunId);
         Assert.IsType<OkObjectResult>(result);
     }
-
-    #endregion
-
-    #region Edge Cases
 
     [Theory]
     [InlineData(0)]
@@ -565,6 +543,4 @@ public class JobFunctionRunnerTests
             x => x.InsertJobRunAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<JobStatus>()),
             Times.Once);
     }
-
-    #endregion
 }
