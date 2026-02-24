@@ -1,3 +1,5 @@
+using SFA.DAS.AODP.Jobs.Functions.Abstractions;
+
 namespace SFA.DAS.AODP.Jobs.Functions;
 
 public class RegulatedQaaQualificationsDataFunction(

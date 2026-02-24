@@ -1,4 +1,4 @@
-namespace SFA.DAS.AODP.Jobs.Functions;
+namespace SFA.DAS.AODP.Jobs.Functions.Abstractions;
 
 /// <summary>
 /// Default implementation <see cref="IJobFunctionRunner"/>.
@@ -27,13 +27,13 @@ public class JobFunctionRunner(
 
             if (!jobControl.JobEnabled)
             {
-                logger.JobDisabled(functionName);
+                LoggerMessages.FunctionLoggerMessages.JobDisabled(logger, functionName);
                 return new OkObjectResult($"[{functionName}] -> Job disabled");
             }
 
             if (jobControl.Status is nameof(JobStatus.Running))
             {
-                logger.JobRunning(functionName);
+                LoggerMessages.FunctionLoggerMessages.JobRunning(logger, functionName);
                 return new OkObjectResult($"[{functionName}] -> Job currently running");
             }
 
@@ -64,7 +64,7 @@ public class JobFunctionRunner(
 
             sw.Stop();
 
-            logger.JobCompleted(functionName, sw.Elapsed.TotalSeconds);
+            LoggerMessages.FunctionLoggerMessages.JobCompleted(logger, functionName, sw.Elapsed.TotalSeconds);
 
             return new OkObjectResult($"[{functionName}] -> Completed.");
         }
@@ -85,13 +85,13 @@ public class JobFunctionRunner(
     private async Task<IActionResult> HandleException(string functionName, string username, Exception ex,
         JobControl jobControl)
     {
-        logger.UnexpectedSystemError(functionName, ex.Message);
+        LoggerMessages.FunctionLoggerMessages.UnexpectedSystemError(logger, functionName, ex.Message);
         return await JobErrored(username, HttpStatusCode.InternalServerError, jobControl);
     }
 
     private async Task<IActionResult> HandleApiCallExceptionAsync(string functionName, string username, string message, HttpStatusCode? statusCode, JobControl jobControl)
     {
-        logger.UnexpectedApiError(functionName, message);
+        LoggerMessages.FunctionLoggerMessages.UnexpectedApiError(logger, functionName, message);
         return await JobErrored(username, statusCode, jobControl);
     }
 

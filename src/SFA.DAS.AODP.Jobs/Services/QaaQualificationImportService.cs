@@ -1,5 +1,7 @@
 ﻿using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Jobs.Functions;
+using SFA.DAS.AODP.Jobs.LoggerMessages;
+using QaaQualificationImportServiceLoggerMessages = SFA.DAS.AODP.Jobs.LoggerMessages.QaaQualificationImportServiceLoggerMessages;
 
 namespace SFA.DAS.AODP.Jobs.Services;
 
@@ -27,14 +29,14 @@ public class QaaQualificationImportService(ILogger<QaaQualificationImportService
 
             if (!proposedQualifications.Any())
             {
-                _logger.NoQaaQualificationsFound();
+                QaaQualificationImportServiceLoggerMessages.NoQaaQualificationsFound(_logger);
                 return 0;
             }
 
             var dateOfSnapshot = _clockService.UtcNow;
             var rowsDeleted = await _qaaRepository.RunPrerequisitesForImportAsync(cancellationToken);
 
-            _logger.DeletedExistingRows(rowsDeleted);
+            QaaQualificationImportServiceLoggerMessages.DeletedExistingRows(_logger, rowsDeleted);
 
             var qualificationsToCreate = new List<RegulatedQaaQualification>();
 
@@ -57,12 +59,12 @@ public class QaaQualificationImportService(ILogger<QaaQualificationImportService
             await _qaaRepository.RunImportAsync(qualificationsToCreate, cancellationToken);
             totalCountOfRecordsProcessed = qualificationsToCreate.Count;
 
-            _logger.FinishedImport(totalCountOfRecordsProcessed);
+            QaaQualificationImportServiceLoggerMessages.FinishedImport(_logger, totalCountOfRecordsProcessed);
             
         }
         catch (HttpRequestException ex)
         {
-            _logger.FailedToCallQaaApi(ex);
+            QaaQualificationImportServiceLoggerMessages.FailedToCallQaaApi(_logger, ex);
             throw;
         }
        

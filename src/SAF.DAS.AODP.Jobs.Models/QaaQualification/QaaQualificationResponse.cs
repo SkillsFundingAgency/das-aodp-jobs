@@ -1,10 +1,13 @@
-﻿using System.Text.Json.Serialization;
+﻿using SFA.DAS.AODP.Models.QaaQualification.Converters;
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
 
 namespace SFA.DAS.AODP.Models.QaaQualification;
 
 /// <summary>
 /// The details of a QAA education qualification (diploma) as retrieved from the API.
 /// </summary>
+[ExcludeFromCodeCoverage]
 public record QaaQualificationResponse
 {
     /// <summary>

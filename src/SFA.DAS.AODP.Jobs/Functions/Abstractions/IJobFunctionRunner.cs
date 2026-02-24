@@ -1,4 +1,4 @@
-namespace SFA.DAS.AODP.Jobs.Functions;
+namespace SFA.DAS.AODP.Jobs.Functions.Abstractions;
 
 /// <summary>
 /// Defines a generic approach to running job import functions.

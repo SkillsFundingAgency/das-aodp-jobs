@@ -152,7 +152,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 x => x.Log(
                     It.Is<LogLevel>(l => l == LogLevel.Error),
                     It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("FailedToCallQaaApi downloading CSV file from url")),
+                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Error downloading CSV file from url")),
                     It.IsAny<Exception>(),
                     It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
         }

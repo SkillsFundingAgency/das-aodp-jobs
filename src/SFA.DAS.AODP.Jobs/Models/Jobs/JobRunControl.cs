@@ -1,5 +1,6 @@
 ﻿namespace SFA.DAS.AODP.Jobs.Models.Jobs;
 
+[ExcludeFromCodeCoverage]
 public class JobRunControl
 {
     public Guid Id;

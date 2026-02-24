@@ -1,4 +1,4 @@
-namespace SFA.DAS.AODP.Jobs.Functions;
+namespace SFA.DAS.AODP.Jobs.LoggerMessages;
 
 /// <summary>
 /// Defines static logger messages using source generators to generate the logging messages at compile time.
