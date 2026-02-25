@@ -56,7 +56,7 @@ public static class DataImportServiceExtensions
 
         services.AddTransient<IQaaQualificationImportService, QaaQualificationImportService>();
         services.AddTransient<IQaaRepository, QaaRepository>();
-        services.AddSingleton<ITokenProvider, TokenProvider>();
+        services.AddSingleton<ITokenProvider, QaaClientCredentialsTokenProvider>();
 
         return services;
     }

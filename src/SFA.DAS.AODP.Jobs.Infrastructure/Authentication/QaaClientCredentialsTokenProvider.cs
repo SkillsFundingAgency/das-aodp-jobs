@@ -6,11 +6,11 @@ using SFA.DAS.AODP.Models.Config;
 namespace SFA.DAS.AODP.Infrastructure.Authentication;
 
 /// <summary>
-/// Default implementation for <see cref="ITokenProvider"/>.
+/// Implements the <see cref="ITokenProvider"/> by using Microsoft Entra as the Identity provider for retrieving tokens for the Qaa API.
 /// </summary>
 /// <param name="tokenCredential">A credential used to obtain a token.</param>
 /// <param name="qaaApiConfiguration">Strongly-typed configuration for the Qaa API.</param>
-public class TokenProvider([FromKeyedServices("QaaApi")]TokenCredential tokenCredential, IOptions<QaaApiConfiguration> qaaApiConfiguration) : ITokenProvider
+public class QaaClientCredentialsTokenProvider([FromKeyedServices("QaaApi")]TokenCredential tokenCredential, IOptions<QaaApiConfiguration> qaaApiConfiguration) : ITokenProvider
 {
     private readonly QaaApiConfiguration _qaaApiConfiguration = qaaApiConfiguration.Value;
     private readonly TokenCredential _credential = tokenCredential;
