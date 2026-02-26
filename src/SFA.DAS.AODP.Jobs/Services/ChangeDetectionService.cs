@@ -2,48 +2,39 @@
 
 public class ChangeDetectionService : IChangeDetectionService
 {
-    public struct DetectionResults
+    public struct DetectionResults()
     {
-        public DetectionResults()
-        {
-            ChangesPresent = false;
-            Fields = new List<string>();
-            KeyFieldsChanged = false;
-        }
-
-        public bool ChangesPresent { get; set; }
-        public List<string> Fields { get; set; }
-        public bool KeyFieldsChanged { get; set; }
+        public bool ChangesPresent { get; set; } = false;
+        public List<string> Fields { get; set; } = new();
+        public bool KeyFieldsChanged { get; set; } = false;
     }
 
-    private readonly List<string> _keyFields;
-
-    public ChangeDetectionService()
+    private readonly List<string> _keyFields = new()
     {
-        _keyFields = new List<string>()
-        {
-            "OrganisationName",
-            "Title",
-            "Level",
-            "Type",
-            "TotalCredits",
-            "Ssa",
-            "GradingType",
-            "OfferedInEngland",
-            "PreSixteen",
-            "SixteenToEighteen",
-            "EighteenPlus",
-            "NineteenPlus",
-            "FundingInEngland", // no match
-            "GLH",
-            "MinimumGLH",
-            "Tqt",
-            "OperationalEndDate",
-            "LastUpdatedDate",
-            "Version", //internal version numbers do not match Ofqual version numbers (we start from 1)
-            "OfferedInternationally"
-        };
-    }
+        "OrganisationName",
+        "Title",
+        "Level",
+        "Type",
+        "TotalCredits",
+        "Ssa",
+        "GradingType",
+        "OfferedInEngland",
+        "PreSixteen",
+        "SixteenToEighteen",
+        "EighteenPlus",
+        "NineteenPlus",
+        "FundingInEngland", // no match
+        "GLH",
+        "MinimumGLH",
+        "Tqt",
+        "OperationalEndDate",
+        "LastUpdatedDate",
+        "Version", //internal version numbers do not match Ofqual version numbers (we start from 1)
+        "OfferedInternationally"
+    };
+
+    // no match
+    //internal version numbers do not match Ofqual version numbers (we start from 1)
 
     public DetectionResults DetectChanges(QualificationDTO newRecord, QualificationVersions qualificationVersion, AwardingOrganisation awardingOrganisation, Qualification qualification)
     {

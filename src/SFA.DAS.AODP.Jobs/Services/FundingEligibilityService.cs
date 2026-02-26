@@ -1,14 +1,7 @@
 ﻿namespace SFA.DAS.AODP.Jobs.Services;
 
-public class FundingEligibilityService : IFundingEligibilityService
+public class FundingEligibilityService(ILogger<FundingEligibilityService> logger) : IFundingEligibilityService
 {
-    private readonly ILogger<FundingEligibilityService> _logger;
-
-    public FundingEligibilityService(ILogger<FundingEligibilityService> logger)
-    {
-        _logger = logger;
-    }
-
     public bool EligibleForFunding(QualificationDTO qualification)
     {            
         var eligibleForFunding = qualification.OfferedInEngland
@@ -22,11 +15,11 @@ public class FundingEligibilityService : IFundingEligibilityService
 
         if (eligibleForFunding)
         {
-            _logger.LogInformation($"[{nameof(FundingEligibilityService)}] -> [{nameof(EligibleForFunding)}] -> Qualification {qualification.QualificationNumberNoObliques} eligible for funding");
+            logger.LogInformation($"[{nameof(FundingEligibilityService)}] -> [{nameof(EligibleForFunding)}] -> Qualification {qualification.QualificationNumberNoObliques} eligible for funding");
         }
         else
         {
-            _logger.LogInformation($"[{nameof(FundingEligibilityService)}] -> [{nameof(EligibleForFunding)}] -> Qualification {qualification.QualificationNumberNoObliques} NOT eligible for funding");
+            logger.LogInformation($"[{nameof(FundingEligibilityService)}] -> [{nameof(EligibleForFunding)}] -> Qualification {qualification.QualificationNumberNoObliques} NOT eligible for funding");
         }
 
         return eligibleForFunding;
@@ -42,7 +35,7 @@ public class FundingEligibilityService : IFundingEligibilityService
 
         if (noGlhOrTqt)
         {
-            _logger.LogInformation($"[{nameof(FundingEligibilityService)}] -> [{nameof(EligibleForFunding)}] -> Qualification {qualification.QualificationNumberNoObliques} has no GLH/TQT");
+            logger.LogInformation($"[{nameof(FundingEligibilityService)}] -> [{nameof(EligibleForFunding)}] -> Qualification {qualification.QualificationNumberNoObliques} has no GLH/TQT");
             reason = ImportReason.NoGLHOrTQT;
         }            
 

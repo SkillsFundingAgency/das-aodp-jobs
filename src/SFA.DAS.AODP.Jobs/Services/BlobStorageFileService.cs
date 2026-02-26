@@ -1,14 +1,7 @@
 ﻿namespace SFA.DAS.AODP.Jobs.Services;
 
-public class BlobStorageFileService : IBlobStorageFileService
+public class BlobStorageFileService(IHttpClientFactory httpClientFactory) : IBlobStorageFileService
 {
-    private readonly IHttpClientFactory _httpClientFactory;
-
-    public BlobStorageFileService(IHttpClientFactory httpClientFactory)
-    {
-        _httpClientFactory = httpClientFactory;
-    }
-
     public async Task<Stream> DownloadFileAsync(string filename, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(filename))
@@ -21,7 +14,7 @@ public class BlobStorageFileService : IBlobStorageFileService
 
     private async Task<HttpResponseMessage> GetDataFromUrl(string approvedUrlFilePath)
     {
-        var _httpClient = _httpClientFactory.CreateClient("xlsx");
+        var _httpClient = httpClientFactory.CreateClient("xlsx");
         var response = await _httpClient.GetAsync(approvedUrlFilePath);
         response.EnsureSuccessStatusCode();
         return response;

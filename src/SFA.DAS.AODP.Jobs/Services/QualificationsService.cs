@@ -1,24 +1,18 @@
 ﻿namespace SFA.DAS.AODP.Jobs.Services;
 
-public class QualificationsService : IQualificationsService
+public class QualificationsService(
+    ILogger<QualificationsService> logger,
+    IMapper mapper,
+    IApplicationDbContext appDbContext)
+    : IQualificationsService
 {
-    private readonly ILogger<QualificationsService> _logger;
-    private readonly IApplicationDbContext _applicationDbContext;
-    private readonly IMapper _mapper;
-
-    public QualificationsService(ILogger<QualificationsService> logger, IMapper mapper, 
-        IApplicationDbContext appDbContext)
-    {
-        _logger = logger;
-        _mapper = mapper;
-        _applicationDbContext = appDbContext;
-    }
+    private readonly IMapper _mapper = mapper;
 
     public async Task AddQualificationsStagingRecords(List<string> qualificationsJson)
     {
         try
         {
-            _logger.LogInformation($"[{nameof(QualificationsService)}] -> [{nameof(AddQualificationsStagingRecords)}] -> Adding regulated qualification records...");
+            logger.LogInformation($"[{nameof(QualificationsService)}] -> [{nameof(AddQualificationsStagingRecords)}] -> Adding regulated qualification records...");
 
             var qualificationsJsonEntities = qualificationsJson
                 .Select(json => new QualificationImportStaging
@@ -28,13 +22,13 @@ public class QualificationsService : IQualificationsService
                     CreatedDate = DateTime.Now
                 }).ToList();
 
-            await _applicationDbContext.QualificationImportStaging.AddRangeAsync(qualificationsJsonEntities);
+            await appDbContext.QualificationImportStaging.AddRangeAsync(qualificationsJsonEntities);
 
-            _logger.LogInformation($"[{nameof(QualificationsService)}] -> [{nameof(AddQualificationsStagingRecords)}] ->  Successfully added regulated qualification records.");
+            logger.LogInformation($"[{nameof(QualificationsService)}] -> [{nameof(AddQualificationsStagingRecords)}] ->  Successfully added regulated qualification records.");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"[{nameof(QualificationsService)}] -> [{nameof(AddQualificationsStagingRecords)}] -> An error occurred while adding regulated qualification records.");
+            logger.LogError(ex, $"[{nameof(QualificationsService)}] -> [{nameof(AddQualificationsStagingRecords)}] -> An error occurred while adding regulated qualification records.");
             throw;
         }
     }
@@ -43,15 +37,15 @@ public class QualificationsService : IQualificationsService
     {
         try
         {
-            _logger.LogInformation($"[{nameof(QualificationsService)}] -> [{nameof(SaveQualificationsStagingAsync)}] -> Saving regulated qualification records...");
+            logger.LogInformation($"[{nameof(QualificationsService)}] -> [{nameof(SaveQualificationsStagingAsync)}] -> Saving regulated qualification records...");
 
-            await _applicationDbContext.SaveChangesAsync();
+            await appDbContext.SaveChangesAsync();
 
-            _logger.LogInformation($"[{nameof(QualificationsService)}] -> [{nameof(SaveQualificationsStagingAsync)}] -> Successfully saved regulated qualification records.");
+            logger.LogInformation($"[{nameof(QualificationsService)}] -> [{nameof(SaveQualificationsStagingAsync)}] -> Successfully saved regulated qualification records.");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"[{nameof(QualificationsService)}] -> [{nameof(SaveQualificationsStagingAsync)}] -> An error occurred while saving regulated qualification records.");
+            logger.LogError(ex, $"[{nameof(QualificationsService)}] -> [{nameof(SaveQualificationsStagingAsync)}] -> An error occurred while saving regulated qualification records.");
             throw;
         }
     }
@@ -60,9 +54,9 @@ public class QualificationsService : IQualificationsService
     {
         try
         {
-            _logger.LogInformation($"[{nameof(QualificationsService)}] -> [{nameof(GetStagedQualificationsBatchAsync)}] -> Retrieving next batch of {batchSize} staged qualifications from record {processedCount}...");
+            logger.LogInformation($"[{nameof(QualificationsService)}] -> [{nameof(GetStagedQualificationsBatchAsync)}] -> Retrieving next batch of {batchSize} staged qualifications from record {processedCount}...");
 
-            var stagedQualifications = await _applicationDbContext.QualificationImportStaging
+            var stagedQualifications = await appDbContext.QualificationImportStaging
                 .OrderBy(q => q.Id)
                 .Skip(processedCount)
                 .Take(batchSize)
@@ -77,7 +71,7 @@ public class QualificationsService : IQualificationsService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"[{nameof(QualificationsService)}] -> [{nameof(GetStagedQualificationsBatchAsync)}] -> An error occurred while retrieving batch of import records.");
+            logger.LogError(ex, $"[{nameof(QualificationsService)}] -> [{nameof(GetStagedQualificationsBatchAsync)}] -> An error occurred while retrieving batch of import records.");
             throw;
         }
     }

@@ -1,68 +1,55 @@
 ﻿namespace SFA.DAS.AODP.Jobs.Functions;
 
-public class ImportPldnsDataFunction
+public class ImportPldnsDataFunction(
+    ILogger<ImportPldnsDataFunction> logger,
+    AodpJobsConfiguration config,
+    IJobConfigurationService jobConfigurationService,
+    IImportRepository repository,
+    IBlobStorageFileService blobStorageFileService)
 {
-    private readonly ILogger<ImportPldnsDataFunction> _logger;
-    private readonly AodpJobsConfiguration _config;
-    private readonly IJobConfigurationService _jobConfigurationService;
-    private readonly IImportRepository _repository;
-    private readonly IBlobStorageFileService _blobStorageFileService;
     private const int BatchSize = 3000;
-
-    public ImportPldnsDataFunction(ILogger<ImportPldnsDataFunction> logger,
-            AodpJobsConfiguration config,
-            IJobConfigurationService jobConfigurationService,
-            IImportRepository repository,
-            IBlobStorageFileService blobStorageFileService)
-    {
-        _logger = logger;
-        _config = config;
-        _jobConfigurationService = jobConfigurationService;
-        _repository = repository;
-        _blobStorageFileService = blobStorageFileService;
-    }
 
     // Todo : Merge with ImportDefundingListDataFunction as they are almost identical apart from the data being imported
     [Function("ImportPldnsDataFunction")]
     public async Task<IActionResult> ImportPldns(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "api/importPldns/{username}")] HttpRequestData req, string username = "", CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("[{Function}] -> ImportPldns triggered by {Username}", nameof(ImportPldnsDataFunction), username);
+        logger.LogInformation("[{Function}] -> ImportPldns triggered by {Username}", nameof(ImportPldnsDataFunction), username);
         try
         {
             var totalImported = await ImportPldns(cancellationToken);
 
-            var jobControl = await _jobConfigurationService.ReadPldnsImportConfiguration();
+            var jobControl = await jobConfigurationService.ReadPldnsImportConfiguration();
 
-            var lastJobRun = await _jobConfigurationService.GetLastJobRunAsync(JobNames.Pldns.ToString());
+            var lastJobRun = await jobConfigurationService.GetLastJobRunAsync(JobNames.Pldns.ToString());
 
-            await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, lastJobRun.Id, totalImported, JobStatus.Completed);
+            await jobConfigurationService.UpdateJobRun(username, jobControl.JobId, lastJobRun.Id, totalImported, JobStatus.Completed);
 
             var msg = $"[{nameof(ImportPldnsDataFunction)}] -> {totalImported} records imported.";
-            _logger.LogInformation("[{Function}] -> {TotalImported} records imported.", nameof(ImportPldnsDataFunction), totalImported);
+            logger.LogInformation("[{Function}] -> {TotalImported} records imported.", nameof(ImportPldnsDataFunction), totalImported);
             return new OkObjectResult(msg);
         }
         catch (ApiException ex)
         {
-            _logger.LogError(ex, "[{Function}] -> ImportPldns unexpected api exception: {Message}", nameof(ImportPldnsDataFunction), ex.Message);
+            logger.LogError(ex, "[{Function}] -> ImportPldns unexpected api exception: {Message}", nameof(ImportPldnsDataFunction), ex.Message);
             return new StatusCodeResult((int)ex.StatusCode);
         }
         catch (SystemException ex)
         {
-            _logger.LogError(ex, "[{Function}] -> ImportPldns unexpected system exception: {Message}", nameof(ImportPldnsDataFunction), ex.Message);
+            logger.LogError(ex, "[{Function}] -> ImportPldns unexpected system exception: {Message}", nameof(ImportPldnsDataFunction), ex.Message);
             return new StatusCodeResult(500);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{Function}] -> ImportPldns failed: {Message}", nameof(ImportPldnsDataFunction), ex.Message);
+            logger.LogError(ex, "[{Function}] -> ImportPldns failed: {Message}", nameof(ImportPldnsDataFunction), ex.Message);
             return new StatusCodeResult(500);
         }
     }
 
     private async Task<int> ImportPldns(CancellationToken cancellationToken)
     {
-        string? importFileUrl = _config.PldnsImportUrl;
-        await using var ms = await _blobStorageFileService.DownloadFileAsync(importFileUrl!, cancellationToken);
+        string? importFileUrl = config.PldnsImportUrl;
+        await using var ms = await blobStorageFileService.DownloadFileAsync(importFileUrl!, cancellationToken);
         ms.Position = 0;
 
         using var document = SpreadsheetDocument.Open(ms, false);
@@ -72,7 +59,7 @@ public class ImportPldnsDataFunction
         var sheet = FindSheet(workbookPart, "PLDNS V12F");
         if (sheet == null)
         {
-            _logger.LogWarning("[{Function}] -> ImportPldns - Sheet {SheetName} not found", nameof(ImportPldnsDataFunction), "PLDNS V12F");
+            logger.LogWarning("[{Function}] -> ImportPldns - Sheet {SheetName} not found", nameof(ImportPldnsDataFunction), "PLDNS V12F");
             return 0;
         }
 
@@ -80,7 +67,7 @@ public class ImportPldnsDataFunction
         var sheetData = worksheetPart.Worksheet.Elements<SheetData>().FirstOrDefault();
         if (sheetData == null)
         {
-            _logger.LogWarning("[{Function}] -> ImportPldns - Sheet data is null for sheet {SheetName}", nameof(ImportPldnsDataFunction), "PLDNS V12F");
+            logger.LogWarning("[{Function}] -> ImportPldns - Sheet data is null for sheet {SheetName}", nameof(ImportPldnsDataFunction), "PLDNS V12F");
             return 0;
         }
 
@@ -110,13 +97,13 @@ public class ImportPldnsDataFunction
 
         if (items.Count == 0)
         {
-            _logger.LogWarning("[{Function}] -> ImportPldns - No records available to import.", nameof(ImportPldnsDataFunction));
+            logger.LogWarning("[{Function}] -> ImportPldns - No records available to import.", nameof(ImportPldnsDataFunction));
             return 0;
         }
 
         var totalImported = await InsertBatchesAsync(items, cancellationToken);
 
-        await _repository.DeleteDuplicateAsync("[dbo].[proc_DeleteDuplicatePldns]", null, cancellationToken);
+        await repository.DeleteDuplicateAsync("[dbo].[proc_DeleteDuplicatePldns]", null, cancellationToken);
 
         return totalImported;
     }
@@ -275,8 +262,8 @@ public class ImportPldnsDataFunction
             cancellationToken.ThrowIfCancellationRequested();
 
             var batchItems = items.Skip(batch * BatchSize).Take(BatchSize).ToList();
-            await _repository.BulkInsertAsync(batchItems, cancellationToken);
-            _logger.LogInformation("[{Function}] -> Inserted batch {BatchNumber} with {BatchCount} records.", nameof(ImportPldnsDataFunction), batch + 1, batchItems.Count);
+            await repository.BulkInsertAsync(batchItems, cancellationToken);
+            logger.LogInformation("[{Function}] -> Inserted batch {BatchNumber} with {BatchCount} records.", nameof(ImportPldnsDataFunction), batch + 1, batchItems.Count);
             totalImported += batchItems.Count;
         }
         return totalImported;

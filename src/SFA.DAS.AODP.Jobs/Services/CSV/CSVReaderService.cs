@@ -1,20 +1,11 @@
 ﻿namespace SFA.DAS.AODP.Jobs.Services.CSV;
 
-public class CsvReaderService : ICsvReaderService
+public class CsvReaderService(ILogger<CsvReaderService> logger, IHttpClientFactory httpClientFactory)
+    : ICsvReaderService
 {
-    private readonly ILogger<CsvReaderService> _logger;
-    private readonly IHttpClientFactory _httpClientFactory;
-
-    public CsvReaderService(ILogger<CsvReaderService> logger, IHttpClientFactory httpClientFactory)
-    {
-        _logger = logger;
-        _httpClientFactory = httpClientFactory;
-
-    }
-
     public List<T> ReadCSVFromFilePath<T, TMap>(string filePath, params object[] additionalParameters) where TMap : ClassMap<T>
     {
-        _logger.LogInformation("Searching for CSV file for processing");
+        logger.LogInformation("Searching for CSV file for processing");
 
         var fundedCsvRecords = new List<T>();
         if (File.Exists(filePath))
@@ -24,14 +15,14 @@ public class CsvReaderService : ICsvReaderService
         }
         else
         {
-            _logger.LogError("File not found: {FilePath}", filePath);
+            logger.LogError("File not found: {FilePath}", filePath);
         }
         return fundedCsvRecords;
     }
 
     public async Task<List<T>> ReadCsvFileFromUrlAsync<T, TMap>(string urlFilePath, params object[] additionalParameters) where TMap : ClassMap<T>
     {
-        _logger.LogInformation("Downloading CSV file from url: {UrlFilePath}", urlFilePath);
+        logger.LogInformation("Downloading CSV file from url: {UrlFilePath}", urlFilePath);
 
         var records = new List<T>();
 
@@ -43,22 +34,22 @@ public class CsvReaderService : ICsvReaderService
 
             records = ReadCsv<T, TMap>(approvedResponseStream, additionalParameters);
 
-            _logger.LogInformation("Total Records Read: {fundedCsvRecords}", records.Count);
+            logger.LogInformation("Total Records Read: {fundedCsvRecords}", records.Count);
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "HTTP request error downloading CSV file from url: {UrlFilePath}", urlFilePath);
+            logger.LogError(ex, "HTTP request error downloading CSV file from url: {UrlFilePath}", urlFilePath);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error downloading CSV file from url: {UrlFilePath}", urlFilePath);
+            logger.LogError(ex, "Error downloading CSV file from url: {UrlFilePath}", urlFilePath);
         }
         return records;
     }
 
     private async Task<HttpResponseMessage> GetDataFromUrl(string approvedUrlFilePath)
     {
-        var _httpClient = _httpClientFactory.CreateClient("CsvReaderServiceClient");
+        var _httpClient = httpClientFactory.CreateClient("CsvReaderServiceClient");
         var response = await _httpClient.GetAsync(approvedUrlFilePath);
         response.EnsureSuccessStatusCode();
         return response;
@@ -107,12 +98,12 @@ public class CsvReaderService : ICsvReaderService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error reading CSV record");
+                logger.LogError(ex, "Error reading CSV record");
                 skippedCount++;
             }
         }
 
-        _logger.LogInformation("Total Records Read: {RecordCount}, Skipped: {SkippedCount}",
+        logger.LogInformation("Total Records Read: {RecordCount}, Skipped: {SkippedCount}",
             records.Count, skippedCount);
 
         return records;

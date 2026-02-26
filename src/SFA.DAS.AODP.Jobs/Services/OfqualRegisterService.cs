@@ -1,32 +1,24 @@
 ﻿namespace SFA.DAS.AODP.Jobs.Services;
 
-public class OfqualRegisterService : IOfqualRegisterService
+public class OfqualRegisterService(
+    ILogger<QualificationsService> logger,
+    IOfqualRegisterApi apiClient,
+    IOptions<AodpJobsConfiguration> configuration)
+    : IOfqualRegisterService
 {
-    private readonly ILogger<QualificationsService> _logger;
-    private readonly IOfqualRegisterApi _apiClient;
-    private readonly IOptions<AodpJobsConfiguration> _configuration;
-
-    public OfqualRegisterService(ILogger<QualificationsService> logger, IOfqualRegisterApi apiClient,
-        IOptions<AodpJobsConfiguration> configuration)
-    {
-        _logger = logger;
-        _apiClient = apiClient;
-        _configuration = configuration;
-    }
-
     public async Task<PaginatedResult<QualificationDTO>> SearchPrivateQualificationsAsync(QualificationsQueryParameters parameters)
     {
-        _logger.LogInformation($"[{nameof(OfqualRegisterService)}] -> [{nameof(SearchPrivateQualificationsAsync)}] -> Starting search for qualifications using ofqual api...");
+        logger.LogInformation($"[{nameof(OfqualRegisterService)}] -> [{nameof(SearchPrivateQualificationsAsync)}] -> Starting search for qualifications using ofqual api...");
 
         try
         {
             if (parameters == null)
             {
-                _logger.LogError($"[{nameof(OfqualRegisterService)}] -> [{nameof(SearchPrivateQualificationsAsync)}] -> Parameters cannot be null...");
+                logger.LogError($"[{nameof(OfqualRegisterService)}] -> [{nameof(SearchPrivateQualificationsAsync)}] -> Parameters cannot be null...");
                 throw new ArgumentNullException(nameof(parameters), "Parameters cannot be null.");
             }
 
-            return await _apiClient.SearchPrivateQualificationsAsync(
+            return await apiClient.SearchPrivateQualificationsAsync(
                 parameters.Title,
                 parameters.Page,
                 parameters.Limit,
@@ -46,14 +38,14 @@ public class OfqualRegisterService : IOfqualRegisterService
         }
         catch (ApiException ex)
         {
-            _logger.LogError(ex, $"[{nameof(OfqualRegisterService)}] -> [{nameof(SearchPrivateQualificationsAsync)}] -> An error occurred while retrieving qualification records.");
+            logger.LogError(ex, $"[{nameof(OfqualRegisterService)}] -> [{nameof(SearchPrivateQualificationsAsync)}] -> An error occurred while retrieving qualification records.");
             throw;
         }
     }
 
     public List<QualificationDTO> ExtractQualificationsList(PaginatedResult<QualificationDTO> paginatedResult)
     {
-        _logger.LogInformation($"[{nameof(OfqualRegisterService)}] -> [{nameof(ExtractQualificationsList)}] -> Extracting qualifications from ofqual api response data...");
+        logger.LogInformation($"[{nameof(OfqualRegisterService)}] -> [{nameof(ExtractQualificationsList)}] -> Extracting qualifications from ofqual api response data...");
 
         return paginatedResult.Results.Select(q => new QualificationDTO
         {
@@ -119,14 +111,14 @@ public class OfqualRegisterService : IOfqualRegisterService
 
     public QualificationsQueryParameters ParseQueryParameters(NameValueCollection query)
     {
-        _logger.LogInformation($"[{nameof(OfqualRegisterService)}] -> [{nameof(ParseQueryParameters)}] -> Parsing function query parameters...");
+        logger.LogInformation($"[{nameof(OfqualRegisterService)}] -> [{nameof(ParseQueryParameters)}] -> Parsing function query parameters...");
 
-        var defaultImportPage = _configuration.Value.DefaultImportPage;
-        var defaultImportLimit = _configuration.Value.DefaultImportLimit;
+        var defaultImportPage = configuration.Value.DefaultImportPage;
+        var defaultImportLimit = configuration.Value.DefaultImportLimit;
 
         if (query == null || query.Count == 0)
         {
-            _logger.LogInformation($"[{nameof(OfqualRegisterService)}] -> [{nameof(ParseQueryParameters)}] -> Url parameters are empty. Defaulting Page to {defaultImportPage} and Limit to {defaultImportLimit}");
+            logger.LogInformation($"[{nameof(OfqualRegisterService)}] -> [{nameof(ParseQueryParameters)}] -> Url parameters are empty. Defaulting Page to {defaultImportPage} and Limit to {defaultImportLimit}");
 
             return new QualificationsQueryParameters
             {

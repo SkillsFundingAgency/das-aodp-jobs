@@ -1,50 +1,36 @@
 namespace SFA.DAS.AODP.Jobs.Functions;
 
-public class ImportDefundingListDataFunction
+public class ImportDefundingListDataFunction(
+    ILogger<ImportDefundingListDataFunction> logger,
+    AodpJobsConfiguration config,
+    IJobConfigurationService jobConfigurationService,
+    IImportRepository repository,
+    IBlobStorageFileService blobStorageFileService)
 {
-    private readonly ILogger<ImportDefundingListDataFunction> _logger;
-    private readonly AodpJobsConfiguration _config;
-    private readonly IJobConfigurationService _jobConfigurationService;
-    private readonly IImportRepository _repository;
-    private readonly IBlobStorageFileService _blobStorageFileService;
-
-    public ImportDefundingListDataFunction(ILogger<ImportDefundingListDataFunction> logger,
-            AodpJobsConfiguration config,
-            IJobConfigurationService jobConfigurationService,
-            IImportRepository repository,
-            IBlobStorageFileService blobStorageFileService)
-    {
-        _logger = logger;
-        _config = config;
-        _jobConfigurationService = jobConfigurationService;
-        _repository = repository;
-        _blobStorageFileService = blobStorageFileService;
-    }
-
     // Todo - Merge with ImportPldnDataFunction as they are almost identical apart from the data being imported
     [Function("ImportDefundingListDataFunction")]
     public async Task<IActionResult> ImportDefundingList(
         [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "api/importDefundingList/{username}")] HttpRequestData req, string username = "", CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("[{Function}] -> ImportDefundingList triggered by {Username}", nameof(ImportDefundingListDataFunction), username);
+        logger.LogInformation("[{Function}] -> ImportDefundingList triggered by {Username}", nameof(ImportDefundingListDataFunction), username);
 
         var totalImported = await ImportDefundingList(cancellationToken);
 
-        var jobControl = await _jobConfigurationService.ReadDefundingListImportConfiguration();
+        var jobControl = await jobConfigurationService.ReadDefundingListImportConfiguration();
 
-        var lastJobRun = await _jobConfigurationService.GetLastJobRunAsync(JobNames.DefundingList.ToString());
+        var lastJobRun = await jobConfigurationService.GetLastJobRunAsync(JobNames.DefundingList.ToString());
 
-        await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, lastJobRun.Id, totalImported, JobStatus.Completed);
+        await jobConfigurationService.UpdateJobRun(username, jobControl.JobId, lastJobRun.Id, totalImported, JobStatus.Completed);
 
         var msg = $"[{nameof(ImportDefundingListDataFunction)}] -> {totalImported} records imported.";
-        _logger.LogInformation("[{Function}] -> {TotalImported} records imported.", nameof(ImportDefundingListDataFunction), totalImported);
+        logger.LogInformation("[{Function}] -> {TotalImported} records imported.", nameof(ImportDefundingListDataFunction), totalImported);
         return new OkObjectResult(msg);
     }
 
     private async Task<int> ImportDefundingList(CancellationToken cancellationToken)
     {
-        string? importFileUrl = _config.DefundingListImportUrl;
-        await using var ms = await _blobStorageFileService.DownloadFileAsync(importFileUrl!, cancellationToken);
+        string? importFileUrl = config.DefundingListImportUrl;
+        await using var ms = await blobStorageFileService.DownloadFileAsync(importFileUrl!, cancellationToken);
 
         ms.Position = 0;
 
@@ -85,8 +71,8 @@ public class ImportDefundingListDataFunction
             return 0;
         }
 
-        await _repository.BulkInsertAsync(items, cancellationToken);
-        await _repository.DeleteDuplicateAsync("[dbo].[proc_DeleteDuplicateDefundingLists]", null, cancellationToken);
+        await repository.BulkInsertAsync(items, cancellationToken);
+        await repository.DeleteDuplicateAsync("[dbo].[proc_DeleteDuplicateDefundingLists]", null, cancellationToken);
 
         return items.Count;
     }

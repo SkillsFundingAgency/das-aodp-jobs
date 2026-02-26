@@ -1,52 +1,36 @@
 namespace SFA.DAS.AODP.Jobs.Functions;
 
-public class FundedQualificationsDataFunction
+public class FundedQualificationsDataFunction(
+    ILogger<FundedQualificationsDataFunction> logger,
+    ICsvReaderService csvReaderService,
+    AodpJobsConfiguration config,
+    IJobConfigurationService jobConfigurationService,
+    IFundedQualificationWriter fundedQualificationWriter,
+    IQualificationsRepository qualificationsRepository)
 {
-    private readonly ILogger<FundedQualificationsDataFunction> _logger;
-    private readonly ICsvReaderService _csvReaderService;
-    private readonly AodpJobsConfiguration _config;
-    private readonly IJobConfigurationService _jobConfigurationService;
-    private readonly IFundedQualificationWriter _fundedQualificationWriter;
-    private readonly IQualificationsRepository _qualificationsRepository;
-
-    public FundedQualificationsDataFunction(ILogger<FundedQualificationsDataFunction> logger,            
-        ICsvReaderService csvReaderService, 
-        AodpJobsConfiguration config, 
-        IJobConfigurationService jobConfigurationService, 
-        IFundedQualificationWriter fundedQualificationWriter,
-        IQualificationsRepository qualificationsRepository)
-    {
-        _logger = logger;        
-        _csvReaderService = csvReaderService;
-        _config = config;
-        _jobConfigurationService = jobConfigurationService;
-        _fundedQualificationWriter = fundedQualificationWriter;
-        _qualificationsRepository = qualificationsRepository;
-    }
-
     [Function("ApprovedQualificationsDataFunction")]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "api/approvedQualificationsImport/{username}")] HttpRequestData req, string username = "")
     {
-        string? fundedUrlFilePath = _config.FundedQualificationsImportUrl;
-        string? archivedUrlFilePath = _config.ArchivedFundedQualificationsImportUrl;      
+        string? fundedUrlFilePath = config.FundedQualificationsImportUrl;
+        string? archivedUrlFilePath = config.ArchivedFundedQualificationsImportUrl;      
 
         if (string.IsNullOrEmpty(fundedUrlFilePath))
         {
             var errorMsg = "Config for 'FundedQualificationsImportUrl' is not set or empty.";
-            _logger.LogError(errorMsg);
+            logger.LogError(errorMsg);
             return new BadRequestObjectResult($"[{nameof(FundedQualificationsDataFunction)}] -> {errorMsg}");
         }
 
         if (string.IsNullOrEmpty(archivedUrlFilePath))
         {
             var errorMsg = "Config for 'ArchivedFundedQualificationsImportUrl' is not set or empty.";
-            _logger.LogError(errorMsg);
+            logger.LogError(errorMsg);
             return new BadRequestObjectResult($"[{nameof(FundedQualificationsDataFunction)}] -> {errorMsg}");
         }
             
-        _logger.LogInformation($"[{nameof(FundedQualificationsDataFunction)}] -> Reading Configuration");
-        var jobControl = await _jobConfigurationService.ReadFundedJobConfiguration();
+        logger.LogInformation($"[{nameof(FundedQualificationsDataFunction)}] -> Reading Configuration");
+        var jobControl = await jobConfigurationService.ReadFundedJobConfiguration();
 
         if (!jobControl.JobEnabled)
         {
@@ -60,20 +44,20 @@ public class FundedQualificationsDataFunction
 
         try
         {
-            _logger.LogInformation($"[{nameof(FundedQualificationsDataFunction)}] -> Starting Job");
-            var lastJobRun = await _jobConfigurationService.GetLastJobRunAsync(JobNames.FundedQualifications.ToString());
+            logger.LogInformation($"[{nameof(FundedQualificationsDataFunction)}] -> Starting Job");
+            var lastJobRun = await jobConfigurationService.GetLastJobRunAsync(JobNames.FundedQualifications.ToString());
             if (lastJobRun.Id != Guid.Empty && lastJobRun.Status == JobStatus.RequestSent.ToString())
             {
                 jobControl.JobRunId = lastJobRun.Id;
-                await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, 0, JobStatus.Running);
+                await jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, 0, JobStatus.Running);
             }
             else
             {
-                jobControl.JobRunId = await _jobConfigurationService.InsertJobRunAsync(jobControl.JobId, username, JobStatus.Running);
+                jobControl.JobRunId = await jobConfigurationService.InsertJobRunAsync(jobControl.JobId, username, JobStatus.Running);
             }
 
-            var qualifications = await _qualificationsRepository.GetQualificationsAsync();              
-            var organisations = await _qualificationsRepository.GetAwardingOrganisationsAsync();
+            var qualifications = await qualificationsRepository.GetQualificationsAsync();              
+            var organisations = await qualificationsRepository.GetAwardingOrganisationsAsync();
                 
             var totalRecords = 0;
             var totalArchivedRecords = 0;
@@ -81,23 +65,23 @@ public class FundedQualificationsDataFunction
             var tablesCleared = false;
             if (jobControl.ImportFundedCsv)
             {
-                _logger.LogInformation($"[{nameof(FundedQualificationsDataFunction)}] -> Importing Funded CSV");
-                var approvedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(fundedUrlFilePath, qualifications, organisations, _logger);
+                logger.LogInformation($"[{nameof(FundedQualificationsDataFunction)}] -> Importing Funded CSV");
+                var approvedQualifications = await csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(fundedUrlFilePath, qualifications, organisations, logger);
                 //Commented out method to read a file from disk, useful for testing
                 //var path = "D:\\Source\\Repos\\das-aodp-jobs\\src\\SFA.DAS.AODP.Jobs\\Data\\approved.csv";
                 //var approvedQualifications = _csvReaderService.ReadCSVFromFilePath<FundedQualificationDTO, FundedQualificationsImportClassMap>(path, qualifications, organisations, _logger);
 
                 if (approvedQualifications.Any())
                 {
-                    await _qualificationsRepository.TruncateFundingTables();
+                    await qualificationsRepository.TruncateFundingTables();
                     tablesCleared = true;
-                    await _fundedQualificationWriter.WriteQualifications(approvedQualifications);                        
+                    await fundedQualificationWriter.WriteQualifications(approvedQualifications);                        
                 }
                 else
                 {
                     var warningMsg = "No data found found in approved qualifications csv";
-                    _logger.LogWarning(warningMsg);
-                    await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, 0, JobStatus.Error);
+                    logger.LogWarning(warningMsg);
+                    await jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, 0, JobStatus.Error);
                     return new NotFoundObjectResult($"[{nameof(FundedQualificationsDataFunction)}] -> {warningMsg}");
                 }
                 totalRecords = approvedQualifications.Count();
@@ -105,51 +89,51 @@ public class FundedQualificationsDataFunction
 
             if (jobControl.ImportArchivedCsv)
             {
-                _logger.LogInformation($"[{nameof(FundedQualificationsDataFunction)}] -> Importing Archived CSV");
-                var archivedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(archivedUrlFilePath, qualifications, organisations, _logger);
+                logger.LogInformation($"[{nameof(FundedQualificationsDataFunction)}] -> Importing Archived CSV");
+                var archivedQualifications = await csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(archivedUrlFilePath, qualifications, organisations, logger);
                 if (archivedQualifications.Any())
                 {
                     if (!tablesCleared)
                     {
-                        await _qualificationsRepository.TruncateFundingTables();
+                        await qualificationsRepository.TruncateFundingTables();
                     }
-                    await _fundedQualificationWriter.WriteQualifications(archivedQualifications);
+                    await fundedQualificationWriter.WriteQualifications(archivedQualifications);
                 }
                 else
                 {
                     var warningMsg = "No data found found in archived qualifications csv";
-                    _logger.LogWarning(warningMsg);
-                    await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, 0, JobStatus.Error);
+                    logger.LogWarning(warningMsg);
+                    await jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, 0, JobStatus.Error);
                     return new NotFoundObjectResult($"[{nameof(FundedQualificationsDataFunction)}] -> {warningMsg}");
                 }
 
                 totalArchivedRecords = archivedQualifications.Count();
-                _logger.LogInformation($"{totalArchivedRecords} records imported");
+                logger.LogInformation($"{totalArchivedRecords} records imported");
             }
                 
             var totalProcessedRecords = totalRecords + totalArchivedRecords;
             if ((totalProcessedRecords) > 0)
             {
-                _logger.LogInformation($"Seeding funded data into funding offers");
-                await _fundedQualificationWriter.SeedFundingData();
+                logger.LogInformation($"Seeding funded data into funding offers");
+                await fundedQualificationWriter.SeedFundingData();
             }
 
-            await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, totalProcessedRecords, JobStatus.Completed);
+            await jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, totalProcessedRecords, JobStatus.Completed);
 
             var msg = $"[{nameof(FundedQualificationsDataFunction)}] -> {totalRecords} approved qualifications imported, {totalArchivedRecords} archived qualifications imported";
-            _logger.LogInformation(msg);
+            logger.LogInformation(msg);
             return new OkObjectResult(msg);
         }
         catch (ApiException ex)
         {
-            _logger.LogError(ex, $"[{nameof(FundedQualificationsDataFunction)}] -> Unexpected api exception occurred: {ex.Message}");
-            await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, 0, JobStatus.Error);
+            logger.LogError(ex, $"[{nameof(FundedQualificationsDataFunction)}] -> Unexpected api exception occurred: {ex.Message}");
+            await jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, 0, JobStatus.Error);
             return new StatusCodeResult((int)ex.StatusCode);
         }
         catch (SystemException ex)
         {
-            _logger.LogError(ex, $"[{nameof(FundedQualificationsDataFunction)}] -> Unexpected system exception occurred: {ex.Message}");
-            await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, 0, JobStatus.Error);
+            logger.LogError(ex, $"[{nameof(FundedQualificationsDataFunction)}] -> Unexpected system exception occurred: {ex.Message}");
+            await jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, 0, JobStatus.Error);
             return new StatusCodeResult(500);
         }
     }
