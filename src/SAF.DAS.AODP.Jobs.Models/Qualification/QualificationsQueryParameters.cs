@@ -18,4 +18,3 @@ public class QualificationsQueryParameters
     public int? MinGuidedLearningHours { get; set; }
     public int? MaxGuidedLearningHours { get; set; }
 }
-
