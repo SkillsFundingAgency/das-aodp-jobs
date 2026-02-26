@@ -1,22 +1,4 @@
-﻿using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Spreadsheet;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.Extensions.Logging;
-using Moq;
-using SFA.DAS.AODP.Common.Enum;
-using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Infrastructure.Interfaces;
-using SFA.DAS.AODP.Jobs.Functions;
-using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Jobs.Services;
-using SFA.DAS.AODP.Models.Config;
-using System.Net;
-using System.Security.Claims;
-
-namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Functions;
+﻿namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Functions;
 
 public class ImportDefundingListDataFunctionTests
 {
@@ -313,13 +295,9 @@ public class ImportDefundingListDataFunctionTests
         };
     }
 
-    private class MockHttpRequestData : HttpRequestData
+    private class MockHttpRequestData(FunctionContext functionContext) : HttpRequestData(functionContext)
     {
         private readonly MemoryStream _body = new MemoryStream();
-
-        public MockHttpRequestData(FunctionContext functionContext) : base(functionContext)
-        {
-        }
 
         public override Stream Body => _body;
         public override HttpHeadersCollection Headers { get; } = new HttpHeadersCollection();

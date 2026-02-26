@@ -1,12 +1,4 @@
-﻿using Azure.Storage.Blobs;
-using Microsoft.Extensions.Options;
-using Moq;
-using SFA.DAS.AODP.Jobs.Services;
-using SFA.DAS.AODP.Models.Config;
-using System.Net;
-using System.Text;
-
-namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Services;
+﻿namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Services;
 
 public class BlobStorageFileServiceTests
 {
@@ -98,14 +90,10 @@ public class BlobStorageFileServiceTests
         await Assert.ThrowsAsync<HttpRequestException>(() => service.DownloadFileAsync(fileUrl));
     }
 
-    private class FakeHttpMessageHandler : HttpMessageHandler
+    private class FakeHttpMessageHandler(Func<HttpRequestMessage, CancellationToken, HttpResponseMessage> responder)
+        : HttpMessageHandler
     {
-        private readonly Func<HttpRequestMessage, CancellationToken, HttpResponseMessage> _responder;
-
-        public FakeHttpMessageHandler(Func<HttpRequestMessage, CancellationToken, HttpResponseMessage> responder)
-        {
-            _responder = responder ?? throw new ArgumentNullException(nameof(responder));
-        }
+        private readonly Func<HttpRequestMessage, CancellationToken, HttpResponseMessage> _responder = responder ?? throw new ArgumentNullException(nameof(responder));
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             => Task.FromResult(_responder(request, cancellationToken));

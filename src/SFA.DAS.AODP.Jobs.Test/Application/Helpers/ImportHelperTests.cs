@@ -1,10 +1,4 @@
-﻿using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Spreadsheet;
-using Moq;
-using SFA.DAS.AODP.Jobs.Helpers;
-
-namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Helpers;
+﻿namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Helpers;
 
 public class ImportHelperTests
 {

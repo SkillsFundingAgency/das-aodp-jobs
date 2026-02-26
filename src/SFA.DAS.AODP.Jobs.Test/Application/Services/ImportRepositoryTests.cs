@@ -1,11 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using Moq;
-using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Infrastructure.Context;
-using SFA.DAS.AODP.Infrastructure.Repositories;
-
-namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Services;
+﻿namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Services;
 
 public class ImportRepositoryTests
 {

@@ -1,15 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Extensions.Logging;
-using Moq;
-using SFA.DAS.AODP.Common.Enum;
-using SFA.DAS.AODP.Infrastructure.Services;
-using SFA.DAS.AODP.Jobs.Functions;
-using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Jobs.Services;
-using SFA.DAS.AODP.Models.Config;
-
-namespace SFA.DAS.AODP.Jobs.Test.Application.Functions;
+﻿namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Functions;
 
 public class ScheduledImportJobRunnerTests
 {

@@ -1,15 +1,4 @@
-﻿using Xunit;
-using Moq;
-using RestEase;
-using System.Net;
-using Newtonsoft.Json;
-using System.Text;
-using SFA.DAS.AODP.Jobs.Client;
-using SFA.DAS.AODP.Models.Qualification;
-using SFA.DAS.AODP.Data;
-using Moq.Protected;
-
-namespace SFA.DAS.AODP.Jobs.Test.Application.Client;
+﻿namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Client;
 
 public class OfqualRegisterApiTests
 {

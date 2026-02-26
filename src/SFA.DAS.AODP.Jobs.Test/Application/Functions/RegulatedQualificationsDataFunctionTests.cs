@@ -1,19 +1,4 @@
-﻿using AutoFixture;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.Extensions.Logging;
-using Moq;
-using RestEase;
-using SFA.DAS.AODP.Common.Enum;
-using SFA.DAS.AODP.Infrastructure.Context;
-using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Jobs.Services;
-using System.Net;
-using SFA.DAS.AODP.Infrastructure.Services;
-using SFA.DAS.AODP.Jobs.Functions;
-
-namespace SFA.DAS.AODP.Jobs.Test.Application.Functions;
+﻿namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Functions;
 
 public class RegulatedQualificationsDataFunctionTests
 {
