@@ -74,7 +74,6 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
             _function = new FundedQualificationsDataFunction(
                 _loggerMock.Object,               
                 _csvReaderServiceMock.Object,
-                _mapper,       
                 _config,
                 _jobConfigurationService.Object,
                 _fundedQualificationWriter.Object,

@@ -4,7 +4,6 @@ public class FundedQualificationsDataFunction
 {
     private readonly ILogger<FundedQualificationsDataFunction> _logger;
     private readonly ICsvReaderService _csvReaderService;
-    private readonly IMapper _mapper;
     private readonly AodpJobsConfiguration _config;
     private readonly IJobConfigurationService _jobConfigurationService;
     private readonly IFundedQualificationWriter _fundedQualificationWriter;
@@ -12,7 +11,6 @@ public class FundedQualificationsDataFunction
 
     public FundedQualificationsDataFunction(ILogger<FundedQualificationsDataFunction> logger,            
         ICsvReaderService csvReaderService, 
-        IMapper mapper, 
         AodpJobsConfiguration config, 
         IJobConfigurationService jobConfigurationService, 
         IFundedQualificationWriter fundedQualificationWriter,
@@ -20,7 +18,6 @@ public class FundedQualificationsDataFunction
     {
         _logger = logger;        
         _csvReaderService = csvReaderService;
-        _mapper = mapper;          
         _config = config;
         _jobConfigurationService = jobConfigurationService;
         _fundedQualificationWriter = fundedQualificationWriter;
