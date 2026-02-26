@@ -1,12 +1,11 @@
-﻿namespace SFA.DAS.AODP.Common.Enum
+﻿namespace SFA.DAS.AODP.Common.Enum;
+
+public enum JobConfiguration
 {
-    public enum JobConfiguration
-    {
-        ProcessStagingData,
-        ApiImport,
-        ImportFundedCsv,
-        ImportArchivedCsv,
-        ImportPldns,
-        ImportDefundingList
-    }
+    ProcessStagingData,
+    ApiImport,
+    ImportFundedCsv,
+    ImportArchivedCsv,
+    ImportPldns,
+    ImportDefundingList
 }

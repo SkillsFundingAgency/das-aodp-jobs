@@ -1,10 +1,9 @@
-﻿namespace SFA.DAS.AODP.Common.Enum
+﻿namespace SFA.DAS.AODP.Common.Enum;
+
+public enum JobNames
 {
-    public enum JobNames
-    {
-        RegulatedQualifications,
-        FundedQualifications,
-        Pldns,
-        DefundingList
-    }
+    RegulatedQualifications,
+    FundedQualifications,
+    Pldns,
+    DefundingList
 }

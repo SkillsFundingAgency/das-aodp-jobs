@@ -1,8 +1,7 @@
-﻿namespace SFA.DAS.AODP.Common.Enum
+﻿namespace SFA.DAS.AODP.Common.Enum;
+
+public class SchemaTypeEnum
 {
-    public class SchemaTypeEnum
-    {
-        public const string Funded = "funded";
-        public const string Regulated = "regulated";
-    }
+    public const string Funded = "funded";
+    public const string Regulated = "regulated";
 }
