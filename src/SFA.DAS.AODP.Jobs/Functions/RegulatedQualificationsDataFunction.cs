@@ -1,99 +1,98 @@
-namespace SFA.DAS.AODP.Jobs.Functions
-{
-    public class RegulatedQualificationsDataFunction
-    {
-        private readonly IApplicationDbContext _applicationDbContext;
-        private readonly ILogger<RegulatedQualificationsDataFunction> _logger;
-        private readonly IQualificationsService _qualificationsService;
-        private readonly IOfqualImportService _ofqualImportService;
-        private readonly IJobConfigurationService _jobConfigurationService;
+namespace SFA.DAS.AODP.Jobs.Functions;
 
-        public RegulatedQualificationsDataFunction(
-            ILogger<RegulatedQualificationsDataFunction> logger, 
-            IApplicationDbContext appDbContext, 
-            IQualificationsService qualificationsService,
-            IOfqualImportService ofqualImportService,
-            IJobConfigurationService jobConfigurationService
-            )
+public class RegulatedQualificationsDataFunction
+{
+    private readonly IApplicationDbContext _applicationDbContext;
+    private readonly ILogger<RegulatedQualificationsDataFunction> _logger;
+    private readonly IQualificationsService _qualificationsService;
+    private readonly IOfqualImportService _ofqualImportService;
+    private readonly IJobConfigurationService _jobConfigurationService;
+
+    public RegulatedQualificationsDataFunction(
+        ILogger<RegulatedQualificationsDataFunction> logger, 
+        IApplicationDbContext appDbContext, 
+        IQualificationsService qualificationsService,
+        IOfqualImportService ofqualImportService,
+        IJobConfigurationService jobConfigurationService
+    )
+    {
+        _logger = logger;
+        _applicationDbContext = appDbContext;
+        _qualificationsService = qualificationsService;
+        _ofqualImportService = ofqualImportService;
+        _jobConfigurationService = jobConfigurationService;          
+    }
+
+    [Function("RegulatedQualificationsDataFunction")]
+    public async Task<IActionResult> Run(
+        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "gov/regulatedQualificationsImport/{username}")] HttpRequestData req, string username = "")
+    {
+        _logger.LogInformation($"[{nameof(RegulatedQualificationsDataFunction)}] -> Processing request by user {username}");
+
+        var stopWatch = new Stopwatch();
+
+        _logger.LogInformation($"[{nameof(RegulatedQualificationsDataFunction)}] -> Reading Configuration");
+        var jobControl = await _jobConfigurationService.ReadRegulatedJobConfiguration();           
+        var totalRecords = 0;
+
+        if (!jobControl.JobEnabled)
         {
-            _logger = logger;
-            _applicationDbContext = appDbContext;
-            _qualificationsService = qualificationsService;
-            _ofqualImportService = ofqualImportService;
-            _jobConfigurationService = jobConfigurationService;          
+            return new OkObjectResult($"[{nameof(RegulatedQualificationsDataFunction)}] -> Job disabled");
         }
 
-        [Function("RegulatedQualificationsDataFunction")]
-        public async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Function, "get", Route = "gov/regulatedQualificationsImport/{username}")] HttpRequestData req, string username = "")
+        if (jobControl.Status == JobStatus.Running.ToString())
         {
-            _logger.LogInformation($"[{nameof(RegulatedQualificationsDataFunction)}] -> Processing request by user {username}");
+            return new OkObjectResult($"[{nameof(RegulatedQualificationsDataFunction)}] -> Job currently running");
+        }
 
-            var stopWatch = new Stopwatch();
+        _logger.LogInformation($"[{nameof(RegulatedQualificationsDataFunction)}] -> Configuration set to Run Api Import = {jobControl.RunApiImport}, Process Staging Data = {jobControl.ProcessStagingData}");
 
-            _logger.LogInformation($"[{nameof(RegulatedQualificationsDataFunction)}] -> Reading Configuration");
-            var jobControl = await _jobConfigurationService.ReadRegulatedJobConfiguration();           
-            var totalRecords = 0;
-
-            if (!jobControl.JobEnabled)
-            {
-                return new OkObjectResult($"[{nameof(RegulatedQualificationsDataFunction)}] -> Job disabled");
-            }
-
-            if (jobControl.Status == JobStatus.Running.ToString())
-            {
-                return new OkObjectResult($"[{nameof(RegulatedQualificationsDataFunction)}] -> Job currently running");
-            }
-
-            _logger.LogInformation($"[{nameof(RegulatedQualificationsDataFunction)}] -> Configuration set to Run Api Import = {jobControl.RunApiImport}, Process Staging Data = {jobControl.ProcessStagingData}");
-
-            try
-            {
-                stopWatch.Start();
+        try
+        {
+            stopWatch.Start();
                 
-                var lastJobRun = await _jobConfigurationService.GetLastJobRunAsync(JobNames.RegulatedQualifications.ToString());
-                if (lastJobRun != null && lastJobRun.Id != Guid.Empty && lastJobRun.Status == JobStatus.RequestSent.ToString())
-                {
-                    jobControl.JobRunId = lastJobRun.Id;
-                    await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, 0, JobStatus.Running);
-                }                
-                else
-                {
-                    jobControl.JobRunId = await _jobConfigurationService.InsertJobRunAsync(jobControl.JobId, username, JobStatus.Running);
-                }
-
-                if (jobControl.RunApiImport)
-                {
-                    // STAGE 1 - Import Ofqual Api data to staging area
-                    totalRecords = await _ofqualImportService.ImportApiData(req);
-                }
-
-                if (jobControl.ProcessStagingData)
-                {
-                    // STAGE 2 - Process staging data into AODP database
-                    await _ofqualImportService.ProcessQualificationsDataAsync();
-                }
-
-                await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, totalRecords, JobStatus.Completed);
-
-                stopWatch.Stop();
-
-                _logger.LogInformation($"RegulatedQualificationsDataFunction completed in {stopWatch.Elapsed.TotalSeconds:F2} seconds");
-
-                return new OkObjectResult($"[{nameof(RegulatedQualificationsDataFunction)}] -> Successfully Imported Ofqual Data.");
-            }
-            catch (ApiException ex)
+            var lastJobRun = await _jobConfigurationService.GetLastJobRunAsync(JobNames.RegulatedQualifications.ToString());
+            if (lastJobRun != null && lastJobRun.Id != Guid.Empty && lastJobRun.Status == JobStatus.RequestSent.ToString())
             {
-                _logger.LogError($"[{nameof(RegulatedQualificationsDataFunction)}] -> Unexpected api exception occurred: {ex.Message}");
-                await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, totalRecords, JobStatus.Error);
-                return new StatusCodeResult((int)ex.StatusCode);
-            }
-            catch (SystemException ex)
+                jobControl.JobRunId = lastJobRun.Id;
+                await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, 0, JobStatus.Running);
+            }                
+            else
             {
-                _logger.LogError($"[{nameof(RegulatedQualificationsDataFunction)}] -> Unexpected system exception occurred: {ex.Message}");
-                await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, totalRecords, JobStatus.Error);
-                return new StatusCodeResult(500);
+                jobControl.JobRunId = await _jobConfigurationService.InsertJobRunAsync(jobControl.JobId, username, JobStatus.Running);
             }
-        }        
-    }
+
+            if (jobControl.RunApiImport)
+            {
+                // STAGE 1 - Import Ofqual Api data to staging area
+                totalRecords = await _ofqualImportService.ImportApiData(req);
+            }
+
+            if (jobControl.ProcessStagingData)
+            {
+                // STAGE 2 - Process staging data into AODP database
+                await _ofqualImportService.ProcessQualificationsDataAsync();
+            }
+
+            await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, totalRecords, JobStatus.Completed);
+
+            stopWatch.Stop();
+
+            _logger.LogInformation($"RegulatedQualificationsDataFunction completed in {stopWatch.Elapsed.TotalSeconds:F2} seconds");
+
+            return new OkObjectResult($"[{nameof(RegulatedQualificationsDataFunction)}] -> Successfully Imported Ofqual Data.");
+        }
+        catch (ApiException ex)
+        {
+            _logger.LogError($"[{nameof(RegulatedQualificationsDataFunction)}] -> Unexpected api exception occurred: {ex.Message}");
+            await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, totalRecords, JobStatus.Error);
+            return new StatusCodeResult((int)ex.StatusCode);
+        }
+        catch (SystemException ex)
+        {
+            _logger.LogError($"[{nameof(RegulatedQualificationsDataFunction)}] -> Unexpected system exception occurred: {ex.Message}");
+            await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, totalRecords, JobStatus.Error);
+            return new StatusCodeResult(500);
+        }
+    }        
 }

@@ -1,8 +1,7 @@
-﻿namespace SFA.DAS.AODP.Jobs.Models
+﻿namespace SFA.DAS.AODP.Jobs.Models;
+
+public class QualificationFundingTracker
 {
-    public class QualificationFundingTracker
-    {
-        public Guid OldVersionId { get; set; }
-        public Guid NewVersionId { get; set; }
-    }
+    public Guid OldVersionId { get; set; }
+    public Guid NewVersionId { get; set; }
 }

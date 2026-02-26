@@ -1,6 +1,5 @@
-﻿namespace SFA.DAS.AODP.Jobs.Services
+﻿namespace SFA.DAS.AODP.Jobs.Services;
+
+internal class LifecycleCalculationService
 {
-    internal class LifecycleCalculationService
-    {
-    }
 }

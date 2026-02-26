@@ -1,7 +1,6 @@
-﻿namespace SFA.DAS.AODP.Jobs.Interfaces
+﻿namespace SFA.DAS.AODP.Jobs.Interfaces;
+
+public interface ISchedulerClientService
 {
-    public interface ISchedulerClientService
-    {
-        Task<bool> ExecuteFunction(JobRunControl requestedJobRun, string functionName, string functionUrlPartial);
-    }
+    Task<bool> ExecuteFunction(JobRunControl requestedJobRun, string functionName, string functionUrlPartial);
 }

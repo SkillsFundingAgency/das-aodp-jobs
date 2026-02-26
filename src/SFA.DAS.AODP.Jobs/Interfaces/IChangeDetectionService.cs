@@ -1,7 +1,6 @@
-﻿namespace SFA.DAS.AODP.Jobs.Interfaces
+﻿namespace SFA.DAS.AODP.Jobs.Interfaces;
+
+public interface IChangeDetectionService
 {
-    public interface IChangeDetectionService
-    {
-        ChangeDetectionService.DetectionResults DetectChanges(QualificationDTO newRecord, QualificationVersions qualificationVersion, AwardingOrganisation awardingOrganisation, Qualification qualification);
-    }
+    ChangeDetectionService.DetectionResults DetectChanges(QualificationDTO newRecord, QualificationVersions qualificationVersion, AwardingOrganisation awardingOrganisation, Qualification qualification);
 }

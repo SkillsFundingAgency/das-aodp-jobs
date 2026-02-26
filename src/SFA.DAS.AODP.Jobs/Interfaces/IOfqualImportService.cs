@@ -1,9 +1,8 @@
-﻿namespace SFA.DAS.AODP.Jobs.Interfaces
-{
-    public interface IOfqualImportService
-    {
-        Task<int> ImportApiData(HttpRequestData request);
+﻿namespace SFA.DAS.AODP.Jobs.Interfaces;
 
-        Task ProcessQualificationsDataAsync();
-    }
+public interface IOfqualImportService
+{
+    Task<int> ImportApiData(HttpRequestData request);
+
+    Task ProcessQualificationsDataAsync();
 }
