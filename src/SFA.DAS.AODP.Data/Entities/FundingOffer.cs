@@ -1,8 +1,7 @@
-﻿namespace SFA.DAS.AODP.Data.Entities
+﻿namespace SFA.DAS.AODP.Data.Entities;
+
+public class FundingOffer
 {
-    public class FundingOffer
-    {
-        public Guid Id { get; set; }
-        public string Name { get; set; }
-    }
+    public Guid Id { get; set; }
+    public string Name { get; set; }
 }
