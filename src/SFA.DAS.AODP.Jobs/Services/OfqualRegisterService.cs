@@ -1,14 +1,4 @@
-﻿using System.Collections.Specialized;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using RestEase;
-using SFA.DAS.AODP.Data;
-using SFA.DAS.AODP.Jobs.Client;
-using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Models.Config;
-using SFA.DAS.AODP.Models.Qualification;
-
-namespace SFA.DAS.AODP.Jobs.Services
+﻿namespace SFA.DAS.AODP.Jobs.Services
 {
     public class OfqualRegisterService : IOfqualRegisterService
     {

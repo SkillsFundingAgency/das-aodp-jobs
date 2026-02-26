@@ -1,8 +1,4 @@
-﻿using RestEase;
-using SFA.DAS.AODP.Data;
-using SFA.DAS.AODP.Models.Qualification;
-
-namespace SFA.DAS.AODP.Jobs.Client
+﻿namespace SFA.DAS.AODP.Jobs.Client
 {
     public interface IOfqualRegisterApi
     {

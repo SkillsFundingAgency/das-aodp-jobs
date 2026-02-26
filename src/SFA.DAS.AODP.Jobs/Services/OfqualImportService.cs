@@ -1,20 +1,4 @@
-﻿using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using RestEase;
-using SFA.DAS.AODP.Common.Enum;
-using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Infrastructure.Context;
-using SFA.DAS.AODP.Infrastructure.Interfaces;
-using SFA.DAS.AODP.Jobs.Client;
-using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Jobs.Models;
-using SFA.DAS.AODP.Models.Qualification;
-using System.Diagnostics;
-using System.Text.Json;
-using static SFA.DAS.AODP.Jobs.Services.ChangeDetectionService;
+﻿using static SFA.DAS.AODP.Jobs.Services.ChangeDetectionService;
 
 namespace SFA.DAS.AODP.Jobs.Services
 {
@@ -77,7 +61,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                     _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ImportApiData)}] -> Processing page {pageCount}. Retrieved {paginatedResult.Results?.Count} qualifications.");
 
                     var importedQualificationsJson = paginatedResult.Results
-                        .Select(JsonConvert.SerializeObject)
+                        .Select(o => JsonSerializer.Serialize(o))
                         .ToList();
 
                     await _qualificationsService.AddQualificationsStagingRecords(importedQualificationsJson);

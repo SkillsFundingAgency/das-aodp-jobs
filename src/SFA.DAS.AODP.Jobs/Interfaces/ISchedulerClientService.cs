@@ -1,6 +1,4 @@
-﻿using SFA.DAS.AODP.Jobs.Services;
-
-namespace SFA.DAS.AODP.Jobs.Interfaces
+﻿namespace SFA.DAS.AODP.Jobs.Interfaces
 {
     public interface ISchedulerClientService
     {

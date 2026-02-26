@@ -1,10 +1,4 @@
-﻿using CsvHelper;
-using CsvHelper.Configuration;
-using Microsoft.Extensions.Logging;
-using SFA.DAS.AODP.Jobs.Interfaces;
-using System.Globalization;
-
-namespace SFA.DAS.AODP.Jobs.Services.CSV
+﻿namespace SFA.DAS.AODP.Jobs.Services.CSV
 {
     public class CsvReaderService : ICsvReaderService
     {

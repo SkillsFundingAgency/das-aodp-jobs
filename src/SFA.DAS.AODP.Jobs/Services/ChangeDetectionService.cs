@@ -1,10 +1,4 @@
-﻿using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Jobs.Extensions;
-using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Models.Qualification;
-using System.Text.RegularExpressions;
-
-namespace SFA.DAS.AODP.Jobs.Services
+﻿namespace SFA.DAS.AODP.Jobs.Services
 {
     public class ChangeDetectionService : IChangeDetectionService
     {

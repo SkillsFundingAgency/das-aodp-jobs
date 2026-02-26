@@ -1,6 +1,4 @@
-﻿using Microsoft.Azure.Functions.Worker.Http;
-
-namespace SFA.DAS.AODP.Jobs.Interfaces
+﻿namespace SFA.DAS.AODP.Jobs.Interfaces
 {
     public interface IOfqualImportService
     {

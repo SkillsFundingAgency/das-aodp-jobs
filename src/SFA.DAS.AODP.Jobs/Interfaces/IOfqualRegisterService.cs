@@ -1,8 +1,4 @@
-﻿using System.Collections.Specialized;
-using SFA.DAS.AODP.Data;
-using SFA.DAS.AODP.Models.Qualification;
-
-namespace SFA.DAS.AODP.Jobs.Interfaces
+﻿namespace SFA.DAS.AODP.Jobs.Interfaces
 {
     public interface IOfqualRegisterService
     {

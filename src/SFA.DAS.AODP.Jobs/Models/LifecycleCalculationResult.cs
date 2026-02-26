@@ -1,6 +1,4 @@
 ﻿
-using SFA.DAS.AODP.Common.Enum;
-
 namespace SFA.DAS.AODP.Jobs.Models
 {
     public class LifecycleCalculationResult

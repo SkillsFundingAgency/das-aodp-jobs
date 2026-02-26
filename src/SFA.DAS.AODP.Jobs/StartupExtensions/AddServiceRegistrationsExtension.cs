@@ -1,24 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Azure;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
-using RestEase;
-using SFA.DAS.AODP.Data.Repositories.Jobs;
-using SFA.DAS.AODP.Infrastructure.Context;
-using SFA.DAS.AODP.Infrastructure.Interfaces;
-using SFA.DAS.AODP.Infrastructure.Repositories;
-using SFA.DAS.AODP.Infrastructure.Services;
-using SFA.DAS.AODP.Jobs.Client;
-using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Jobs.Services;
-using SFA.DAS.AODP.Jobs.Services.CSV;
-using SFA.DAS.AODP.Models.Config;
-using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
-using System.Diagnostics.CodeAnalysis;
-
-namespace SFA.DAS.AODP.Jobs.StartupExtensions;
+﻿namespace SFA.DAS.AODP.Jobs.StartupExtensions;
 
 [ExcludeFromCodeCoverage]
 public static class AddServiceRegistrationsExtension

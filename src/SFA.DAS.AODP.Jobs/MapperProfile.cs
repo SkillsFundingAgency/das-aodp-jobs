@@ -1,8 +1,4 @@
-﻿using AutoMapper;
-using SFA.DAS.AODP.Models.Qualification;
-using SFA.DAS.AODP.Data.Entities;
-
-public class MapperProfile : Profile
+﻿public class MapperProfile : Profile
 {
     public MapperProfile()
     {

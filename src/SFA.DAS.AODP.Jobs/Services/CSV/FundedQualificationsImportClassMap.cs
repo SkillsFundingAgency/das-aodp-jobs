@@ -1,9 +1,4 @@
-﻿using CsvHelper.Configuration;
-using Microsoft.Extensions.Logging;
-using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Models.Qualification;
-
-namespace SFA.DAS.AODP.Jobs.Services.CSV
+﻿namespace SFA.DAS.AODP.Jobs.Services.CSV
 {
     public class FundedQualificationsImportClassMap : ClassMap<FundedQualificationDTO>
     {

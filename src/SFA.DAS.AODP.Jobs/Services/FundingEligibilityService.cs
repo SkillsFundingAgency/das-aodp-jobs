@@ -1,10 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using SFA.DAS.AODP.Common.Enum;
-using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Models.Qualification;
-using System.Linq;
-
-namespace SFA.DAS.AODP.Jobs.Services
+﻿namespace SFA.DAS.AODP.Jobs.Services
 {
     public class FundingEligibilityService : IFundingEligibilityService
     {

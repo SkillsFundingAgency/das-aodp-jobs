@@ -1,6 +1,4 @@
-﻿using CsvHelper.Configuration;
-
-namespace SFA.DAS.AODP.Jobs.Interfaces
+﻿namespace SFA.DAS.AODP.Jobs.Interfaces
 {
     public interface ICsvReaderService
     {

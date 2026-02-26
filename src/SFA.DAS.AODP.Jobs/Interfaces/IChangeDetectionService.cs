@@ -1,8 +1,4 @@
-﻿using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Jobs.Services;
-using SFA.DAS.AODP.Models.Qualification;
-
-namespace SFA.DAS.AODP.Jobs.Interfaces
+﻿namespace SFA.DAS.AODP.Jobs.Interfaces
 {
     public interface IChangeDetectionService
     {

@@ -1,14 +1,4 @@
-﻿using System.Reflection.Metadata.Ecma335;
-using System.Text.Json;
-using AutoMapper;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Infrastructure.Context;
-using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Models.Qualification;
-
-namespace SFA.DAS.AODP.Jobs.Services
+﻿namespace SFA.DAS.AODP.Jobs.Services
 {
     public class QualificationsService : IQualificationsService
     {

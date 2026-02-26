@@ -1,10 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using SFA.DAS.AODP.Common.Enum;
-using SFA.DAS.AODP.Infrastructure.Interfaces;
-using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
+﻿using JobConfiguration = SFA.DAS.AODP.Common.Enum.JobConfiguration;
 
 namespace SFA.DAS.AODP.Jobs.Services
 {

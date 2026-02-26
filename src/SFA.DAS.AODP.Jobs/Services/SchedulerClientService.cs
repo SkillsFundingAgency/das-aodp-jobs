@@ -1,9 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using SFA.DAS.AODP.Jobs.Functions;
-using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Models.Config;
-
-namespace SFA.DAS.AODP.Jobs.Services
+﻿namespace SFA.DAS.AODP.Jobs.Services
 {
     public class SchedulerClientService : ISchedulerClientService
     {

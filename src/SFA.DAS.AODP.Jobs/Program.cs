@@ -1,12 +1,3 @@
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.ApplicationInsights;
-using SFA.DAS.AODP.Jobs.StartupExtensions;
-using System.Diagnostics.CodeAnalysis;
-
 var builder = FunctionsApplication.CreateBuilder(args);
 
 var configuration = builder.Configuration
