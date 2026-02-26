@@ -9,7 +9,7 @@ using SFA.DAS.AODP.Common.Enum;
 using SFA.DAS.AODP.Functions.Functions;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Jobs.Models.Jobs;
+using SFA.DAS.AODP.Jobs.Services;
 using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
 using System.Net;
 

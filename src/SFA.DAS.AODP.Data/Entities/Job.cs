@@ -1,4 +1,7 @@
-﻿namespace SFA.DAS.AODP.Data.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace SFA.DAS.AODP.Data.Entities;
 
 public partial class Job
 {

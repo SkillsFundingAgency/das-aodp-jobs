@@ -16,7 +16,6 @@ using SFA.DAS.AODP.Models.Config;
 using System.Globalization;
 using System.Net;
 using System.Security.Claims;
-using SFA.DAS.AODP.Jobs.Models.Jobs;
 
 namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Functions;
 
