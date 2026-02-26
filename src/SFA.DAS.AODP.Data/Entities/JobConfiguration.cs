@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace SFA.DAS.AODP.Data.Entities;
+﻿namespace SFA.DAS.AODP.Data.Entities;
 
 public partial class JobConfiguration
 {
