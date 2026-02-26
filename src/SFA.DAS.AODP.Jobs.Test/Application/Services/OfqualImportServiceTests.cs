@@ -45,7 +45,7 @@ public class OfqualImportServiceTests
         var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseInMemoryDatabase("ApplicationDbContext" + Guid.NewGuid()).Options;
         var configuration = new Mock<IConfiguration>();
         _dbContext = new ApplicationDbContext(options);
-        _fixture = new Fixture();            
+        _fixture = new Fixture();
     }
 
     [Fact]
