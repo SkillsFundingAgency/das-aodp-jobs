@@ -1,4 +1,6 @@
-﻿public class MapperProfile : Profile
+﻿namespace SFA.DAS.AODP.Jobs;
+
+public class MapperProfile : Profile
 {
     public MapperProfile()
     {

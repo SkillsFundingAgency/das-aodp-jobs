@@ -1,4 +1,4 @@
-namespace SFA.DAS.AODP.Functions.Functions
+namespace SFA.DAS.AODP.Jobs.Functions
 {
     public class RegulatedQualificationsDataFunction
     {
