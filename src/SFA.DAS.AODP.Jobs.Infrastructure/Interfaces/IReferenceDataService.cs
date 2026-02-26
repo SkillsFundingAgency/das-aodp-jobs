@@ -1,9 +1,8 @@
-﻿namespace SFA.DAS.AODP.Infrastructure.Interfaces
+﻿namespace SFA.DAS.AODP.Infrastructure.Interfaces;
+
+public interface IReferenceDataService
 {
-    public interface IReferenceDataService
-    {
-        Guid GetActionTypeId(string actionType);
-        Guid GetProcessStatusId(string processStatus);
-        Guid GetLifecycleStageId(string stage);
-    }
+    Guid GetActionTypeId(string actionType);
+    Guid GetProcessStatusId(string processStatus);
+    Guid GetLifecycleStageId(string stage);
 }

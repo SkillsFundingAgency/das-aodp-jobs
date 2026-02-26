@@ -1,8 +1,8 @@
 ﻿using Moq;
 using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Infrastructure.Interfaces;
+using SFA.DAS.AODP.Infrastructure.Services;
 using SFA.DAS.AODP.Jobs.Services;
-using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
 
 namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Services;
 

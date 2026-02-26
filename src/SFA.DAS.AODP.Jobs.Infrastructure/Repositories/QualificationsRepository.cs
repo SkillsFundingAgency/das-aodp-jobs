@@ -1,65 +1,64 @@
-﻿namespace SFA.DAS.AODP.Data.Repositories.Jobs
+﻿namespace SFA.DAS.AODP.Infrastructure.Repositories;
+
+public class QualificationsRepository : IQualificationsRepository
 {
-    public class QualificationsRepository : IQualificationsRepository
+    private readonly IApplicationDbContext _context;
+    private readonly ILogger<QualificationsRepository> _logger;
+
+    public QualificationsRepository(IApplicationDbContext context, ILogger<QualificationsRepository> logger)
     {
-        private readonly IApplicationDbContext _context;
-        private readonly ILogger<QualificationsRepository> _logger;
+        _context = context;
+        _logger = logger;
+    }
 
-        public QualificationsRepository(IApplicationDbContext context, ILogger<QualificationsRepository> logger)
+    public async Task<List<Qualification>> GetQualificationsAsync()
+    {
+        var qualifications = new List<Qualification>();
+
+        try
         {
-            _context = context;
-            _logger = logger;
+            qualifications = await _context.Qualification
+                .AsNoTracking()
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error while retrieving Qualifications: {ex.Message}");
         }
 
-        public async Task<List<Qualification>> GetQualificationsAsync()
+        return qualifications;
+    }
+
+    public async Task<List<AwardingOrganisation>> GetAwardingOrganisationsAsync()
+    {
+        var organisations = new List<AwardingOrganisation>();
+
+        try
         {
-            var qualifications = new List<Qualification>();
-
-            try
-            {
-                qualifications = await _context.Qualification
-                    .AsNoTracking()
-                    .ToListAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error while retrieving Qualifications: {ex.Message}");
-            }
-
-            return qualifications;
+            organisations = await _context.AwardingOrganisation
+                .AsNoTracking()
+                .OrderByDescending(o => o.RecognitionNumber)
+                .GroupBy(o => o.NameOfqual)
+                .Select(g => g.First())
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error while retrieving AwardingOrganisations: {ex.Message}");
         }
 
-        public async Task<List<AwardingOrganisation>> GetAwardingOrganisationsAsync()
+        return organisations;
+    }
+
+    public async Task TruncateFundingTables()
+    {
+        try
         {
-            var organisations = new List<AwardingOrganisation>();
-
-            try
-            {
-                organisations = await _context.AwardingOrganisation
-                    .AsNoTracking()
-                    .OrderByDescending(o => o.RecognitionNumber)
-                    .GroupBy(o => o.NameOfqual)
-                    .Select(g => g.First())
-                    .ToListAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error while retrieving AwardingOrganisations: {ex.Message}");
-            }
-
-            return organisations;
+            await _context.Truncate_FundedQualifications();
         }
-
-        public async Task TruncateFundingTables()
+        catch (Exception ex)
         {
-            try
-            {
-                await _context.Truncate_FundedQualifications();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error while truncating Funding Tables: {ex.Message}");
-            }
+            _logger.LogError(ex, $"Error while truncating Funding Tables: {ex.Message}");
         }
     }
 }

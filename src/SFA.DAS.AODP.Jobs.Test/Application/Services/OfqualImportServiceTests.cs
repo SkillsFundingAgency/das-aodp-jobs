@@ -13,12 +13,12 @@ using System.Collections.Specialized;
 using Microsoft.Azure.Functions.Worker;
 using AutoFixture;
 using RestEase;
-using SFA.DAS.AODP.Data.Repositories.Jobs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Components;
 using System.Text.Json;
 using SFA.DAS.AODP.Infrastructure.Interfaces;
 using SFA.DAS.AODP.Common.Enum;
+using SFA.DAS.AODP.Infrastructure.Repositories;
 using SFA.DAS.AODP.Infrastructure.Services;
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Services

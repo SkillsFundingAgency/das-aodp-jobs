@@ -1,8 +1,7 @@
-﻿namespace SFA.DAS.AODP.Infrastructure.Interfaces
+﻿namespace SFA.DAS.AODP.Infrastructure.Interfaces;
+
+public interface IFundedQualificationWriter
 {
-    public interface IFundedQualificationWriter
-    {
-        Task<bool> WriteQualifications(List<FundedQualificationDTO> qualifications);
-        Task<bool> SeedFundingData();
-    }
+    Task<bool> WriteQualifications(List<FundedQualificationDTO> qualifications);
+    Task<bool> SeedFundingData();
 }

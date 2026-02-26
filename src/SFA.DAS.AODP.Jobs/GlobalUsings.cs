@@ -24,7 +24,6 @@ global using RestEase;
 
 global using SFA.DAS.AODP.Common.Enum;
 global using SFA.DAS.AODP.Data.Entities;
-global using SFA.DAS.AODP.Data.Repositories.Jobs;
 global using SFA.DAS.AODP.Data;
 global using SFA.DAS.AODP.Infrastructure.Context;
 global using SFA.DAS.AODP.Infrastructure.Interfaces;
@@ -42,8 +41,6 @@ global using SFA.DAS.AODP.Jobs.StartupExtensions;
 global using SFA.DAS.AODP.Models.Config;
 global using SFA.DAS.AODP.Models.Qualification;
 global using SFA.DAS.Configuration.AzureTableStorage;
-global using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
-
 global using System.Collections.Specialized;
 global using System.Diagnostics.CodeAnalysis;
 global using System.Diagnostics;

@@ -1,68 +1,67 @@
 ﻿using JobConfiguration = SFA.DAS.AODP.Data.Entities.JobConfiguration;
 using ProcessStatus = SFA.DAS.AODP.Data.Entities.ProcessStatus;
 
-namespace SFA.DAS.AODP.Infrastructure.Context
+namespace SFA.DAS.AODP.Infrastructure.Context;
+
+public class ApplicationDbContext : DbContext, IApplicationDbContext
 {
-    public class ApplicationDbContext : DbContext, IApplicationDbContext
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+        : base(options) { }
+
+    public virtual DbSet<ActionType> ActionType { get; set; }
+
+    public virtual DbSet<LifecycleStage> LifecycleStages { get; set; }
+
+    public virtual DbSet<AwardingOrganisation> AwardingOrganisation { get; set; }
+
+    public virtual DbSet<ProcessStatus> ProcessStatus { get; set; }
+
+    public virtual DbSet<Qualification> Qualification { get; set; }
+
+    public virtual DbSet<Qualifications> FundedQualifications { get; set; }
+
+    public virtual DbSet<QualificationDiscussionHistory> QualificationDiscussionHistory { get; set; }
+
+    public virtual DbSet<QualificationOffer> QualificationOffers { get; set; }
+
+    public virtual DbSet<QualificationVersions> QualificationVersions { get; set; }
+
+    public virtual DbSet<QualificationImportStaging> QualificationImportStaging { get; set; }
+
+    public virtual DbSet<VersionFieldChanges> VersionFieldChanges { get; set; }
+
+    public virtual DbSet<Job> Jobs { get; set; }
+
+    public virtual DbSet<JobConfiguration> JobConfigurations { get; set; }
+
+    public virtual DbSet<JobRun> JobRuns { get; set; }
+
+    public virtual DbSet<QualificationFunding> QualificationFundings { get; set; }
+
+    public virtual DbSet<FundingOffer> FundingOffers { get; set; }
+
+    public virtual DbSet<QualificationFundingFeedback> QualificationFundingFeedbacks { get; set; }
+
+    public virtual DbSet<Pldns> Pldns { get; set; }
+    public virtual DbSet<DefundingList> DefundingLists { get; set; }
+
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-            : base(options) { }
+        return base.SaveChangesAsync(cancellationToken);
+    }
 
-        public virtual DbSet<ActionType> ActionType { get; set; }
+    public async Task Truncate_FundedQualifications()
+    {
+        await Database.ExecuteSqlRawAsync($"EXEC [dbo].[Truncate_Funded_Qualifications]");            
+    }
 
-        public virtual DbSet<LifecycleStage> LifecycleStages { get; set; }
+    public async Task Truncate_QualificationImportStaging()
+    {
+        await Database.ExecuteSqlRawAsync($"EXEC [dbo].[Truncate_QualificationImportStaging]");
+    }
 
-        public virtual DbSet<AwardingOrganisation> AwardingOrganisation { get; set; }
-
-        public virtual DbSet<ProcessStatus> ProcessStatus { get; set; }
-
-        public virtual DbSet<Qualification> Qualification { get; set; }
-
-        public virtual DbSet<Qualifications> FundedQualifications { get; set; }
-
-        public virtual DbSet<QualificationDiscussionHistory> QualificationDiscussionHistory { get; set; }
-
-        public virtual DbSet<QualificationOffer> QualificationOffers { get; set; }
-
-        public virtual DbSet<QualificationVersions> QualificationVersions { get; set; }
-
-        public virtual DbSet<QualificationImportStaging> QualificationImportStaging { get; set; }
-
-        public virtual DbSet<VersionFieldChanges> VersionFieldChanges { get; set; }
-
-        public virtual DbSet<Job> Jobs { get; set; }
-
-        public virtual DbSet<JobConfiguration> JobConfigurations { get; set; }
-
-        public virtual DbSet<JobRun> JobRuns { get; set; }
-
-        public virtual DbSet<QualificationFunding> QualificationFundings { get; set; }
-
-        public virtual DbSet<FundingOffer> FundingOffers { get; set; }
-
-        public virtual DbSet<QualificationFundingFeedback> QualificationFundingFeedbacks { get; set; }
-
-        public virtual DbSet<Pldns> Pldns { get; set; }
-        public virtual DbSet<DefundingList> DefundingLists { get; set; }
-
-        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-        {
-            return base.SaveChangesAsync(cancellationToken);
-        }
-
-        public async Task Truncate_FundedQualifications()
-        {
-            await Database.ExecuteSqlRawAsync($"EXEC [dbo].[Truncate_Funded_Qualifications]");            
-        }
-
-        public async Task Truncate_QualificationImportStaging()
-        {
-            await Database.ExecuteSqlRawAsync($"EXEC [dbo].[Truncate_QualificationImportStaging]");
-        }
-
-        public async Task DeleteDuplicateAsync(string sql, CancellationToken cancellationToken = default)
-        {
-            await Database.ExecuteSqlRawAsync(sql, cancellationToken);
-        }
+    public async Task DeleteDuplicateAsync(string sql, CancellationToken cancellationToken = default)
+    {
+        await Database.ExecuteSqlRawAsync(sql, cancellationToken);
     }
 }
