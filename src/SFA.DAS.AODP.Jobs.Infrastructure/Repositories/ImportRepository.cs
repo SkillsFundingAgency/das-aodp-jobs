@@ -1,30 +1,22 @@
 ﻿namespace SFA.DAS.AODP.Infrastructure.Repositories;
 
-public class ImportRepository : IImportRepository
+public class ImportRepository(IApplicationDbContext context, ILogger<ImportRepository> logger)
+    : IImportRepository
 {
-    private readonly IApplicationDbContext _context;
-    private readonly ILogger<ImportRepository> _logger;
-
-    public ImportRepository(IApplicationDbContext context, ILogger<ImportRepository> logger)
-    {
-        _context = context;
-        _logger = logger;
-    }
-
     public async Task BulkInsertAsync<T>(IEnumerable<T> items, CancellationToken cancellationToken = default)
     {
         if (items == null) return;
 
         if (typeof(T) == typeof(DefundingList))
         {
-            _context.DefundingLists.AddRange((List<DefundingList>)items);
+            context.DefundingLists.AddRange((List<DefundingList>)items);
         }
         else
         {
-            _context.Pldns.AddRange((List<Pldns>)items);
+            context.Pldns.AddRange((List<Pldns>)items);
         }
 
-        await _context.SaveChangesAsync(cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task DeleteDuplicateAsync(string spName, string? qan = null, CancellationToken cancellationToken = default)
@@ -33,11 +25,11 @@ public class ImportRepository : IImportRepository
         {
             var qanParam = qan != null ? $"'{qan}'" : "NULL";
             var sql = $"EXEC {spName} @qan = {qanParam}";
-            await _context.DeleteDuplicateAsync(sql, cancellationToken: cancellationToken);
+            await context.DeleteDuplicateAsync(sql, cancellationToken: cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error while deleting duplicates from {SpName}", spName);
+            logger.LogError(ex, "Error while deleting duplicates from {SpName}", spName);
         }
     }
 }

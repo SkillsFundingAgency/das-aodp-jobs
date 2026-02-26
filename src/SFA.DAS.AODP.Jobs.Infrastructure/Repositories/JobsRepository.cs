@@ -2,27 +2,19 @@
 
 namespace SFA.DAS.AODP.Infrastructure.Repositories;
 
-public class JobsRepository : IJobsRepository
+public class JobsRepository(IApplicationDbContext context, ILogger<JobsRepository> logger)
+    : IJobsRepository
 {
-    private readonly IApplicationDbContext _context;
-    private readonly ILogger<JobsRepository> _logger;
-
-    public JobsRepository(IApplicationDbContext context, ILogger<JobsRepository> logger)
-    {
-        _context = context;
-        _logger = logger;
-    }
-
     public async Task<List<Job>> GetJobsAsync()
     {
         try
         {
-            return await _context.Jobs
+            return await context.Jobs
                 .ToListAsync();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error while retrieving jobs: {ex.Message}");
+            logger.LogError(ex, $"Error while retrieving jobs: {ex.Message}");
         }
 
         return new List<Job>();
@@ -32,12 +24,12 @@ public class JobsRepository : IJobsRepository
     {
         try
         {
-            var record = await _context.Jobs.FirstOrDefaultAsync(v => v.Id == id);
+            var record = await context.Jobs.FirstOrDefaultAsync(v => v.Id == id);
             return record is null ? throw new EntityNotFoundException($"Job record with id {id} not found") : record;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error while retrieving job: {ex.Message}");
+            logger.LogError(ex, $"Error while retrieving job: {ex.Message}");
         }
 
         return null;
@@ -47,12 +39,12 @@ public class JobsRepository : IJobsRepository
     {
         try
         {
-            var record = await _context.Jobs.FirstOrDefaultAsync(v => v.Name == name);
+            var record = await context.Jobs.FirstOrDefaultAsync(v => v.Name == name);
             return record is null ? throw new EntityNotFoundException($"Job record with name {name} not found") : record;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error while retrieving job: {ex.Message}");
+            logger.LogError(ex, $"Error while retrieving job: {ex.Message}");
         }
 
         return null;
@@ -62,14 +54,14 @@ public class JobsRepository : IJobsRepository
     {
         try
         {
-            var record = await _context.Jobs.FirstOrDefaultAsync(v => v.Id == id);
+            var record = await context.Jobs.FirstOrDefaultAsync(v => v.Id == id);
 
             if (record != null)
             {
                 record.Status = status;
                 record.LastRunTime = lastRunTime;
 
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
                 return true;
             }
             else
@@ -79,7 +71,7 @@ public class JobsRepository : IJobsRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error while updating job: {ex.Message}");
+            logger.LogError(ex, $"Error while updating job: {ex.Message}");
         }
 
         return false;
@@ -89,13 +81,13 @@ public class JobsRepository : IJobsRepository
     {
         try
         {
-            var record = await _context.Jobs
+            var record = await context.Jobs
                 .Include(i => i.JobRuns)
                 .FirstOrDefaultAsync(v => v.Id == jobId);
 
             if (record != null)
             {
-                var entity = await _context.JobRuns.AddAsync(new JobRun
+                var entity = await context.JobRuns.AddAsync(new JobRun
                 {
                     JobId = jobId,
                     StartTime = startTime,
@@ -103,7 +95,7 @@ public class JobsRepository : IJobsRepository
                     Status = status
                 });
 
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
                 return entity.Entity.Id;
             }
             else
@@ -113,7 +105,7 @@ public class JobsRepository : IJobsRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error while inserting job run: {ex.Message}");
+            logger.LogError(ex, $"Error while inserting job run: {ex.Message}");
         }
 
         return Guid.Empty;
@@ -123,12 +115,12 @@ public class JobsRepository : IJobsRepository
     {
         try
         {
-            var record = await _context.JobRuns.FirstOrDefaultAsync(v => v.Id == id);
+            var record = await context.JobRuns.FirstOrDefaultAsync(v => v.Id == id);
             return record is null ? throw new EntityNotFoundException($"JobRun record with id {id} not found") : record;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error while retrieving job run: {ex.Message}");
+            logger.LogError(ex, $"Error while retrieving job run: {ex.Message}");
         }
 
         return null;
@@ -138,7 +130,7 @@ public class JobsRepository : IJobsRepository
     {
         try
         {
-            var record = await _context.JobRuns
+            var record = await context.JobRuns
                 .Include(i => i.Job)
                 .Where(w => w.Job.Name == jobName)
                 .OrderByDescending(o => o.StartTime)
@@ -147,7 +139,7 @@ public class JobsRepository : IJobsRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error while retrieving job run: {ex.Message}");
+            logger.LogError(ex, $"Error while retrieving job run: {ex.Message}");
         }
 
         return null;
@@ -158,7 +150,7 @@ public class JobsRepository : IJobsRepository
         try
         {
 
-            var record = await _context.JobRuns.FirstOrDefaultAsync(v => v.Id == id);
+            var record = await context.JobRuns.FirstOrDefaultAsync(v => v.Id == id);
 
             if (record != null)
             {
@@ -167,7 +159,7 @@ public class JobsRepository : IJobsRepository
                 record.Status = status;
                 record.User = user;
 
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
                 return true;
             }
             else
@@ -177,7 +169,7 @@ public class JobsRepository : IJobsRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error while updating job run: {ex.Message}");
+            logger.LogError(ex, $"Error while updating job run: {ex.Message}");
         }
 
         return false;
@@ -187,7 +179,7 @@ public class JobsRepository : IJobsRepository
     {
         try
         {
-            var records = await _context.JobConfigurations
+            var records = await context.JobConfigurations
                 .Where(v => v.JobId == jobId)
                 .AsNoTracking()
                 .ToListAsync();
@@ -196,7 +188,7 @@ public class JobsRepository : IJobsRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error while retrieving job configurations: {ex.Message}");
+            logger.LogError(ex, $"Error while retrieving job configurations: {ex.Message}");
         }
 
         return new List<JobConfiguration>();

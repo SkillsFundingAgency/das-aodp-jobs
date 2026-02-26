@@ -1,18 +1,11 @@
 ﻿namespace SFA.DAS.AODP.Infrastructure.Services;
 
-public class FundedQualificationWriter : IFundedQualificationWriter
+public class FundedQualificationWriter(
+    ILogger<FundedQualificationWriter> logger,
+    IApplicationDbContext applicationDbContext,
+    IMapper mapper)
+    : IFundedQualificationWriter
 {
-    private readonly ILogger<FundedQualificationWriter> _logger;
-    private readonly IMapper _mapper;
-    private readonly IApplicationDbContext _applicationDbContext;
-
-    public FundedQualificationWriter(ILogger<FundedQualificationWriter> logger, IApplicationDbContext applicationDbContext, IMapper mapper)
-    {
-        _logger = logger;
-        _mapper = mapper;
-        _applicationDbContext = applicationDbContext;
-    }
-
     public async Task<bool> WriteQualifications(List<FundedQualificationDTO> qualifications)
     {
         var success = true;
@@ -20,7 +13,7 @@ public class FundedQualificationWriter : IFundedQualificationWriter
         try
         {
             const int _batchSize = 1000;
-            _logger.LogInformation("Writing funded qualifications to db");
+            logger.LogInformation("Writing funded qualifications to db");
             for (int i = 0; i < qualifications.Count; i += _batchSize)
             {
                 var batch = qualifications
@@ -28,16 +21,16 @@ public class FundedQualificationWriter : IFundedQualificationWriter
                     .Take(_batchSize)
                     .ToList();
 
-                var entities = _mapper.Map<List<Qualifications>>(batch);
+                var entities = mapper.Map<List<Qualifications>>(batch);
 
-                await _applicationDbContext.FundedQualifications.AddRangeAsync(entities);
+                await applicationDbContext.FundedQualifications.AddRangeAsync(entities);
             }
 
-            await _applicationDbContext.SaveChangesAsync();
+            await applicationDbContext.SaveChangesAsync();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error while trying to save batch to db: {ex.Message}");
+            logger.LogError(ex, $"Error while trying to save batch to db: {ex.Message}");
             success = false;
         }
 
@@ -50,12 +43,12 @@ public class FundedQualificationWriter : IFundedQualificationWriter
 
         try
         {
-            var offerTypeLookup = await _applicationDbContext.FundingOffers.ToDictionaryAsync(r => r.Name, r => r.Id);
-            var actionLookup = await _applicationDbContext.ActionType.ToDictionaryAsync(r => r.Description ?? "", r => r.Id);
+            var offerTypeLookup = await applicationDbContext.FundingOffers.ToDictionaryAsync(r => r.Name, r => r.Id);
+            var actionLookup = await applicationDbContext.ActionType.ToDictionaryAsync(r => r.Description ?? "", r => r.Id);
             var noActionNeededId = actionLookup[ActionTypeEnum.NoActionRequired];
 
             // Funding offers from imported data
-            var importedOffers = await _applicationDbContext.FundedQualifications
+            var importedOffers = await applicationDbContext.FundedQualifications
                 .Include(i => i.QualificationOffers)
                 .Where(w => w.QualificationId.HasValue
                             && w.AwardingOrganisationId.HasValue
@@ -64,7 +57,7 @@ public class FundedQualificationWriter : IFundedQualificationWriter
             var importedOfferIds = importedOffers.Select(s => s.QualificationId.Value).ToList();
 
             // Funding offers created by users
-            var userCreatedOffers = await _applicationDbContext.QualificationFundings
+            var userCreatedOffers = await applicationDbContext.QualificationFundings
                 .Include(i => i.FundingOffer)
                 .Include(i => i.QualificationVersion)
                 .ThenInclude(t => t.Qualification)
@@ -84,20 +77,20 @@ public class FundedQualificationWriter : IFundedQualificationWriter
             //var qualsMissingFunding = importedOfferIds.Except(userCreatedOfferIds).Except(noTouchyList).ToList();
             var qualsMissingFunding = importedOfferIds.Except(userCreatedOfferIds).ToList();
 
-            _logger.LogInformation($"SeedFundingData -> Found {qualsMissingFunding.Count} quals missing offers");
+            logger.LogInformation($"SeedFundingData -> Found {qualsMissingFunding.Count} quals missing offers");
 
             // These are quals that have imported offers and user created offers
             //var qualsNeedUpdating = importedOfferIds.Except(qualsMissingFunding).Except(noTouchyList).ToList();
             var qualsNeedUpdating = importedOfferIds.Except(qualsMissingFunding).ToList();
 
-            _logger.LogInformation($"SeedFundingData -> Found {qualsNeedUpdating.Count} that might need updating");
+            logger.LogInformation($"SeedFundingData -> Found {qualsNeedUpdating.Count} that might need updating");
 
             var importRun = DateTime.Now;
             if (qualsMissingFunding.Any())
             {
-                _logger.LogInformation($"SeedFundingData -> Adding missing offers to funded.QualificationFundings");
+                logger.LogInformation($"SeedFundingData -> Adding missing offers to funded.QualificationFundings");
 
-                var missingQualLookup = await _applicationDbContext.QualificationVersions                                                    
+                var missingQualLookup = await applicationDbContext.QualificationVersions                                                    
                     .Where(w => qualsMissingFunding.Contains(w.QualificationId))                                                    
                     .ToListAsync();
 
@@ -116,7 +109,7 @@ public class FundedQualificationWriter : IFundedQualificationWriter
 
                     if (latestVersion == null)
                     {
-                        _logger.LogError($"SeedFundingData -> Unable to process Qual Id {id} as it has no qualification versions");
+                        logger.LogError($"SeedFundingData -> Unable to process Qual Id {id} as it has no qualification versions");
                         return false;
                     }
 
@@ -161,7 +154,7 @@ public class FundedQualificationWriter : IFundedQualificationWriter
 
                         if (added > 0)
                         {
-                            _logger.LogInformation($"Found {added} missing offers for {latestVersion.Name}");                               
+                            logger.LogInformation($"Found {added} missing offers for {latestVersion.Name}");                               
 
                             newDiscussions.Add(new QualificationDiscussionHistory()
                             {
@@ -176,16 +169,16 @@ public class FundedQualificationWriter : IFundedQualificationWriter
                     }
                     else
                     {
-                        _logger.LogInformation($"SeedFundingData -> Qual Id {id} has no offers with funding available");
+                        logger.LogInformation($"SeedFundingData -> Qual Id {id} has no offers with funding available");
                     }
 
                     batchCounter++;
                     if (batchCounter > batchSize)
                     {
-                        _logger.LogInformation($"SeedFundingData -> Saving a batch of {batchCounter} records");
-                        await _applicationDbContext.QualificationFundings.AddRangeAsync(newRecords);
-                        await _applicationDbContext.QualificationDiscussionHistory.AddRangeAsync(newDiscussions);
-                        await _applicationDbContext.SaveChangesAsync();
+                        logger.LogInformation($"SeedFundingData -> Saving a batch of {batchCounter} records");
+                        await applicationDbContext.QualificationFundings.AddRangeAsync(newRecords);
+                        await applicationDbContext.QualificationDiscussionHistory.AddRangeAsync(newDiscussions);
+                        await applicationDbContext.SaveChangesAsync();
                         newRecords.Clear();
                         newDiscussions.Clear();
                         batchCounter = 0;
@@ -194,10 +187,10 @@ public class FundedQualificationWriter : IFundedQualificationWriter
 
                 if (batchCounter > 0)
                 {
-                    _logger.LogInformation($"SeedFundingData -> Saving final batch of {batchCounter} records");
-                    await _applicationDbContext.QualificationFundings.AddRangeAsync(newRecords);
-                    await _applicationDbContext.QualificationDiscussionHistory.AddRangeAsync(newDiscussions);
-                    await _applicationDbContext.SaveChangesAsync();
+                    logger.LogInformation($"SeedFundingData -> Saving final batch of {batchCounter} records");
+                    await applicationDbContext.QualificationFundings.AddRangeAsync(newRecords);
+                    await applicationDbContext.QualificationDiscussionHistory.AddRangeAsync(newDiscussions);
+                    await applicationDbContext.SaveChangesAsync();
                     newRecords.Clear();
                     newDiscussions.Clear();
                     batchCounter = 0;
@@ -212,7 +205,7 @@ public class FundedQualificationWriter : IFundedQualificationWriter
                 var updatedOffers = new List<QualificationFunding>();
                 var newDiscussions = new List<QualificationDiscussionHistory>();
 
-                var updatingQualLookup = await _applicationDbContext.QualificationVersions                                                    
+                var updatingQualLookup = await applicationDbContext.QualificationVersions                                                    
                     .Where(w => qualsNeedUpdating.Contains(w.QualificationId))
                     .ToListAsync();
 
@@ -225,7 +218,7 @@ public class FundedQualificationWriter : IFundedQualificationWriter
                         .FirstOrDefault();
                     if (latestVersion == null)
                     {
-                        _logger.LogError($"SeedFundingData -> Unable to process Qual Id {id} as it has no qualification versions");
+                        logger.LogError($"SeedFundingData -> Unable to process Qual Id {id} as it has no qualification versions");
                         return false;
                     }
 
@@ -288,7 +281,7 @@ public class FundedQualificationWriter : IFundedQualificationWriter
                         }
                         if ((added + updated) > 0)
                         {
-                            _logger.LogInformation($"Added {added} and updated {updated} offers for {latestVersion.Name}");                             
+                            logger.LogInformation($"Added {added} and updated {updated} offers for {latestVersion.Name}");                             
 
                             newDiscussions.Add(new QualificationDiscussionHistory()
                             {
@@ -303,16 +296,16 @@ public class FundedQualificationWriter : IFundedQualificationWriter
                     }
                     else
                     {
-                        _logger.LogInformation($"SeedFundingData -> Qual Id {id} has no offers with funding available");
+                        logger.LogInformation($"SeedFundingData -> Qual Id {id} has no offers with funding available");
                     }
 
                     batchCounter++;
                     if (batchCounter > batchSize)
                     {
-                        _logger.LogInformation($"SeedFundingData -> Saving a batch of {batchCounter} updates");
-                        await _applicationDbContext.QualificationFundings.AddRangeAsync(newOffers);
-                        await _applicationDbContext.QualificationDiscussionHistory.AddRangeAsync(newDiscussions);
-                        await _applicationDbContext.SaveChangesAsync();
+                        logger.LogInformation($"SeedFundingData -> Saving a batch of {batchCounter} updates");
+                        await applicationDbContext.QualificationFundings.AddRangeAsync(newOffers);
+                        await applicationDbContext.QualificationDiscussionHistory.AddRangeAsync(newDiscussions);
+                        await applicationDbContext.SaveChangesAsync();
                         newOffers.Clear();
                         newDiscussions.Clear();
                         updatedOffers.Clear();
@@ -322,10 +315,10 @@ public class FundedQualificationWriter : IFundedQualificationWriter
 
                 if (batchCounter > 0)
                 {
-                    _logger.LogInformation($"SeedFundingData -> Saving final batch of {batchCounter} updates");
-                    await _applicationDbContext.QualificationFundings.AddRangeAsync(newOffers);
-                    await _applicationDbContext.QualificationDiscussionHistory.AddRangeAsync(newDiscussions);
-                    await _applicationDbContext.SaveChangesAsync();
+                    logger.LogInformation($"SeedFundingData -> Saving final batch of {batchCounter} updates");
+                    await applicationDbContext.QualificationFundings.AddRangeAsync(newOffers);
+                    await applicationDbContext.QualificationDiscussionHistory.AddRangeAsync(newDiscussions);
+                    await applicationDbContext.SaveChangesAsync();
                     newOffers.Clear();
                     newDiscussions.Clear();
                     updatedOffers.Clear();
@@ -335,11 +328,11 @@ public class FundedQualificationWriter : IFundedQualificationWriter
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error while trying to save batch to db: {ex.Message}");
+            logger.LogError(ex, $"Error while trying to save batch to db: {ex.Message}");
             success = false;
         }
 
-        _logger.LogInformation($"Funding Offers seed complete");
+        logger.LogInformation($"Funding Offers seed complete");
         return success;
     }
 }

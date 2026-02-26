@@ -1,29 +1,21 @@
 ﻿namespace SFA.DAS.AODP.Infrastructure.Repositories;
 
-public class QualificationsRepository : IQualificationsRepository
+public class QualificationsRepository(IApplicationDbContext context, ILogger<QualificationsRepository> logger)
+    : IQualificationsRepository
 {
-    private readonly IApplicationDbContext _context;
-    private readonly ILogger<QualificationsRepository> _logger;
-
-    public QualificationsRepository(IApplicationDbContext context, ILogger<QualificationsRepository> logger)
-    {
-        _context = context;
-        _logger = logger;
-    }
-
     public async Task<List<Qualification>> GetQualificationsAsync()
     {
         var qualifications = new List<Qualification>();
 
         try
         {
-            qualifications = await _context.Qualification
+            qualifications = await context.Qualification
                 .AsNoTracking()
                 .ToListAsync();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error while retrieving Qualifications: {ex.Message}");
+            logger.LogError(ex, $"Error while retrieving Qualifications: {ex.Message}");
         }
 
         return qualifications;
@@ -35,7 +27,7 @@ public class QualificationsRepository : IQualificationsRepository
 
         try
         {
-            organisations = await _context.AwardingOrganisation
+            organisations = await context.AwardingOrganisation
                 .AsNoTracking()
                 .OrderByDescending(o => o.RecognitionNumber)
                 .GroupBy(o => o.NameOfqual)
@@ -44,7 +36,7 @@ public class QualificationsRepository : IQualificationsRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error while retrieving AwardingOrganisations: {ex.Message}");
+            logger.LogError(ex, $"Error while retrieving AwardingOrganisations: {ex.Message}");
         }
 
         return organisations;
@@ -54,11 +46,11 @@ public class QualificationsRepository : IQualificationsRepository
     {
         try
         {
-            await _context.Truncate_FundedQualifications();
+            await context.Truncate_FundedQualifications();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error while truncating Funding Tables: {ex.Message}");
+            logger.LogError(ex, $"Error while truncating Funding Tables: {ex.Message}");
         }
     }
 }

@@ -3,11 +3,9 @@ using ProcessStatus = SFA.DAS.AODP.Data.Entities.ProcessStatus;
 
 namespace SFA.DAS.AODP.Infrastructure.Context;
 
-public class ApplicationDbContext : DbContext, IApplicationDbContext
+public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+    : DbContext(options), IApplicationDbContext
 {
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-        : base(options) { }
-
     public virtual DbSet<ActionType> ActionType { get; set; }
 
     public virtual DbSet<LifecycleStage> LifecycleStages { get; set; }
