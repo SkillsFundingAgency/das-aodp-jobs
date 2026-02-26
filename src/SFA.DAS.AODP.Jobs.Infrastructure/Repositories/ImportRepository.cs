@@ -1,9 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Infrastructure.Context;
-using SFA.DAS.AODP.Infrastructure.Interfaces;
-
-namespace SFA.DAS.AODP.Infrastructure.Repositories;
+﻿namespace SFA.DAS.AODP.Infrastructure.Repositories;
 
 public class ImportRepository : IImportRepository
 {

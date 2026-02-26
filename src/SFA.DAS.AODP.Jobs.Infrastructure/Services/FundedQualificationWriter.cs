@@ -1,13 +1,4 @@
-﻿using AutoMapper;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using SFA.DAS.AODP.Common.Enum;
-using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Infrastructure.Context;
-using SFA.DAS.AODP.Infrastructure.Interfaces;
-using SFA.DAS.AODP.Models.Qualification;
-
-namespace SFA.DAS.AODP.Infrastructure.Services
+﻿namespace SFA.DAS.AODP.Infrastructure.Services
 {
     public class FundedQualificationWriter : IFundedQualificationWriter
     {

@@ -1,6 +1,4 @@
-﻿using SFA.DAS.AODP.Models.Qualification;
-
-namespace SFA.DAS.AODP.Infrastructure.Interfaces
+﻿namespace SFA.DAS.AODP.Infrastructure.Interfaces
 {
     public interface IFundedQualificationWriter
     {

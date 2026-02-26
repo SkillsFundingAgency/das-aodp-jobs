@@ -1,6 +1,4 @@
-﻿using SFA.DAS.AODP.Data.Entities;
-
-namespace SFA.DAS.AODP.Infrastructure.Interfaces
+﻿namespace SFA.DAS.AODP.Infrastructure.Interfaces
 {
     public interface IQualificationsRepository
     {

@@ -1,6 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
-using SFA.DAS.AODP.Data.Entities;
-
+﻿using JobConfiguration = SFA.DAS.AODP.Data.Entities.JobConfiguration;
+using ProcessStatus = SFA.DAS.AODP.Data.Entities.ProcessStatus;
 
 namespace SFA.DAS.AODP.Infrastructure.Context
 {
@@ -53,17 +52,17 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public async Task Truncate_FundedQualifications()
         {
-            await this.Database.ExecuteSqlRawAsync($"EXEC [dbo].[Truncate_Funded_Qualifications]");            
+            await Database.ExecuteSqlRawAsync($"EXEC [dbo].[Truncate_Funded_Qualifications]");            
         }
 
         public async Task Truncate_QualificationImportStaging()
         {
-            await this.Database.ExecuteSqlRawAsync($"EXEC [dbo].[Truncate_QualificationImportStaging]");
+            await Database.ExecuteSqlRawAsync($"EXEC [dbo].[Truncate_QualificationImportStaging]");
         }
 
         public async Task DeleteDuplicateAsync(string sql, CancellationToken cancellationToken = default)
         {
-            await this.Database.ExecuteSqlRawAsync(sql, cancellationToken);
+            await Database.ExecuteSqlRawAsync(sql, cancellationToken);
         }
     }
 }

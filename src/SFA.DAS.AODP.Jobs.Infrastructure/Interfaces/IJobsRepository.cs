@@ -1,4 +1,4 @@
-﻿using SFA.DAS.AODP.Data.Entities;
+﻿using JobConfiguration = SFA.DAS.AODP.Data.Entities.JobConfiguration;
 
 namespace SFA.DAS.AODP.Infrastructure.Interfaces
 {

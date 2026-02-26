@@ -1,5 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
-using SFA.DAS.AODP.Data.Entities;
+﻿using JobConfiguration = SFA.DAS.AODP.Data.Entities.JobConfiguration;
+using ProcessStatus = SFA.DAS.AODP.Data.Entities.ProcessStatus;
 
 namespace SFA.DAS.AODP.Infrastructure.Context
 {

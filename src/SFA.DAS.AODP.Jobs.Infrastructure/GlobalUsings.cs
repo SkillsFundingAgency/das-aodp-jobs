@@ -1,0 +1,9 @@
+﻿global using Microsoft.EntityFrameworkCore;
+global using Microsoft.Extensions.Logging;
+global using SFA.DAS.AODP.Common.Exceptions;
+global using SFA.DAS.AODP.Data.Entities;
+global using SFA.DAS.AODP.Infrastructure.Context;
+global using SFA.DAS.AODP.Infrastructure.Interfaces;
+global using SFA.DAS.AODP.Models.Qualification;
+global using AutoMapper;
+global using SFA.DAS.AODP.Common.Enum;

@@ -1,9 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using SFA.DAS.AODP.Common.Exceptions;
-using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Infrastructure.Context;
-using SFA.DAS.AODP.Infrastructure.Interfaces;
+﻿using JobConfiguration = SFA.DAS.AODP.Data.Entities.JobConfiguration;
 
 namespace SFA.DAS.AODP.Data.Repositories.Jobs
 {
