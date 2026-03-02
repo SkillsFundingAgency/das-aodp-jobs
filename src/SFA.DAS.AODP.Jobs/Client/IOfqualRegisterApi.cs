@@ -1,6 +1,4 @@
-﻿using RestEase;
-using SFA.DAS.AODP.Data;
-using SFA.DAS.AODP.Models.Qualification;
+﻿using SFA.DAS.AODP.Models.Qualification;
 
 namespace SFA.DAS.AODP.Jobs.Client
 {

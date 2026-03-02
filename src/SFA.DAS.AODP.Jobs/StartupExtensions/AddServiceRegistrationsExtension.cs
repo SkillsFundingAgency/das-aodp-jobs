@@ -1,22 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Azure;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
-using RestEase;
-using SFA.DAS.AODP.Data.Repositories.Jobs;
-using SFA.DAS.AODP.Infrastructure.Context;
-using SFA.DAS.AODP.Infrastructure.Interfaces;
-using SFA.DAS.AODP.Infrastructure.Repositories;
-using SFA.DAS.AODP.Infrastructure.Services;
-using SFA.DAS.AODP.Jobs.Client;
-using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Jobs.Services;
-using SFA.DAS.AODP.Jobs.Services.CSV;
-using SFA.DAS.AODP.Models.Config;
-using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
-using System.Diagnostics.CodeAnalysis;
+﻿using SFA.DAS.AODP.Jobs.Functions.Abstractions;
 
 namespace SFA.DAS.AODP.Jobs.StartupExtensions;
 
@@ -80,11 +62,14 @@ public static class AddServiceRegistrationsExtension
             throw new ArgumentException("DbConnectionString is missing in configuration.");
         }
 
-        services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseSqlServer(connectionString,
+        services.AddTransient<IJobFunctionRunner, JobFunctionRunner>();
+        services.AddDbContextFactory<ApplicationDbContext>(options => options.UseSqlServer(connectionString));
+        services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connectionString,
         sqlServerOptions => sqlServerOptions.CommandTimeout(60)));
 
         services.AddAutoMapper(typeof(MapperProfile));
+
+        services.AddDataImportServices(configuration);
 
         return services;
     }

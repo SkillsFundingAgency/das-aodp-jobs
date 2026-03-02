@@ -1,13 +1,39 @@
-﻿using Moq;
-using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Infrastructure.Interfaces;
-using SFA.DAS.AODP.Jobs.Services;
-using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
+﻿using SFA.DAS.AODP.Infrastructure.Interfaces;
+using JobConfiguration = SFA.DAS.AODP.Data.Entities.JobConfiguration;
 
 namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Services;
 
 public class JobConfigurationServiceTests
 {
+    [Theory]
+    [InlineData(JobNames.RegulatedQualifications)]
+    [InlineData(JobNames.FundedQualifications)]
+    [InlineData(JobNames.Pldns)]
+    [InlineData(JobNames.DefundingList)]
+    [InlineData(JobNames.QaaQualifications)]
+    public async Task ReadJobConfiguration_EnsureGoesToSpecificConfigurationMethod(JobNames jobName)
+    {
+        // Arrange
+        var mockJobsRepository = new Mock<IJobsRepository>();
+        var mockClockService = new Mock<ISystemClockService>();
+        var sut = new JobConfigurationService(mockJobsRepository.Object, mockClockService.Object);
+        var jobId = Guid.NewGuid();
+        var job = new Job { Id = jobId, Enabled = true, Status = "Active", Name = jobName.ToString(), LastRunTime = new DateTime(2020, 01, 01)};
+        var configs = new List<JobConfiguration>
+        {
+            new() { Name = "ApiImport", Value = "true" },
+        };
+
+        mockJobsRepository.Setup(r => r.GetJobByNameAsync(It.IsAny<string>())).ReturnsAsync(job);
+        mockJobsRepository.Setup(r => r.GetJobConfigurationsByIdAsync(jobId)).ReturnsAsync(configs);
+
+        // Act
+        var result = await sut.ReadJobConfiguration(jobName);
+
+        // Assert
+        Assert.NotNull(result);
+    }
+
     [Fact]
     public async Task UpdateJobRun_CallsRepositoryWhenIdsProvided()
     {

@@ -52,7 +52,10 @@ namespace SFA.DAS.AODP.Data.Repositories.Jobs
         {
             try
             {
-                var record = await _context.Jobs.FirstOrDefaultAsync(v => v.Name == name);
+                var record = await _context.Jobs
+                    .Include(o => o.JobConfigurations)
+                    .FirstOrDefaultAsync(v => v.Name == name);
+
                 return record is null ? throw new EntityNotFoundException($"Job record with name {name} not found") : record;
             }
             catch (Exception ex)
