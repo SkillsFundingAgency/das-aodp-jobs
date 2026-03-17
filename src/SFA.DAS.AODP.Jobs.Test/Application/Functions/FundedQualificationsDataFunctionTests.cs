@@ -3,6 +3,7 @@ using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using SFA.DAS.AODP.Common.Enum;
 using SFA.DAS.AODP.Data.Entities;
@@ -68,8 +69,12 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
             _fundedQualificationWriter = new Mock<IFundedQualificationWriter>();
             _qualificationsRepository = new Mock<IQualificationsRepository>();
 
-            var configuration = new MapperConfiguration(cfg => cfg.AddProfile(new MapperProfile()));
-            _mapper = new Mapper(configuration);
+            var configuration = new MapperConfiguration(cfg =>
+            {
+                cfg.AddProfile<MapperProfile>();
+            }, NullLoggerFactory.Instance);
+
+            _mapper = configuration.CreateMapper();
 
             _function = new FundedQualificationsDataFunction(
                 _loggerMock.Object,               

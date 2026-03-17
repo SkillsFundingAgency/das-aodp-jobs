@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using SFA.DAS.AODP.Common.Enum;
 using SFA.DAS.AODP.Data.Entities;
@@ -54,8 +55,12 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                     new FundedQualificationOfferDTO() { Id = Guid.NewGuid(), Name = FundingOffer3, FundingAvailable = "True", FundingApprovalStartDate = DateTime.Now.AddYears(-1), FundingApprovalEndDate = DateTime.Now.AddYears(1) },
                     new FundedQualificationOfferDTO() { Id = Guid.NewGuid(), Name = FundingOffer1, FundingAvailable = "True", FundingApprovalStartDate = DateTime.Now.AddYears(-1), FundingApprovalEndDate = DateTime.Now.AddYears(1) }));
 
-            var configuration = new MapperConfiguration(cfg => cfg.AddProfile(new MapperProfile()));
-            _mapper = new Mapper(configuration);
+            var configuration = new MapperConfiguration(cfg =>
+            {
+                cfg.AddProfile<MapperProfile>();
+            }, NullLoggerFactory.Instance);
+
+            _mapper = configuration.CreateMapper();
         }
 
         [Fact]
