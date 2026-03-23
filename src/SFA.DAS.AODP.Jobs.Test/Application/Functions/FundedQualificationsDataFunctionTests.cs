@@ -1,5 +1,4 @@
 ﻿using AutoFixture;
-using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
@@ -28,7 +27,6 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
         private readonly Mock<IQualificationsRepository> _qualificationsRepository;
         private readonly FunctionContext _functionContext;
         private readonly FundedQualificationsDataFunction _function;
-        private readonly IMapper _mapper;
         private readonly AodpJobsConfiguration _config;
         private FundedJobControl _control;
         private JobRunControl _jobRunControl;
@@ -68,13 +66,9 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
             _fundedQualificationWriter = new Mock<IFundedQualificationWriter>();
             _qualificationsRepository = new Mock<IQualificationsRepository>();
 
-            var configuration = new MapperConfiguration(cfg => cfg.AddProfile(new MapperProfile()));
-            _mapper = new Mapper(configuration);
-
             _function = new FundedQualificationsDataFunction(
                 _loggerMock.Object,               
                 _csvReaderServiceMock.Object,
-                _mapper,       
                 _config,
                 _jobConfigurationService.Object,
                 _fundedQualificationWriter.Object,

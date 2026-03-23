@@ -1,6 +1,5 @@
 ﻿using System.Reflection.Metadata.Ecma335;
 using System.Text.Json;
-using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.AODP.Data.Entities;
@@ -14,13 +13,10 @@ namespace SFA.DAS.AODP.Jobs.Services
     {
         private readonly ILogger<QualificationsService> _logger;
         private readonly IApplicationDbContext _applicationDbContext;
-        private readonly IMapper _mapper;
-
-        public QualificationsService(ILogger<QualificationsService> logger, IMapper mapper, 
+        public QualificationsService(ILogger<QualificationsService> logger, 
             IApplicationDbContext appDbContext)
         {
             _logger = logger;
-            _mapper = mapper;
             _applicationDbContext = appDbContext;
         }
 
