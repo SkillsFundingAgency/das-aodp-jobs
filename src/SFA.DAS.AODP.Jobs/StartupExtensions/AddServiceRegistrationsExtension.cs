@@ -63,12 +63,11 @@ public static class AddServiceRegistrationsExtension
         }
 
         services.AddTransient<IJobFunctionRunner, JobFunctionRunner>();
-        services.AddDbContextFactory<ApplicationDbContext>(options => options.UseSqlServer(connectionString));
-        services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connectionString,
-        sqlServerOptions => sqlServerOptions.CommandTimeout(60)));
-
-        services.AddAutoMapper(cfg => { }, typeof(MapperProfile));
-
+        services.AddDbContextFactory<ApplicationDbContext>(options =>
+        {
+            options.UseSqlServer(connectionString, sqlServerOptions => sqlServerOptions.CommandTimeout(60));
+        });
+        
         services.AddDataImportServices(configuration);
 
         return services;
