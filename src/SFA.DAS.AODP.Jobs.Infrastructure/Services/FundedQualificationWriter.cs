@@ -1,5 +1,4 @@
-﻿using AutoMapper;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.AODP.Common.Enum;
 using SFA.DAS.AODP.Data.Entities;
@@ -12,13 +11,11 @@ namespace SFA.DAS.AODP.Infrastructure.Services
     public class FundedQualificationWriter : IFundedQualificationWriter
     {
         private readonly ILogger<FundedQualificationWriter> _logger;
-        private readonly IMapper _mapper;
         private readonly IApplicationDbContext _applicationDbContext;
 
-        public FundedQualificationWriter(ILogger<FundedQualificationWriter> logger, IApplicationDbContext applicationDbContext, IMapper mapper)
+        public FundedQualificationWriter(ILogger<FundedQualificationWriter> logger, IApplicationDbContext applicationDbContext)
         {
             _logger = logger;
-            _mapper = mapper;
             _applicationDbContext = applicationDbContext;
         }
 
@@ -37,7 +34,30 @@ namespace SFA.DAS.AODP.Infrastructure.Services
                         .Take(_batchSize)
                         .ToList();
 
-                    var entities = _mapper.Map<List<Qualifications>>(batch);
+                    var entities = batch.Select(o => new Qualifications
+                    {
+                        Id = o.Id,
+                        QualificationId = o.QualificationId,
+                        AwardingOrganisationId = o.AwardingOrganisationId,
+                        AwardingOrganisationUrl = o.AwardingOrganisationURL,
+                        DateOfOfqualDataSnapshot = o.DateOfOfqualDataSnapshot,
+                        ImportDate = o.ImportDate,
+                        Level = o.Level,
+                        QualificationType = o.QualificationType,
+                        SectorSubjectArea = o.SectorSubjectArea,
+                        Status = o.Status,
+                        SubCategory = o.Subcategory,
+                        QualificationOffers = o.Offers.Select(x => new QualificationOffer
+                        {
+                            Id = x.Id,
+                            QualificationId = x.QualificationId,
+                            FundingApprovalEndDate = x.FundingApprovalEndDate,
+                            FundingApprovalStartDate = x.FundingApprovalStartDate,
+                            Name = x.Name,
+                            FundingAvailable = bool.Parse(x.FundingAvailable ?? "false"),
+                            Notes = x.Notes
+                        }).ToList()
+                    });
 
                     await _applicationDbContext.FundedQualifications.AddRangeAsync(entities);
                 }

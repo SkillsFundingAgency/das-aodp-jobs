@@ -1,5 +1,4 @@
 ﻿using AutoFixture;
-using AutoMapper;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.EntityFrameworkCore;
@@ -20,7 +19,6 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         private readonly FunctionContext _functionContext;
         private ApplicationDbContext _dbContext;
         private Fixture _fixture;
-        private readonly IMapper _mapper;
         private Guid LifeCycleStageNew = new Guid("00000000-0000-0000-0000-000000000001");
         private Guid LifeCycleStageChanged = new Guid("00000000-0000-0000-0000-000000000002");
         private Guid ProcessStageNoAction = new Guid("00000000-0000-0000-0000-000000000001");
@@ -54,13 +52,6 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                     new FundedQualificationOfferDTO() { Id = Guid.NewGuid(), Name = FundingOffer2, FundingAvailable = "True", FundingApprovalStartDate = DateTime.Now.AddYears(-1), FundingApprovalEndDate = DateTime.Now.AddYears(1) },
                     new FundedQualificationOfferDTO() { Id = Guid.NewGuid(), Name = FundingOffer3, FundingAvailable = "True", FundingApprovalStartDate = DateTime.Now.AddYears(-1), FundingApprovalEndDate = DateTime.Now.AddYears(1) },
                     new FundedQualificationOfferDTO() { Id = Guid.NewGuid(), Name = FundingOffer1, FundingAvailable = "True", FundingApprovalStartDate = DateTime.Now.AddYears(-1), FundingApprovalEndDate = DateTime.Now.AddYears(1) }));
-
-            var configuration = new MapperConfiguration(cfg =>
-            {
-                cfg.AddProfile<MapperProfile>();
-            }, NullLoggerFactory.Instance);
-
-            _mapper = configuration.CreateMapper();
         }
 
         [Fact]
@@ -357,8 +348,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         {
             return new FundedQualificationWriter(
                 _loggerMock.Object,
-                _dbContext,
-                _mapper
+                _dbContext
             );
         }
 

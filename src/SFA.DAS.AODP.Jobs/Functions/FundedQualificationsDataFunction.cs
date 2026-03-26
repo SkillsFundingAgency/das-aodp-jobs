@@ -1,4 +1,3 @@
-using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -19,23 +18,20 @@ namespace SFA.DAS.AODP.Functions
     {
         private readonly ILogger<FundedQualificationsDataFunction> _logger;
         private readonly ICsvReaderService _csvReaderService;
-        private readonly IMapper _mapper;
 		private readonly AodpJobsConfiguration _config;
         private readonly IJobConfigurationService _jobConfigurationService;
         private readonly IFundedQualificationWriter _fundedQualificationWriter;
         private readonly IQualificationsRepository _qualificationsRepository;
 
         public FundedQualificationsDataFunction(ILogger<FundedQualificationsDataFunction> logger,            
-            ICsvReaderService csvReaderService, 
-            IMapper mapper, 
+            ICsvReaderService csvReaderService,
             AodpJobsConfiguration config, 
             IJobConfigurationService jobConfigurationService, 
             IFundedQualificationWriter fundedQualificationWriter,
             IQualificationsRepository qualificationsRepository)
         {
             _logger = logger;        
-            _csvReaderService = csvReaderService;
-            _mapper = mapper;          
+            _csvReaderService = csvReaderService;     
             _config = config;
             _jobConfigurationService = jobConfigurationService;
             _fundedQualificationWriter = fundedQualificationWriter;
