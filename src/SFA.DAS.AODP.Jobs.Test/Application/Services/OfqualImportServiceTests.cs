@@ -1,25 +1,27 @@
-﻿using Moq;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration;
-using SFA.DAS.AODP.Jobs.Services;
-using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Infrastructure.Context;
-using Microsoft.Azure.Functions.Worker.Http;
-using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Jobs.Client;
-using SFA.DAS.AODP.Models.Qualification;
-using SFA.DAS.AODP.Data;
-using System.Collections.Specialized;
-using Microsoft.Azure.Functions.Worker;
-using AutoFixture;
-using RestEase;
-using SFA.DAS.AODP.Data.Repositories.Jobs;
-using Microsoft.EntityFrameworkCore;
+﻿using AutoFixture;
+using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.AspNetCore.Components;
-using System.Text.Json;
-using SFA.DAS.AODP.Infrastructure.Interfaces;
+using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Moq;
+using RestEase;
 using SFA.DAS.AODP.Common.Enum;
+using SFA.DAS.AODP.Data;
+using SFA.DAS.AODP.Data.Entities;
+using SFA.DAS.AODP.Data.Repositories.Jobs;
+using SFA.DAS.AODP.Infrastructure.Context;
+using SFA.DAS.AODP.Infrastructure.Interfaces;
 using SFA.DAS.AODP.Infrastructure.Services;
+using SFA.DAS.AODP.Jobs.Client;
+using SFA.DAS.AODP.Jobs.Interfaces;
+using SFA.DAS.AODP.Jobs.Models.Jobs.FundingEligibility;
+using SFA.DAS.AODP.Jobs.Services;
+using SFA.DAS.AODP.Models.Qualification;
+using System.Collections.Specialized;
+using System.Text.Json;
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 {
@@ -206,10 +208,20 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
             _qualificationsServiceMock.Setup(s => s.GetStagedQualificationsBatchAsync(It.IsAny<int>(), 0)).ReturnsAsync(importRecords);
             _qualificationsServiceMock.Setup(s => s.GetStagedQualificationsBatchAsync(It.IsAny<int>(), 1)).ReturnsAsync(new List<QualificationDTO>());
-            _fundingEligibilityService.Setup(s => s.EligibleForFunding(It.Is<QualificationDTO>(q => q.QualificationNumberNoObliques == importRecord.QualificationNumberNoObliques)))
-                                        .Returns(false);
-            _fundingEligibilityService.Setup(s => s.DetermineFailureReason(It.Is<QualificationDTO>(q => q.QualificationNumberNoObliques == importRecord.QualificationNumberNoObliques)))
-                                        .Returns(ImportReason.NoAction);
+            _fundingEligibilityService
+                .Setup(s => s.EvaluateFundingEligibilityRules(It.IsAny<QualificationDTO>()))
+                .Returns(new FundingEligibilityEvaluation
+                {
+                    Rules = new List<FundingEligibilityRuleResult>
+                    {
+                        new FundingEligibilityRuleResult
+                        {
+                            RuleName = "TestRule",
+                            Passed = false,
+                            Fields = new List<string> { "Glh" }
+                        }
+                    }
+                });
             
             //Act
             await _service.ProcessQualificationsDataAsync();
@@ -239,7 +251,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .Where(w => w.QualificationId == insertedQualification.Id).Single();
             Assert.NotNull(insertedDiscussion);
             Assert.Equal("No Action Required", insertedDiscussion.ActionType.Description);
-            Assert.Equal(ImportReason.NoAction, insertedDiscussion.Notes);
+            Assert.Contains("Failed funding eligibility check on: Glh", insertedDiscussion.Notes);
         }
 
         [Fact]
@@ -258,10 +270,22 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
             _qualificationsServiceMock.Setup(s => s.GetStagedQualificationsBatchAsync(It.IsAny<int>(), 0)).ReturnsAsync(importRecords);
             _qualificationsServiceMock.Setup(s => s.GetStagedQualificationsBatchAsync(It.IsAny<int>(), 1)).ReturnsAsync(new List<QualificationDTO>());
-            _fundingEligibilityService.Setup(s => s.EligibleForFunding(It.Is<QualificationDTO>(q => q.QualificationNumberNoObliques == importRecord.QualificationNumberNoObliques)))
-                                        .Returns(true);
-            _fundingEligibilityService.Setup(s => s.DetermineFailureReason(It.Is<QualificationDTO>(q => q.QualificationNumberNoObliques == importRecord.QualificationNumberNoObliques)))
-                                        .Returns(ImportReason.NoAction);
+            _fundingEligibilityService
+                .Setup(s => s.EvaluateFundingEligibilityRules(It.IsAny<QualificationDTO>()))
+                .Returns(new FundingEligibilityEvaluation
+                {
+                    Rules = new List<FundingEligibilityRuleResult>
+                    {
+                        new FundingEligibilityRuleResult
+                        {
+                            RuleName = "GlhRule",
+                            Passed = true,
+                            Fields = new()
+                        }
+                    }
+                });
+            //_fundingEligibilityService.Setup(s => s.DetermineFailureReason(It.Is<QualificationDTO>(q => q.QualificationNumberNoObliques == importRecord.QualificationNumberNoObliques)))
+            //                            .Returns(ImportReason.NoAction);
 
             //Act
             await _service.ProcessQualificationsDataAsync();
@@ -311,11 +335,21 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
             _qualificationsServiceMock.Setup(s => s.GetStagedQualificationsBatchAsync(It.IsAny<int>(), 0)).ReturnsAsync(importRecords);
             _qualificationsServiceMock.Setup(s => s.GetStagedQualificationsBatchAsync(It.IsAny<int>(), 1)).ReturnsAsync(new List<QualificationDTO>());
-            _fundingEligibilityService.Setup(s => s.EligibleForFunding(It.Is<QualificationDTO>(q => q.QualificationNumberNoObliques == importRecord.QualificationNumberNoObliques)))
-                                        .Returns(false);
-            _fundingEligibilityService.Setup(s => s.DetermineFailureReason(It.Is<QualificationDTO>(q => q.QualificationNumberNoObliques == importRecord.QualificationNumberNoObliques)))
-                                        .Returns(ImportReason.NoAction);
-
+            _fundingEligibilityService
+                .Setup(s => s.EvaluateFundingEligibilityRules(It.IsAny<QualificationDTO>()))
+                .Returns(new FundingEligibilityEvaluation
+                {
+                    Rules = new List<FundingEligibilityRuleResult>
+                    {
+                        new FundingEligibilityRuleResult
+                        {
+                            RuleName = "GlhRule",
+                            Passed = false,
+                            Fields = { "Glh"}
+                        }
+                    }
+                });
+                
             //Act
             await _service.ProcessQualificationsDataAsync();
 
@@ -344,7 +378,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .Where(w => w.QualificationId == insertedQualification.Id).First();
             Assert.NotNull(insertedDiscussion);
             Assert.Equal("No Action Required", insertedDiscussion.ActionType.Description);
-            Assert.Equal(ImportReason.NoAction, insertedDiscussion.Notes);
+            Assert.Contains("Failed funding eligibility check on: Glh", insertedDiscussion.Notes);
         }
 
         [Fact]
@@ -361,7 +395,14 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
             var importRecord = this.CreateImportRecord(organisationId1, qualificationNumber1, qualificationName1);
             var importRecords = new List<QualificationDTO>() { importRecord };
-            ApplyMockBehaviour(importRecord, importRecords, eligibleForFunding: false, changesPresent: true, keyFieldsChanged: false);
+            ApplyMockBehaviour(importRecord, 
+                importRecords, 
+                currentlyEligible: false, 
+                previouslyEligible: false,
+                ruleFields: new List<string> { "Glh" },
+                changesPresent: true, 
+                changedFields: new List<string> { "Glh", "Status", "Date" },
+                keyFieldsChanged: false);
 
             //Act
             await _service.ProcessQualificationsDataAsync();
@@ -395,19 +436,61 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .FirstAsync();
             Assert.NotNull(insertedDiscussion);
             Assert.Equal("No Action Required", insertedDiscussion.ActionType.Description);
-            Assert.Equal("No Action required - Changed Qualification (Funding Criteria)", insertedDiscussion.Notes);
+            Assert.Contains("No Action required - Changed Qualification (Funding Criteria)", insertedDiscussion.Notes);
+            Assert.Contains("Failed funding eligibility check on: Glh", insertedDiscussion.Notes);
         }
 
-        private void ApplyMockBehaviour(QualificationDTO importRecord, List<QualificationDTO> importRecords, bool eligibleForFunding, bool changesPresent, bool keyFieldsChanged, string failureReason = ImportReason.NoAction)
+        private void ApplyMockBehaviour(QualificationDTO importRecord, 
+            List<QualificationDTO> importRecords, 
+            bool currentlyEligible,
+            bool previouslyEligible,
+            List<string> ruleFields,
+            bool changesPresent, 
+            bool keyFieldsChanged,
+            List<string> changedFields)
         {
             _qualificationsServiceMock.Setup(s => s.GetStagedQualificationsBatchAsync(It.IsAny<int>(), 0)).ReturnsAsync(importRecords);
             _qualificationsServiceMock.Setup(s => s.GetStagedQualificationsBatchAsync(It.IsAny<int>(), 1)).ReturnsAsync(new List<QualificationDTO>());
-            _fundingEligibilityService.Setup(s => s.EligibleForFunding(It.Is<QualificationDTO>(q => q.QualificationNumberNoObliques == importRecord.QualificationNumberNoObliques)))
-                                        .Returns(eligibleForFunding);
-            _fundingEligibilityService.Setup(s => s.DetermineFailureReason(It.Is<QualificationDTO>(q => q.QualificationNumberNoObliques == importRecord.QualificationNumberNoObliques)))
-                                        .Returns(failureReason);
-            _changeDetectionServiceMock.Setup(s => s.DetectChanges(It.IsAny<QualificationDTO>(), It.IsAny<QualificationVersions>(), It.IsAny<AwardingOrganisation>(), It.IsAny<Qualification>()))
-                                        .Returns(new ChangeDetectionService.DetectionResults() { ChangesPresent = changesPresent, Fields = new List<string>() { "Glh", "Status" }, KeyFieldsChanged = keyFieldsChanged });
+
+            _fundingEligibilityService
+                .Setup(s => s.CompareEligibilityRules(It.IsAny<QualificationDTO>(), It.IsAny<QualificationDTO>()))
+                .Returns((QualificationDTO prevDto, QualificationDTO currDto) =>
+                {
+                    FundingEligibilityEvaluation CreateEval(bool passed) => new()
+                    {
+                        Rules = new List<FundingEligibilityRuleResult>
+                        {
+                            new() { RuleName = "Rule1", Passed = passed, Fields = ruleFields }
+                        }
+                    };
+
+                    var previousEval = CreateEval(previouslyEligible);
+                    var currentEval = CreateEval(currentlyEligible);
+
+                    return new FundingEligibilityComparison
+                    {
+                        PreviousEvaluation = previousEval,
+                        CurrentEvaluation = currentEval,
+                        RuleComparisons = new List<FundingEligibilityRuleComparison>
+                        {
+                            new()
+                            {
+                                RuleName = "Rule1",
+                                PreviousPassed = previouslyEligible,
+                                CurrentPassed = currentlyEligible,
+                                Fields = ruleFields
+                            }
+                        }
+                    };
+                });
+
+            _changeDetectionServiceMock.Setup(s => s.DetectChanges(It.IsAny<QualificationDTO>(), It.IsAny<QualificationVersions>()))
+                                        .Returns(new ChangeDetectionService.DetectionResults() 
+                                        { 
+                                            ChangesPresent = changesPresent, 
+                                            Fields = changedFields, 
+                                            KeyFieldsChanged = keyFieldsChanged 
+                                        });
         }
 
         [Fact]
@@ -425,7 +508,15 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var importRecord = this.CreateImportRecord(organisationId1, qualificationNumber1, qualificationName1);
             var importRecords = new List<QualificationDTO>() { importRecord };
           
-            ApplyMockBehaviour(importRecord, importRecords, eligibleForFunding: true, changesPresent: true, keyFieldsChanged: false);
+            ApplyMockBehaviour(
+                importRecord, 
+                importRecords, 
+                previouslyEligible: true,
+                currentlyEligible: true, 
+                ruleFields : new(),
+                changesPresent: true, 
+                changedFields: new List<string> { "Column1" },
+                keyFieldsChanged: false);
 
             //Act
             await _service.ProcessQualificationsDataAsync();
@@ -477,7 +568,15 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var importRecord = this.CreateImportRecord(organisationId1, qualificationNumber1, qualificationName1);
             var importRecords = new List<QualificationDTO>() { importRecord };
 
-            ApplyMockBehaviour(importRecord, importRecords, eligibleForFunding: true, changesPresent: true, keyFieldsChanged: true);
+            ApplyMockBehaviour(
+                importRecord, 
+                importRecords, 
+                previouslyEligible: true,
+                currentlyEligible: true, 
+                ruleFields: new(),
+                changesPresent: true,
+                changedFields: new List<string> { "Title", "Ssa" },
+                keyFieldsChanged: true);
 
             //Act
             await _service.ProcessQualificationsDataAsync();
@@ -530,7 +629,15 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var importRecord = this.CreateImportRecord(organisationId1, qualificationNumber1, qualificationName1);
             var importRecords = new List<QualificationDTO>() { importRecord };
 
-            ApplyMockBehaviour(importRecord, importRecords, eligibleForFunding: true, changesPresent: true, keyFieldsChanged: false);
+            ApplyMockBehaviour(
+                importRecord, 
+                importRecords, 
+                previouslyEligible: true,
+                currentlyEligible: true, 
+                ruleFields: new(),
+                changesPresent: true,
+                changedFields: new List<string> { "Column 1" },
+                keyFieldsChanged: false);
 
             //Act
             await _service.ProcessQualificationsDataAsync();
@@ -588,7 +695,15 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var importRecord = this.CreateImportRecord(organisationId1, qualificationNumber1, qualificationName1);
             var importRecords = new List<QualificationDTO>() { importRecord };
 
-            ApplyMockBehaviour(importRecord, importRecords, eligibleForFunding: true, changesPresent: true, keyFieldsChanged: true);
+            ApplyMockBehaviour(
+                importRecord, 
+                importRecords, 
+                previouslyEligible: true,
+                currentlyEligible: true, 
+                ruleFields: new(),
+                changesPresent: true, 
+                changedFields: new List<string> { "Ssa" },
+                keyFieldsChanged: true);
 
             //Act
             await _service.ProcessQualificationsDataAsync();
@@ -646,7 +761,15 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var importRecord = this.CreateImportRecord(organisationId1, qualificationNumber1, qualificationName1);
             var importRecords = new List<QualificationDTO>() { importRecord };
 
-            ApplyMockBehaviour(importRecord, importRecords, eligibleForFunding: true, changesPresent: true, keyFieldsChanged: false);
+            ApplyMockBehaviour(
+                importRecord, 
+                importRecords, 
+                previouslyEligible: true,
+                currentlyEligible: true, 
+                ruleFields : new(),
+                changesPresent: true, 
+                changedFields: new List<string> { "Column1" },
+                keyFieldsChanged: false);
 
             //Act
             await _service.ProcessQualificationsDataAsync();
@@ -706,32 +829,16 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var importRecord = this.CreateImportRecord(organisationId, qualificationNumber, updatedTitle);
             var importRecords = new List<QualificationDTO>() { importRecord };
 
-            _qualificationsServiceMock.Setup(s => s.GetStagedQualificationsBatchAsync(It.IsAny<int>(), 0))
-                                       .ReturnsAsync(importRecords);
-            _qualificationsServiceMock.Setup(s => s.GetStagedQualificationsBatchAsync(It.IsAny<int>(), 1))
-                                       .ReturnsAsync(new List<QualificationDTO>());
-
-            // Set up funding eligibility (can be either eligible or not eligible)
-            _fundingEligibilityService.Setup(s => s.EligibleForFunding(It.Is<QualificationDTO>(q =>
-                                            q.QualificationNumberNoObliques == importRecord.QualificationNumberNoObliques)))
-                                      .Returns(false);
-
-            _fundingEligibilityService.Setup(s => s.DetermineFailureReason(It.Is<QualificationDTO>(q =>
-                                            q.QualificationNumberNoObliques == importRecord.QualificationNumberNoObliques)))
-                                      .Returns(ImportReason.NoAction);
-
-            // Important: Setup change detection to include "Title" in the changed fields
-            _changeDetectionServiceMock.Setup(s => s.DetectChanges(
-                                            It.IsAny<QualificationDTO>(),
-                                            It.IsAny<QualificationVersions>(),
-                                            It.IsAny<AwardingOrganisation>(),
-                                            It.IsAny<Qualification>()))
-                                      .Returns(new ChangeDetectionService.DetectionResults()
-                                      {
-                                          ChangesPresent = true,
-                                          Fields = new List<string>() { "Title", "Glh", "Status" }
-                                      });
-
+            ApplyMockBehaviour(
+                importRecord: importRecord,
+                importRecords: importRecords,
+                currentlyEligible: true,               
+                previouslyEligible: true,              
+                ruleFields: new List<string>(),        
+                changesPresent: true,                  
+                keyFieldsChanged: false,               
+                changedFields: new List<string> { "Title", "Glh", "Status" }
+            );
             //Act
             await _service.ProcessQualificationsDataAsync();
 
@@ -774,7 +881,15 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var importRecord = this.CreateImportRecord(organisationId1, qualificationNumber1, qualificationName1);
             var importRecords = new List<QualificationDTO>() { importRecord };
                         
-            ApplyMockBehaviour(importRecord, importRecords, eligibleForFunding: false, changesPresent: false, keyFieldsChanged: false, failureReason: ImportReason.NoAction);
+            ApplyMockBehaviour(
+                importRecord, 
+                importRecords, 
+                previouslyEligible: false,
+                currentlyEligible: false, 
+                ruleFields :new(),
+                changesPresent: false, 
+                changedFields: new (),
+                keyFieldsChanged: false);
             var initialVersionCount = await _dbContext.QualificationVersions.CountAsync();
             var initialDiscussionCount = await _dbContext.QualificationDiscussionHistory.CountAsync();
 
@@ -829,7 +944,15 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var importRecord = this.CreateImportRecord(organisationId1, qualificationNumber1, qualificationName1);
             var importRecords = new List<QualificationDTO>() { importRecord };
 
-            ApplyMockBehaviour(importRecord, importRecords, eligibleForFunding: true, changesPresent: true, keyFieldsChanged: true);
+            ApplyMockBehaviour(
+                importRecord, 
+                importRecords, 
+                previouslyEligible: true,
+                currentlyEligible: true, 
+                ruleFields: new(),
+                changesPresent: true,
+                changedFields: new List<string> { "Column1" },
+                keyFieldsChanged: true);
 
             //Act
             await _service.ProcessQualificationsDataAsync();
@@ -886,7 +1009,15 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var importRecord = this.CreateImportRecord(organisationId1, qualificationNumber1, qualificationName1);
             var importRecords = new List<QualificationDTO>() { importRecord };
 
-            ApplyMockBehaviour(importRecord, importRecords, eligibleForFunding: true, changesPresent: true, keyFieldsChanged: true);
+            ApplyMockBehaviour(
+                importRecord, 
+                importRecords, 
+                previouslyEligible: true,
+                currentlyEligible: true, 
+                ruleFields: new(),
+                changesPresent: true, 
+                changedFields: new List<string> { "Title" },
+                keyFieldsChanged: true);
 
             //Act
             await _service.ProcessQualificationsDataAsync();

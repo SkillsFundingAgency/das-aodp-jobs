@@ -1,71 +1,31 @@
 ﻿using AutoFixture;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
-using SFA.DAS.AODP.Common.Enum;
-using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Jobs.Services;
 using SFA.DAS.AODP.Models.Qualification;
+using Xunit;
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 {
     public class FundingEligibilityServiceTests
     {
         private readonly Mock<ILogger<FundingEligibilityService>> _mockLogger;
-        private FundingEligibilityService fundingEligibilityService;
-        private Fixture _fixture;
+        private readonly FundingEligibilityService _service;
 
         public FundingEligibilityServiceTests()
         {
             _mockLogger = new Mock<ILogger<FundingEligibilityService>>();
-            _fixture = new Fixture();
-            fundingEligibilityService = new FundingEligibilityService(_mockLogger.Object);
-        }
-
-        [Fact]
-        public void Constructor_ShouldInitializeActionTypeMap()
-        {
-            // Act
-            fundingEligibilityService = new FundingEligibilityService(_mockLogger.Object);
-
-            // Assert
-            Assert.NotNull(fundingEligibilityService);
-            
+            _service = new FundingEligibilityService(_mockLogger.Object);
         }
 
         [Fact]
         public void FundingEligibilityService_Eligible()
         {
             // Arrange
-            var qualification = _fixture.Build<QualificationDTO>()             
-                .With(w => w.OfferedInEngland, true)
-                .With(w => w.Glh, 5)
-                .With(w => w.Tqt, 10)
-                .With(w => w.OperationalStartDate, QualificationReference.MinOperationalDate)
-                .Create();
+            var qualification = CreateEligibleBaseline();
 
             // Act
-            var eligible = fundingEligibilityService.EligibleForFunding(qualification);
-
-            // Assert
-            Assert.True(eligible);
-        }
-
-        [Fact]
-        public void FundingEligibilityService_Eligible_OperationalStartDateIgnored()
-        {
-            // Arrange
-            var qualification = _fixture.Build<QualificationDTO>()
-                .With(w => w.OfferedInEngland, true)
-                .With(w => w.IntentionToSeekFundingInEngland,true)
-                .With(w => w.Glh, 5)
-                .With(w => w.Tqt, 10)
-                .With(w => w.OperationalStartDate, DateTime.MinValue)
-                .Create();
-
-            // Act
-            var eligible = fundingEligibilityService.EligibleForFunding(qualification);
+            var eligible = _service.EligibleForFunding(qualification);
 
             // Assert
             Assert.True(eligible);
@@ -75,34 +35,62 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         public void FundingEligibilityService_Ineligible_IntentionToSeekFundingInEngland()
         {
             // Arrange
-            var qualification = _fixture.Build<QualificationDTO>()
-                .With(w => w.OfferedInEngland, true)
-                .With(w => w.IntentionToSeekFundingInEngland, false)
-                .With(w => w.Glh, 5)
-                .With(w => w.Tqt, 10)
-                .With(w => w.OperationalStartDate, DateTime.MinValue)
-                .Create();
+            var qualification = CreateEligibleBaseline();
+            qualification.IntentionToSeekFundingInEngland = false;
 
             // Act
-            var eligible = fundingEligibilityService.EligibleForFunding(qualification);
+            var eligible = _service.EligibleForFunding(qualification);
 
             // Assert
             Assert.False(eligible);
         }
 
         [Fact]
+        public void FundingEligibilityService_Ineligible_OfferedInEngland()
+        {
+            var qualification = CreateEligibleBaseline();
+            qualification.OfferedInEngland = false;
+
+            Assert.False(_service.EligibleForFunding(qualification));
+        }
+
+        [Fact]
+        public void FundingEligibilityService_Ineligible_EndPointAssessmentType()
+        {
+            var qualification = CreateEligibleBaseline();
+            qualification.Type = QualificationReference.EndPointAssessment;
+
+            Assert.False(_service.EligibleForFunding(qualification));
+        }
+
+        [Fact]
+        public void FundingEligibilityService_Ineligible_TqtZero()
+        {
+            var qualification = CreateEligibleBaseline();
+            qualification.Tqt = 0;
+
+            Assert.False(_service.EligibleForFunding(qualification));
+        }
+
+        [Fact]
+        public void FundingEligibilityService_Ineligible_GlhZero()
+        {
+            var qualification = CreateEligibleBaseline();
+            qualification.Glh = 0;
+
+            Assert.False(_service.EligibleForFunding(qualification));
+        }
+
+        [Fact]
         public void FundingEligibilityService_Ineligible_GLH_Larger()
         {
             // Arrange
-            var qualification = _fixture.Build<QualificationDTO>()
-                .With(w => w.OfferedInEngland, true)
-                .With(w => w.Glh, 5)
-                .With(w => w.Tqt, 1)
-                .With(w => w.OperationalStartDate, DateTime.MinValue)
-                .Create();
+            var qualification = CreateEligibleBaseline();
+            qualification.Glh = 10;
+            qualification.Tqt = 1;
 
             // Act
-            var eligible = fundingEligibilityService.EligibleForFunding(qualification);
+            var eligible = _service.EligibleForFunding(qualification);
 
             // Assert
             Assert.False(eligible);
@@ -123,16 +111,11 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         public void FundingEligibilityService_Ineligible_MatchingTitle(string title)
         {
             // Arrange
-            var qualification = _fixture.Build<QualificationDTO>()
-                .With(w => w.Title, $"SomeText{title}EndText")
-                .With(w => w.OfferedInEngland, true)
-                .With(w => w.Glh, 5)
-                .With(w => w.Tqt, 10)
-                .With(w => w.OperationalStartDate, QualificationReference.MinOperationalDate)           
-                .Create();
+            var qualification = CreateEligibleBaseline();
+            qualification.Title = $"prefix {title} suffix";
 
             // Act
-            var eligible = fundingEligibilityService.EligibleForFunding(qualification);
+            var eligible = _service.EligibleForFunding(qualification);
 
             // Assert
             Assert.False(eligible);
@@ -150,58 +133,27 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         public void FundingEligibilityService_Ineligible_MatchingShortTitle(string shortTitle)
         {
             // Arrange
-            var qualification = _fixture.Build<QualificationDTO>()
-                .With(w => w.Title, $"SomeText{shortTitle}EndText")
-                .With(w => w.OfferedInEngland, true)
-                .With(w => w.Glh, 5)
-                .With(w => w.Tqt, 10)
-                .With(w => w.OperationalStartDate, QualificationReference.MinOperationalDate)
-                .Create();
+            var qualification = CreateEligibleBaseline();
+            qualification.Title = $"prefix {shortTitle} suffix";
 
             // Act
-            var eligible = fundingEligibilityService.EligibleForFunding(qualification);
+            var eligible = _service.EligibleForFunding(qualification);
 
             // Assert
             Assert.False(eligible);
         }
 
-        [Fact]
-        public void FundingEligibilityService_RejectReason_NoAction()
+        private QualificationDTO CreateEligibleBaseline()
         {
-            // Arrange
-            var qualification = _fixture.Build<QualificationDTO>()
-                .With(w => w.OfferedInEngland, true)
-                .With(w => w.Glh, 5)
-                .With(w => w.Tqt, 10)
-                .With(w => w.OperationalStartDate, QualificationReference.MinOperationalDate)
-                .Create();
-
-            // Act
-            var reason = fundingEligibilityService.DetermineFailureReason(qualification);
-
-            // Assert
-            Assert.Equal(ImportReason.NoAction, reason);
-        }
-
-        [Fact]
-        public void FundingEligibilityService_RejectReason_NoHLG()
-        {
-            // Arrange
-            var qualification = _fixture.Build<QualificationDTO>()
-                .With(w => w.OfferedInEngland, true)
-                .With(w => w.Glh, 0)
-                .With(w => w.Tqt, 0)
-                .With(w => w.OperationalStartDate, QualificationReference.MinOperationalDate)
-                .Create();
-
-            // Act
-            var reason = fundingEligibilityService.DetermineFailureReason(qualification);
-
-            // Assert
-            Assert.Equal(ImportReason.NoGLHOrTQT, reason);
+            return new QualificationDTO
+            {
+                OfferedInEngland = true,
+                IntentionToSeekFundingInEngland = true,
+                Type = "GeneralQualification", 
+                Title = "Valid Qualification Title", 
+                Glh = 10,
+                Tqt = 20
+            };
         }
     }
 }
-
-
-
