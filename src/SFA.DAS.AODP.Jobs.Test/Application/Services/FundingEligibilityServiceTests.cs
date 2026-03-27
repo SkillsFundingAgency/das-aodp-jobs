@@ -53,11 +53,31 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         }
 
         [Fact]
-        public void FundingEligibilityService_Ineligible_minoperationaldate()
+        public void FundingEligibilityService_Eligible_OperationalStartDateIgnored()
         {
             // Arrange
             var qualification = _fixture.Build<QualificationDTO>()
                 .With(w => w.OfferedInEngland, true)
+                .With(w => w.IntentionToSeekFundingInEngland,true)
+                .With(w => w.Glh, 5)
+                .With(w => w.Tqt, 10)
+                .With(w => w.OperationalStartDate, DateTime.MinValue)
+                .Create();
+
+            // Act
+            var eligible = fundingEligibilityService.EligibleForFunding(qualification);
+
+            // Assert
+            Assert.True(eligible);
+        }
+
+        [Fact]
+        public void FundingEligibilityService_Ineligible_IntentionToSeekFundingInEngland()
+        {
+            // Arrange
+            var qualification = _fixture.Build<QualificationDTO>()
+                .With(w => w.OfferedInEngland, true)
+                .With(w => w.IntentionToSeekFundingInEngland, false)
                 .With(w => w.Glh, 5)
                 .With(w => w.Tqt, 10)
                 .With(w => w.OperationalStartDate, DateTime.MinValue)

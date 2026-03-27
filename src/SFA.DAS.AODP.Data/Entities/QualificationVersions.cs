@@ -123,6 +123,8 @@ public partial class QualificationVersions
 
     public string? Name { get; set; }
 
+    public bool? IntentionToSeekFundingInEngland { get; set; }
+
     public virtual LifecycleStage LifecycleStage { get; set; } = null!;
 
     public virtual AwardingOrganisation Organisation { get; set; } = null!;
