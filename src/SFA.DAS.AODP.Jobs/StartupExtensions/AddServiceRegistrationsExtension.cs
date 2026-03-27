@@ -1,4 +1,5 @@
 ﻿using SFA.DAS.AODP.Jobs.Functions.Abstractions;
+using SFA.DAS.AODP.Models.Config;
 
 namespace SFA.DAS.AODP.Jobs.StartupExtensions;
 

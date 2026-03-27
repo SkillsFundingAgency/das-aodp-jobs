@@ -121,7 +121,11 @@ public partial class QualificationVersions
 
     public bool? EligibleForFunding { get; set; }
 
+    public string? EligibleForFundingChangeReason { get; set; }
+
     public string? Name { get; set; }
+
+    public bool? IntentionToSeekFundingInEngland { get; set; }
 
     public virtual LifecycleStage LifecycleStage { get; set; } = null!;
 
