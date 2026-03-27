@@ -12,16 +12,15 @@ namespace SFA.DAS.AODP.Jobs.Models.Jobs.FundingEligibility
 
         public bool IsEligible => Rules.All(r => r.Passed);
 
-        public List<FundingEligibilityRuleResult> FailedRules =>
-            Rules.Where(r => !r.Passed).ToList();
+        public IEnumerable<FundingEligibilityRuleResult> FailedRules =>
+            Rules.Where(r => !r.Passed);
 
-        public List<string> FailedFields =>
+        public IEnumerable<string> GetFailedFields() =>
             FailedRules
                 .SelectMany(r => r.Fields)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
+                .Distinct(StringComparer.OrdinalIgnoreCase);
 
-        public string FailedFieldsCsv =>
-            string.Join(", ", FailedFields ?? Enumerable.Empty<string>());
+        public string GetFailedFieldsCsv() =>
+            string.Join(", ", GetFailedFields());
     }
 }

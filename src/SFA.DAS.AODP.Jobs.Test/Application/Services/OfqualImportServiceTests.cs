@@ -809,7 +809,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .FirstAsync();
             Assert.NotNull(insertedDiscussion);
             Assert.Equal("Action Required", insertedDiscussion.ActionType.Description);
-            Assert.Equal("Decision Required - Changed Qualification (Minor Fields)", insertedDiscussion.Notes);
+            Assert.Equal("On Hold - Changed Qualification (Minor Fields)", insertedDiscussion.Notes);
         }
 
         [Fact]

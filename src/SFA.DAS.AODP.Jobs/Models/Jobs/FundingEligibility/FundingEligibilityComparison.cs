@@ -16,13 +16,12 @@ namespace SFA.DAS.AODP.Jobs.Models.Jobs.FundingEligibility
 
         public List<FundingEligibilityRuleComparison> RuleComparisons { get; set; } = new();
 
-        public List<FundingEligibilityRuleComparison> ChangedRules =>
-            RuleComparisons.Where(r => r.OutcomeChanged).ToList();
+        public IEnumerable<FundingEligibilityRuleComparison> ChangedRules =>
+            RuleComparisons.Where(r => r.OutcomeChanged);
 
-        public List<string> ContributingFields =>
+        public IEnumerable<string> GetContributingFields() =>
             ChangedRules
                 .SelectMany(r => r.Fields)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
+                .Distinct(StringComparer.OrdinalIgnoreCase);
     }
 }

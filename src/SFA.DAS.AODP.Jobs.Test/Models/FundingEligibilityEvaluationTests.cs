@@ -33,7 +33,7 @@ namespace SFA.DAS.AODP.Jobs.UnitTests.Models
             {
                 Assert.True(eligible);
                 Assert.Empty(evaluation.FailedRules);
-                Assert.Empty(evaluation.FailedFields);
+                Assert.Empty(evaluation.GetFailedFields());
             });
         }
 
@@ -51,7 +51,7 @@ namespace SFA.DAS.AODP.Jobs.UnitTests.Models
             };
 
             // Act
-            var csv = evaluation.FailedFieldsCsv;
+            var csv = evaluation.GetFailedFieldsCsv();
 
             // Assert
             Assert.Equal($"{FieldA}, {FieldB}", csv);

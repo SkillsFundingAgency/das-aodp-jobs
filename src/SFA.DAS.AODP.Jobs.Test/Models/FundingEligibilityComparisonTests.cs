@@ -48,7 +48,7 @@ namespace SFA.DAS.AODP.Jobs.UnitTests.Models
             Assert.Multiple(() =>
             {
                 Assert.True(changed);
-                Assert.Equal(new[] { FieldA }, comparison.ContributingFields);
+                Assert.Equal(new[] { FieldA }, comparison.GetContributingFields());
             });
         }
     }

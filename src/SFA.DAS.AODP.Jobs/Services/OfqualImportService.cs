@@ -239,6 +239,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                             var actionTypeId = Guid.Empty;
 
                             var fundingEligibilityResult = _fundingEligibilityService.EvaluateFundingEligibilityRules(importRecord);
+                            var failedFieldsCsv = fundingEligibilityResult.GetFailedFieldsCsv();
 
                             if (fundingEligibilityResult.IsEligible)
                             {
@@ -255,8 +256,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 processStatusName = Common.Enum.ProcessStatus.NoActionRequired;
                                 actionTypeId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired);
 
-                                notes = fundingEligibilityResult.FailedFields.Any()
-                                    ? $"Failed funding eligibility check on: {fundingEligibilityResult.FailedFieldsCsv}"
+                                notes = !string.IsNullOrWhiteSpace(failedFieldsCsv)
+                                    ? $"Failed funding eligibility check on: {failedFieldsCsv}"
                                     : "Failed funding eligibility check";
                             }
 
@@ -291,7 +292,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 versionFieldChange,
                                 fundingEligibilityResult.IsEligible,
                                 1,
-                                fundingEligibilityResult.FailedFieldsCsv);
+                                failedFieldsCsv);
 
                             newQualificationVersions.Add(newQualificationVersion);
 
@@ -334,18 +335,18 @@ namespace SFA.DAS.AODP.Jobs.Services
                             var reviewRequired = detectionResults.KeyFieldsChanged || eligibilityChanged;
 
                             // Build notes and determine process status
-                            var currentFailedFieldsCsv = fundingEligibilityComparison.CurrentEvaluation.FailedFieldsCsv;
+                            var currentFailedFieldsCsv = fundingEligibilityComparison.CurrentEvaluation.GetFailedFieldsCsv();
+                            
+                            var failedEligibilityNoteSuffix = !eligibleForFunding
+                               ? $"Failed funding eligibility check on: {currentFailedFieldsCsv}"
+                               : string.Empty;
 
-                            var fundingEligibilityChangeReason = eligibilityChanged
-                                ? string.Join(", ", fundingEligibilityComparison.ContributingFields)
+                            var eligibilityChangedReasonCsv = eligibilityChanged
+                                ? string.Join(", ", fundingEligibilityComparison.GetContributingFields())
                                 : string.Empty;
 
                             var eligibilityChangedNoteSuffix = eligibilityChanged
-                                ? $"Eligibility changed due to fields: {fundingEligibilityChangeReason}"
-                                : string.Empty;
-
-                            var failedEligibilityNote = !eligibleForFunding
-                                ? $"Failed funding eligibility check on: {currentFailedFieldsCsv}"
+                                ? $"Eligibility changed due to fields: {eligibilityChangedReasonCsv}"
                                 : string.Empty;
 
                             if (eligibilityChanged)
@@ -369,13 +370,18 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired);
 
                                 noteLines.Add("No Action required - Changed Qualification (Funding Criteria)");
-                                noteLines.Add(failedEligibilityNote);
+
+                                if (!string.IsNullOrWhiteSpace(failedEligibilityNoteSuffix))
+                                {
+                                    noteLines.Add(failedEligibilityNoteSuffix);
+                                }
                             }
                             else
                             {
+                                var previousStatusName = previousQualificationVersion.ProcessStatus.Name;
 
-                                if ((previousQualificationVersion.ProcessStatus.Name == Common.Enum.ProcessStatus.Approved) ||
-                                        (previousQualificationVersion.ProcessStatus.Name == Common.Enum.ProcessStatus.Rejected))
+                                if ((previousStatusName == Common.Enum.ProcessStatus.Approved) ||
+                                        (previousStatusName == Common.Enum.ProcessStatus.Rejected))
                                 {
 
                                     if (reviewRequired)
@@ -394,24 +400,17 @@ namespace SFA.DAS.AODP.Jobs.Services
                                     lifecycleStageName = LifeCycleStage.Changed;
                                     actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.ActionRequired);                                    
                                 }
-                                else if ((previousQualificationVersion.ProcessStatus.Name == Common.Enum.ProcessStatus.OnHold) ||
-                                        (previousQualificationVersion.ProcessStatus.Name == Common.Enum.ProcessStatus.DecisionRequired))
+                                else if ((previousStatusName == Common.Enum.ProcessStatus.OnHold) ||
+                                        (previousStatusName == Common.Enum.ProcessStatus.DecisionRequired))
                                 {
-                                    // Keep the current status as only changed dont matter when on hold/decision required
-                                    processStatusName = previousQualificationVersion.ProcessStatus.Name;
+                                    // Keep the current status 
+                                    processStatusName = previousStatusName;
                                     lifecycleStageName = previousQualificationVersion.LifecycleStage.Name;
-                                    if (reviewRequired)
-                                    {
+ 
+                                    var notePrefix = previousStatusName == Common.Enum.ProcessStatus.OnHold ? "On Hold" : "Decision Required";
+                                    var noteSuffix = reviewRequired ? "(Key Fields)" : "(Minor Fields)";
+                                    noteLines.Add($"{notePrefix} - Changed Qualification {noteSuffix}");
 
-                                        noteLines.Add(previousQualificationVersion.ProcessStatus.Name == Common.Enum.ProcessStatus.OnHold ?
-                                            "On Hold - Changed Qualification (Key Fields)" :
-                                            "Decision Required - Changed Qualification (Key Fields)");                                        
-                                    }
-                                    else
-                                    {
-                                        noteLines.Add("Decision Required - Changed Qualification (Minor Fields)");
-                                    }
-                                    
                                     actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.ActionRequired);
                                 }
                                 else
@@ -423,7 +422,11 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 }
                                 
                             }
-                            noteLines.Add(eligibilityChangedNoteSuffix);
+
+                            if (!string.IsNullOrWhiteSpace(eligibilityChangedNoteSuffix))
+                            {
+                                noteLines.Add(eligibilityChangedNoteSuffix);
+                            }
 
                             var versionFieldChange = new VersionFieldChanges
                             {
@@ -454,7 +457,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 versionFieldChange,
                                 eligibleForFunding,
                                 existingVersion.Version + 1,
-                                fundingEligibilityChangeReason);
+                                eligibilityChangedReasonCsv);
 
                             newQualificationVersions.Add(newQualificationVersion);
 
