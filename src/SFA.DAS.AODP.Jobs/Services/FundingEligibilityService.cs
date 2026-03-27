@@ -16,20 +16,6 @@ namespace SFA.DAS.AODP.Jobs.Services
             _logger = logger;
         }
 
-        public bool EligibleForFunding(QualificationDTO qualification)
-        {
-            var evaluation = EvaluateFundingEligibilityRules(qualification);
-
-            _logger.LogInformation(
-                "[{Service}] -> [{Method}] -> Qualification {QualificationNumber} {EligibilityMessage}",
-                nameof(FundingEligibilityService),
-                nameof(EligibleForFunding),
-                qualification.QualificationNumberNoObliques,
-                evaluation.IsEligible ? "eligible for funding" : "NOT eligible for funding");
-
-            return evaluation.IsEligible;
-        }
-
         public FundingEligibilityEvaluation EvaluateFundingEligibilityRules(QualificationDTO qualification)
         {
             var rules = new List<FundingEligibilityRuleResult>

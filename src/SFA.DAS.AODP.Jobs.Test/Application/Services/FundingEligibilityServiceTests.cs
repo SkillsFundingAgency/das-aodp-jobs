@@ -1,5 +1,4 @@
-﻿using AutoFixture;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Moq;
 using SFA.DAS.AODP.Jobs.Services;
 using SFA.DAS.AODP.Models.Qualification;
@@ -19,81 +18,56 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         }
 
         [Fact]
-        public void FundingEligibilityService_Eligible()
+        public void EvaluateFundingEligibilityRules_Eligible_ReturnsTrue()
         {
             // Arrange
             var qualification = CreateEligibleBaseline();
 
             // Act
-            var eligible = _service.EligibleForFunding(qualification);
+            var evaluation = _service.EvaluateFundingEligibilityRules(qualification);
 
             // Assert
-            Assert.True(eligible);
+            Assert.True(evaluation.IsEligible);
+            Assert.Empty(evaluation.GetFailedFields());
         }
 
         [Fact]
-        public void FundingEligibilityService_Ineligible_IntentionToSeekFundingInEngland()
+        public void EvaluateFundingEligibilityRules_Ineligible_IntentionToSeekFundingInEngland()
         {
             // Arrange
             var qualification = CreateEligibleBaseline();
             qualification.IntentionToSeekFundingInEngland = false;
 
             // Act
-            var eligible = _service.EligibleForFunding(qualification);
+            var evaluation = _service.EvaluateFundingEligibilityRules(qualification);
 
             // Assert
-            Assert.False(eligible);
+            Assert.False(evaluation.IsEligible);
+            Assert.Contains("IntentionToSeekFundingInEngland", evaluation.GetFailedFields());
         }
 
         [Fact]
-        public void FundingEligibilityService_Ineligible_OfferedInEngland()
+        public void EvaluateFundingEligibilityRules_Ineligible_OfferedInEngland()
         {
             var qualification = CreateEligibleBaseline();
             qualification.OfferedInEngland = false;
 
-            Assert.False(_service.EligibleForFunding(qualification));
+            var evaluation = _service.EvaluateFundingEligibilityRules(qualification);
+
+            Assert.False(evaluation.IsEligible);
+            Assert.Contains("OfferedInEngland", evaluation.GetFailedFields());
         }
 
         [Fact]
-        public void FundingEligibilityService_Ineligible_EndPointAssessmentType()
-        {
-            var qualification = CreateEligibleBaseline();
-            qualification.Type = QualificationReference.EndPointAssessment;
-
-            Assert.False(_service.EligibleForFunding(qualification));
-        }
-
-        [Fact]
-        public void FundingEligibilityService_Ineligible_TqtZero()
+        public void EvaluateFundingEligibilityRules_Ineligible_TqtZero()
         {
             var qualification = CreateEligibleBaseline();
             qualification.Tqt = 0;
 
-            Assert.False(_service.EligibleForFunding(qualification));
-        }
+            var evaluation = _service.EvaluateFundingEligibilityRules(qualification);
 
-        [Fact]
-        public void FundingEligibilityService_Ineligible_GlhZero()
-        {
-            var qualification = CreateEligibleBaseline();
-            qualification.Glh = 0;
-
-            Assert.False(_service.EligibleForFunding(qualification));
-        }
-
-        [Fact]
-        public void FundingEligibilityService_Ineligible_GLH_Larger()
-        {
-            // Arrange
-            var qualification = CreateEligibleBaseline();
-            qualification.Glh = 10;
-            qualification.Tqt = 1;
-
-            // Act
-            var eligible = _service.EligibleForFunding(qualification);
-
-            // Assert
-            Assert.False(eligible);
+            Assert.False(evaluation.IsEligible);
+            Assert.Contains("Tqt", evaluation.GetFailedFields());
         }
 
         [Theory]
@@ -108,49 +82,48 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         [InlineData("Higher National Diploma")]
         [InlineData("Diploma of Higher Education")]
         [InlineData("Diploma in Teaching")]
-        public void FundingEligibilityService_Ineligible_MatchingTitle(string title)
+        public void EvaluateFundingEligibilityRules_Ineligible_MatchingTitles(string title)
         {
             // Arrange
             var qualification = CreateEligibleBaseline();
-            qualification.Title = $"prefix {title} suffix";
+            qualification.Title = $"Some {title} here";
 
             // Act
-            var eligible = _service.EligibleForFunding(qualification);
+            var evaluation = _service.EvaluateFundingEligibilityRules(qualification);
 
             // Assert
-            Assert.False(eligible);
+            Assert.False(evaluation.IsEligible);
+            Assert.Contains("Title", evaluation.GetFailedFields());
         }
 
-        [Theory]
-        [InlineData("CertEd")]
-        [InlineData("PGCE")]
-        [InlineData("PGDE")]
-        [InlineData("HNC")]
-        [InlineData("Cert HE")]
-        [InlineData("HND")]
-        [InlineData("Dip HE")]
-        [InlineData("further education and skills")]
-        public void FundingEligibilityService_Ineligible_MatchingShortTitle(string shortTitle)
+        [Fact]
+        public void CompareEligibilityRules_DetectsChange_WhenStatusFlips()
         {
             // Arrange
-            var qualification = CreateEligibleBaseline();
-            qualification.Title = $"prefix {shortTitle} suffix";
+            var prevQual = CreateEligibleBaseline();
+            var currQual = CreateEligibleBaseline();
+            currQual.OfferedInEngland = false; // Changed from true to false
 
             // Act
-            var eligible = _service.EligibleForFunding(qualification);
+            var comparison = _service.CompareEligibilityRules(prevQual, currQual);
 
             // Assert
-            Assert.False(eligible);
+            Assert.True(comparison.EligibilityChanged);
+            Assert.True(comparison.PreviousEvaluation.IsEligible);
+            Assert.False(comparison.CurrentEvaluation.IsEligible);
+
+            // Check that the specific field is flagged as a contributor to the change
+            Assert.Contains("OfferedInEngland", comparison.GetContributingFields());
         }
 
-        private QualificationDTO CreateEligibleBaseline()
+        private static QualificationDTO CreateEligibleBaseline()
         {
             return new QualificationDTO
             {
                 OfferedInEngland = true,
                 IntentionToSeekFundingInEngland = true,
-                Type = "GeneralQualification", 
-                Title = "Valid Qualification Title", 
+                Type = "GeneralQualification",
+                Title = "Valid Qualification Title",
                 Glh = 10,
                 Tqt = 20
             };

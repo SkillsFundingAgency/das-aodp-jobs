@@ -302,7 +302,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                         else
                         {
                             // We have a previous version
-                            var previousQualificationVersion = _applicationDbContext.QualificationVersions
+                            var previousQualificationVersion = await _applicationDbContext.QualificationVersions
                                                                 .Include(i => i.Qualification)
                                                                 .Include(i => i.Organisation)
                                                                 .Include(i => i.ProcessStatus)
@@ -310,7 +310,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                                                 .OrderByDescending(o => o.Version)
                                                                 .AsNoTracking()
                                                                 .Where(w => w.QualificationId == qualificationId)
-                                                                .FirstOrDefault() ?? throw new Exception($"[{nameof(OfqualImportService)}] -> [{nameof(ProcessQualificationsDataAsync)}] -> Unable to location qualification with id {qualificationId} while processing changes");
+                                                                .FirstOrDefaultAsync() ?? throw new Exception($"[{nameof(OfqualImportService)}] -> [{nameof(ProcessQualificationsDataAsync)}] -> Unable to location qualification with id {qualificationId} while processing changes");
 
                             // Detect changes and eligibility differences
                             var previousQualificationDto = MapToQualificationDto(previousQualificationVersion);
@@ -451,8 +451,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                             var newQualificationVersion = CreateQualificationVersion(
                                 qualificationId,
                                 organisationId,
-                                lifecycleStageName,
-                                processStatusName,
+                                lifecycleStageName!,
+                                processStatusName!,
                                 importRecord,
                                 versionFieldChange,
                                 eligibleForFunding,
