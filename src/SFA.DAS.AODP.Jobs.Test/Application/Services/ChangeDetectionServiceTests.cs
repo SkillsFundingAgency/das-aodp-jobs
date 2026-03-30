@@ -36,7 +36,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
             // Assert
             Assert.False(result.ChangesPresent);
-            Assert.Empty(result.Fields);
+            Assert.Empty(result.ChangedFields);
             Assert.False(result.KeyFieldsChanged);
         }
 
@@ -55,7 +55,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
             // Assert
             Assert.True(result.ChangesPresent);
-            Assert.Contains("Status", result.Fields);
+            Assert.Contains("Status", result.ChangedFields);
             Assert.False(result.KeyFieldsChanged);
         }
 
@@ -74,7 +74,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
             // Assert
             Assert.True(result.ChangesPresent);
-            Assert.Contains("Level", result.Fields);
+            Assert.Contains("Level", result.ChangedFields);
             Assert.True(result.KeyFieldsChanged);
         }
 
@@ -96,8 +96,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
             // Assert
             Assert.True(result.ChangesPresent);
-            Assert.Contains("Level", result.Fields);
-            Assert.Contains("Tqt", result.Fields);
+            Assert.Contains("Level", result.ChangedFields);
+            Assert.Contains("Tqt", result.ChangedFields);
             Assert.True(result.KeyFieldsChanged);
         }
 
@@ -128,7 +128,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
             // Assert
             Assert.False(result.ChangesPresent);
-            Assert.Empty(result.Fields);
+            Assert.Empty(result.ChangedFields);
             Assert.False(result.KeyFieldsChanged);
         }
 
@@ -147,7 +147,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
             // Assert
             Assert.True(result.ChangesPresent);
-            Assert.Contains("Title", result.Fields);
+            Assert.Contains("Title", result.ChangedFields);
             Assert.True(result.KeyFieldsChanged);
         }
 
@@ -169,8 +169,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
             // Assert
             Assert.True(result.ChangesPresent);
-            Assert.DoesNotContain("Title", result.Fields);   
-            Assert.Contains("Level", result.Fields);
+            Assert.DoesNotContain("Title", result.ChangedFields);   
+            Assert.Contains("Level", result.ChangedFields);
             Assert.True(result.KeyFieldsChanged);
         }
 
@@ -189,7 +189,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
             // Assert
             Assert.False(result.ChangesPresent);
-            Assert.Empty(result.Fields);
+            Assert.Empty(result.ChangedFields);
             Assert.False(result.KeyFieldsChanged);
         }
 

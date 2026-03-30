@@ -13,13 +13,16 @@ namespace SFA.DAS.AODP.Jobs.Services
             public DetectionResults()
             {
                 ChangesPresent = false;
-                Fields = new List<string>();
+                ChangedFields = new List<string>();
                 KeyFieldsChanged = false;
             }
 
             public bool ChangesPresent { get; set; }
-            public List<string> Fields { get; set; }
+            public List<string> ChangedFields { get; set; }
             public bool KeyFieldsChanged { get; set; }
+            public string ChangedFieldsCsv => ChangedFields != null && ChangedFields.Count > 0
+                ? string.Join(", ", ChangedFields.Distinct(StringComparer.OrdinalIgnoreCase))
+                : string.Empty;
         }
 
         private readonly List<string> _keyFields;
@@ -116,11 +119,11 @@ namespace SFA.DAS.AODP.Jobs.Services
             fields = fields.AppendIf(newRecord.UiLastUpdatedDate != qualificationVersion.UiLastUpdatedDate, "UiLastUpdatedDate");
             fields = fields.AppendIf(newRecord.IntentionToSeekFundingInEngland != qualificationVersion.IntentionToSeekFundingInEngland, "IntentionToSeekFundingInEngland");
 
-            var results = new DetectionResults() { Fields = fields, ChangesPresent = fields.Any() };
+            var results = new DetectionResults() { ChangedFields = fields, ChangesPresent = fields.Any() };
 
             if (results.ChangesPresent)
             {
-                var keyFieldsChanged = results.Fields.Intersect(_keyFields).ToList();
+                var keyFieldsChanged = results.ChangedFields.Intersect(_keyFields).ToList();
                 results.KeyFieldsChanged = keyFieldsChanged.Count > 0;
             }
 

@@ -10,5 +10,9 @@ namespace SFA.DAS.AODP.Jobs.Interfaces
             QualificationDTO qualification);
         public FundingEligibilityComparison CompareEligibilityRules(
             QualificationDTO previousQualification, QualificationDTO currentQualification);
+
+        public FundingEligibilityComparison CompareFundingEvaluations(
+            FundingEligibilityEvaluation previousEval,
+            FundingEligibilityEvaluation currentEval);
     }
 }

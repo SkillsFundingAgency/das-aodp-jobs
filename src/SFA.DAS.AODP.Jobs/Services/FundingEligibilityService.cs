@@ -113,6 +113,30 @@ namespace SFA.DAS.AODP.Jobs.Services
             };
         }
 
+        public FundingEligibilityComparison CompareFundingEvaluations(
+            FundingEligibilityEvaluation previousEval,
+            FundingEligibilityEvaluation currentEval)
+        {
+            var ruleComparisons = previousEval.Rules.Select((prevRule, index) =>
+            {
+                var currRule = currentEval.Rules[index];
+                return new FundingEligibilityRuleComparison
+                {
+                    RuleName = prevRule.RuleName,
+                    PreviousPassed = prevRule.Passed,
+                    CurrentPassed = currRule.Passed,
+                    Fields = prevRule.Fields.Union(currRule.Fields, StringComparer.OrdinalIgnoreCase).ToList()
+                };
+            }).ToList();
+
+            return new FundingEligibilityComparison
+            {
+                PreviousEvaluation = previousEval,
+                CurrentEvaluation = currentEval,
+                RuleComparisons = ruleComparisons
+            };
+        }
+
         private static FundingEligibilityRuleResult CreateRuleResult(
             string ruleName,
             bool passed,
