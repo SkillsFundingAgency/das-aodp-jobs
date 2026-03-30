@@ -2,11 +2,6 @@
 using SFA.DAS.AODP.Jobs.Models;
 using SFA.DAS.AODP.Jobs.Models.Jobs.FundingEligibility;
 using SFA.DAS.AODP.Models.Qualification;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
 using static SFA.DAS.AODP.Jobs.Services.ChangeDetectionService;
 
 namespace SFA.DAS.AODP.Jobs.Services
@@ -15,25 +10,23 @@ namespace SFA.DAS.AODP.Jobs.Services
     {
         private readonly IFundingEligibilityService _fundingService;
         private readonly IChangeDetectionService _changeService;
-        private readonly IReferenceDataService _referenceDataService;
 
         public QualificationProcessor(
             IFundingEligibilityService fundingService,
-            IChangeDetectionService changeService,
-            IReferenceDataService referenceDataService)
+            IChangeDetectionService changeService)
         {
             _fundingService = fundingService;
             _changeService = changeService;
-            _referenceDataService = referenceDataService;
         }
 
-        public ProcessingResult? Process(
+        public QualificationProcessorResult? Process(
             QualificationDTO importRecord,
             QualificationVersions? existingVersion,
             Guid qualificationId,
             Guid organisationId,
             bool hasActiveApps,
-            bool hasActiveFunding)
+            bool hasActiveFunding,
+            QualificationProcessorSettings settings)
         {
             var incomingEval = _fundingService.EvaluateFundingEligibilityRules(importRecord);
             DetectionResults? changes = null;
@@ -57,20 +50,17 @@ namespace SFA.DAS.AODP.Jobs.Services
                 hasKeyChanges = changes.Value.KeyFieldsChanged;
             }
 
-            var actionReqId = _referenceDataService.GetProcessStatusId(Common.Enum.ProcessStatus.DecisionRequired);
-            var noActionId = _referenceDataService.GetProcessStatusId(Common.Enum.ProcessStatus.NoActionRequired);
 
             var outcome = DetermineOutcome(
-                existingVersion?.ProcessStatus?.Name,
-                existingVersion?.LifecycleStage?.Name,
+                existingVersion?.ProcessStatusId,
+                existingVersion?.LifecycleStageId,
                 existingVersion == null,
                 incomingEval.IsEligible,
                 hasKeyChanges,
                 eligibilityChanged,
                 hasActiveApps,
                 hasActiveFunding,
-                actionReqId,
-                noActionId
+                settings
             );
 
             return BuildResult(
@@ -84,71 +74,140 @@ namespace SFA.DAS.AODP.Jobs.Services
             );
         }
 
-        private ProcessingOutcome DetermineOutcome(
-            string? existingStatus,
-            string? existingStage,
+        private QualificationProcessorOutcome DetermineOutcome(
+            Guid? existingStatusId,
+            Guid? existingStageId,
             bool isNew,
             bool isEligible,
             bool hasKeyChanges,
             bool eligibilityChanged,
             bool hasActiveApps,
             bool hasActiveFunding,
-            Guid actionReqId,
-            Guid noActionId)
+            QualificationProcessorSettings settings)
         {
+            // 1. New Record Logic
             if (isNew)
             {
                 if (isEligible)
                 {
-                    return new ProcessingOutcome(Common.Enum.ProcessStatus.DecisionRequired, LifeCycleStage.New, actionReqId, "New Qualification (Eligible) - Decision Required", true, false, false, false);
+                    return new QualificationProcessorOutcome(
+                        StatusId: settings.DecisionRequiredStatusId,
+                        StageId: settings.NewLifecycleStageId,
+                        ActionId: settings.ActionTypeDecisionId,
+                        BaseNote: "New Qualification (Eligible) - Decision Required",
+                        IncludeFieldChanges: true,
+                        IncludeEligibilityReasons: false,
+                        ReviewRequired: true,
+                        HasFunding: false
+                    );
                 }
 
                 bool isConflict = hasActiveApps;
-                return new ProcessingOutcome(
-                    isConflict ? Common.Enum.ProcessStatus.DecisionRequired : Common.Enum.ProcessStatus.NoActionRequired,
-                    LifeCycleStage.New,
-                    isConflict ? actionReqId : noActionId,
-                    isConflict ? "New Qualification (Ineligible) - Qualification has Active Applications" : "New Qualification (Ineligible) - No Action Required",
-                    isConflict, false, true, false
+                return new QualificationProcessorOutcome(
+                    StatusId: isConflict ? settings.DecisionRequiredStatusId : settings.NoActionRequiredStatusId,
+                    StageId: settings.NewLifecycleStageId,
+                    ActionId: isConflict ? settings.ActionTypeDecisionId : settings.ActionTypeNoActionId,
+                    BaseNote: isConflict ? "New Qualification (Ineligible) - Qualification has Active Applications" : "New Qualification (Ineligible) - No Action Required",
+                    IncludeFieldChanges: isConflict,
+                    IncludeEligibilityReasons: true,
+                    ReviewRequired: isConflict,
+                    HasFunding: false
                 );
             }
 
+            // 2. Ineligible Logic
             if (!isEligible)
             {
                 bool hasUsageConflict = hasActiveApps || hasActiveFunding;
                 if (hasUsageConflict || eligibilityChanged)
                 {
-                    var reasons = new List<string>();
-                    if (hasActiveApps) reasons.Add("Active Applications");
-                    if (hasActiveFunding) reasons.Add("Active Funding");
-                    if (eligibilityChanged) reasons.Add("Eligibility Status Change");
-
-                    return new ProcessingOutcome(Common.Enum.ProcessStatus.DecisionRequired, LifeCycleStage.Changed, actionReqId, $"Review Required: {string.Join(", ", reasons)}.", true, true, true, hasActiveFunding);
+                    return new QualificationProcessorOutcome(
+                        StatusId: settings.DecisionRequiredStatusId,
+                        StageId: settings.ChangedLifecycleStageId,
+                        ActionId: settings.ActionTypeDecisionId,
+                        BaseNote: "Review Required: Eligibility/Conflict detected.",
+                        IncludeFieldChanges: true,
+                        IncludeEligibilityReasons: true,
+                        ReviewRequired: true,
+                        HasFunding: hasActiveFunding
+                    );
                 }
 
-                return new ProcessingOutcome(Common.Enum.ProcessStatus.NoActionRequired, LifeCycleStage.Changed, noActionId, "Ineligible - No status change or active conflicts.", false, true, true, false);
+                return new QualificationProcessorOutcome(
+                    StatusId: settings.NoActionRequiredStatusId,
+                    StageId: settings.ChangedLifecycleStageId,
+                    ActionId: settings.ActionTypeNoActionId,
+                    BaseNote: "Ineligible - No status change or active conflicts.",
+                    IncludeFieldChanges: false,
+                    IncludeEligibilityReasons: true,
+                    ReviewRequired: false,
+                    HasFunding: false
+                );
             }
 
-            return existingStatus switch
+            // 3. Approved/Rejected Logic
+            if (existingStatusId == settings.ApprovedStatusId || existingStatusId == settings.RejectedStatusId)
             {
-                Common.Enum.ProcessStatus.Approved or Common.Enum.ProcessStatus.Rejected =>
-                    (hasKeyChanges || eligibilityChanged)
-                        ? new ProcessingOutcome(Common.Enum.ProcessStatus.DecisionRequired, LifeCycleStage.Changed, actionReqId, "Key Fields or Eligibility Changed - Re-review required", true, true, eligibilityChanged, hasActiveFunding)
-                        : new ProcessingOutcome(existingStatus, LifeCycleStage.Changed, noActionId, "Minor Data Update - No Review Needed", false, true, false, hasActiveFunding),
+                if (hasKeyChanges || eligibilityChanged)
+                {
+                    return new QualificationProcessorOutcome(
+                        StatusId: settings.DecisionRequiredStatusId,
+                        StageId: settings.ChangedLifecycleStageId,
+                        ActionId: settings.ActionTypeDecisionId,
+                        BaseNote: "Key Fields or Eligibility Changed - Re-review required",
+                        IncludeFieldChanges: true,
+                        IncludeEligibilityReasons: true,
+                        ReviewRequired: true,
+                        HasFunding: hasActiveFunding
+                    );
+                }
 
-                Common.Enum.ProcessStatus.OnHold or Common.Enum.ProcessStatus.DecisionRequired =>
-                    new ProcessingOutcome(existingStatus, existingStage ?? LifeCycleStage.Changed, actionReqId, $"Update to Record In-Review ({(hasKeyChanges ? "Major" : "Minor")})", true, true, hasKeyChanges || eligibilityChanged, hasActiveFunding),
+                return new QualificationProcessorOutcome(
+                    StatusId: existingStatusId.Value,
+                    StageId: settings.ChangedLifecycleStageId,
+                    ActionId: settings.ActionTypeNoActionId,
+                    BaseNote: "Minor Data Update - No Review Needed",
+                    IncludeFieldChanges: false,
+                    IncludeEligibilityReasons: true,
+                    ReviewRequired: false,
+                    HasFunding: hasActiveFunding
+                );
+            }
 
-                _ => new ProcessingOutcome(Common.Enum.ProcessStatus.DecisionRequired, LifeCycleStage.Changed, actionReqId, "Status Unknown - Review Required", true, true, true, hasActiveFunding)
-            };
+            // 4. In-Review Logic
+            if (existingStatusId == settings.OnHoldStatusId || existingStatusId == settings.DecisionRequiredStatusId)
+            {
+                return new QualificationProcessorOutcome(
+                    StatusId: existingStatusId.Value,
+                    StageId: existingStageId ?? settings.ChangedLifecycleStageId,
+                    ActionId: settings.ActionTypeDecisionId,
+                    BaseNote: $"Update to Record In-Review ({(hasKeyChanges ? "Major" : "Minor")})",
+                    IncludeFieldChanges: true,
+                    IncludeEligibilityReasons: true,
+                    ReviewRequired: hasKeyChanges || eligibilityChanged,
+                    HasFunding: hasActiveFunding
+                );
+            }
+
+            // 5. Default Fallback
+            return new QualificationProcessorOutcome(
+                StatusId: settings.DecisionRequiredStatusId,
+                StageId: settings.ChangedLifecycleStageId,
+                ActionId: settings.ActionTypeDecisionId,
+                BaseNote: "Status Unknown - Review Required",
+                IncludeFieldChanges: true,
+                IncludeEligibilityReasons: true,
+                ReviewRequired: true,
+                HasFunding: hasActiveFunding
+            );
         }
 
-        private ProcessingResult BuildResult(
+        private QualificationProcessorResult BuildResult(
             QualificationDTO import,
             QualificationVersions? existing,
             Guid qId,
             Guid oId,
-            ProcessingOutcome outcome,
+            QualificationProcessorOutcome outcome,
             DetectionResults? changes,
             FundingEligibilityEvaluation eval)
         {
@@ -181,7 +240,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                 UserDisplayName = "OFQUAL Import"
             };
 
-            var newVersion = CreateQualificationVersion(qId, oId, outcome.Stage, outcome.Status, import, fieldChange, eval.IsEligible, versionNumber, eval.GetFailedFieldsCsv());
+            var newVersion = CreateQualificationVersion(qId, oId, outcome.StageId, outcome.StatusId, import, fieldChange, eval.IsEligible, versionNumber, eval.GetFailedFieldsCsv());
 
             QualificationFundingTracker? tracker = null;
             if (existing != null && outcome.HasFunding)
@@ -189,7 +248,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                 tracker = new QualificationFundingTracker { OldVersionId = existing.Id, NewVersionId = newVersion.Id };
             }
 
-            return new ProcessingResult(newVersion, discussion, fieldChange, tracker);
+            return new QualificationProcessorResult(newVersion, discussion, fieldChange, tracker);
         }
 
         private static QualificationDTO MapToQualificationDto(QualificationVersions version)
@@ -206,12 +265,10 @@ namespace SFA.DAS.AODP.Jobs.Services
             };
         }
 
-        private QualificationVersions CreateQualificationVersion(Guid qualificationId, Guid organisationId, string lifecycleStage,
-            string processStatus, QualificationDTO qualificationData, VersionFieldChanges versionFieldChange, bool eligibleForFunding,
+        private QualificationVersions CreateQualificationVersion(Guid qualificationId, Guid organisationId, Guid lifecycleStageId,
+            Guid processStatusId, QualificationDTO qualificationData, VersionFieldChanges versionFieldChange, bool eligibleForFunding,
             int? version, string eligibilityChangeReason)
         {
-            var processStatusId = _referenceDataService.GetProcessStatusId(processStatus);
-            var lifecycleStageId = _referenceDataService.GetLifecycleStageId(lifecycleStage);
 
             return new QualificationVersions
             {

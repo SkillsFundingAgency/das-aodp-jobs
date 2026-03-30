@@ -7,7 +7,7 @@ using System.Text;
 namespace SFA.DAS.AODP.Jobs.Models.Jobs.FundingEligibility
 {
     [ExcludeFromCodeCoverage]
-    public record ProcessingResult(
+    public record QualificationProcessorResult(
         QualificationVersions NewVersion,
         QualificationDiscussionHistory Discussion,
         VersionFieldChanges FieldChange,

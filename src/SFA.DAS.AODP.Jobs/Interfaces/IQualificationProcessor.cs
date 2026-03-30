@@ -7,11 +7,12 @@ namespace SFA.DAS.AODP.Jobs.Interfaces;
 
 public interface IQualificationProcessor
 {
-    ProcessingResult? Process(
+    QualificationProcessorResult? Process(
         QualificationDTO importRecord,
         QualificationVersions? existingVersion,
         Guid qualificationId,
         Guid organisationId,
         bool hasActiveApps,
-        bool hasActiveFunding);
+        bool hasActiveFunding,
+        QualificationProcessorSettings settings);
 }

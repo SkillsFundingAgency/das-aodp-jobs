@@ -5,9 +5,9 @@ using System.Text;
 namespace SFA.DAS.AODP.Jobs.Models.Jobs.FundingEligibility
 {
     [ExcludeFromCodeCoverage]
-    public record ProcessingOutcome(
-        string Status,
-        string Stage,
+    public record QualificationProcessorOutcome(
+        Guid StatusId,
+        Guid StageId,
         Guid ActionId,
         string BaseNote,
         bool ReviewRequired,

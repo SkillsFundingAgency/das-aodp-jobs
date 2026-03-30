@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 using Newtonsoft.Json;
 using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Jobs.Models;
+using SFA.DAS.AODP.Jobs.Models.Jobs.FundingEligibility;
 
 namespace SFA.DAS.AODP.Jobs.Services
 {
@@ -151,6 +152,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                     .Where(f => !f.EndDate.HasValue || f.EndDate.Value > today)
                     .Select(f => f.QualificationVersionId);
 
+                var settings = await LoadProcessorSettingsAsync();
+
                 while (processedCount < 1000000)
                 {
                     var importRecords = await _qualificationsService.GetStagedQualificationsBatchAsync(batchSize, processedCount);
@@ -243,7 +246,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                             qualificationId,
                             organisationId,
                             hasActiveApps, 
-                            hasActiveFunding
+                            hasActiveFunding,
+                            settings
                         );
 
                         if (result != null)
@@ -324,8 +328,35 @@ namespace SFA.DAS.AODP.Jobs.Services
             return fundingFeedbacks;
         }
 
-        
+        private async Task<QualificationProcessorSettings> LoadProcessorSettingsAsync()
+        {
+            // Fetch all required reference data in one go to minimize DB roundtrips
+            var statuses = await _applicationDbContext.ProcessStatus.ToListAsync();
+            var lifeCycles = await _applicationDbContext.LifecycleStages.ToListAsync();
+            var actionTypes = await _applicationDbContext.ActionType.ToListAsync();
 
-        
+            return new QualificationProcessorSettings
+            {
+                // Map Process Status IDs
+                NoActionRequiredStatusId = statuses.First(s => s.Name == Common.Enum.ProcessStatus.NoActionRequired).Id,
+                DecisionRequiredStatusId = statuses.First(s => s.Name == Common.Enum.ProcessStatus.DecisionRequired).Id,
+
+                ApprovedStatusId = statuses.First(s => s.Name == Common.Enum.ProcessStatus.Approved).Id,
+                RejectedStatusId = statuses.First(s => s.Name == Common.Enum.ProcessStatus.Rejected).Id,
+                OnHoldStatusId = statuses.First(s => s.Name == Common.Enum.ProcessStatus.OnHold).Id,
+
+                // Map Lifecycle Stage IDs
+                NewLifecycleStageId = lifeCycles.First(l => l.Name == Common.Enum.LifeCycleStage.New).Id,
+                ChangedLifecycleStageId = lifeCycles.First(l => l.Name == Common.Enum.LifeCycleStage.Changed).Id,
+
+                // Map Action Type IDs (Used for Discussion History)
+                ActionTypeDecisionId = actionTypes.First(a => a.Description == "Action Required").Id,
+                ActionTypeNoActionId = actionTypes.First(a => a.Description == "No Action Required").Id,
+
+
+            };
+        }
+
+
     }
 }

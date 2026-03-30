@@ -1,25 +1,11 @@
 ﻿using AutoFixture;
-using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.AspNetCore.Components;
-using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using Moq;
-using RestEase;
-using SFA.DAS.AODP.Common.Enum;
-using SFA.DAS.AODP.Data;
-using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Data.Repositories.Jobs;
 using SFA.DAS.AODP.Infrastructure.Context;
-using SFA.DAS.AODP.Infrastructure.Interfaces;
-using SFA.DAS.AODP.Infrastructure.Services;
-using SFA.DAS.AODP.Jobs.Client;
-using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Jobs.Models;
 using SFA.DAS.AODP.Jobs.Models.Jobs.FundingEligibility;
-using SFA.DAS.AODP.Jobs.Services;
 using SFA.DAS.AODP.Models.Qualification;
 using System.Collections.Specialized;
 using System.Text.Json;
@@ -209,8 +195,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             _qualificationsServiceMock.Setup(s => s.GetStagedQualificationsBatchAsync(It.IsAny<int>(), It.Is<int>(i => i > 0)))
                 .ReturnsAsync(new List<QualificationDTO>());
 
-            _qualificationProcessorMock.Setup(p => p.Process(It.IsAny<QualificationDTO>(), null, It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<bool>()))
-                .Returns((QualificationDTO dto, QualificationVersions v, Guid qId, Guid oId, bool b1, bool b2) =>
+            _qualificationProcessorMock.Setup(p => p.Process(It.IsAny<QualificationDTO>(), null, It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<QualificationProcessorSettings>()))
+                .Returns((QualificationDTO dto, QualificationVersions v, Guid qId, Guid oId, bool b1, bool b2, QualificationProcessorSettings s) =>
                 {
                     var newVersion = new QualificationVersions
                     {
@@ -235,7 +221,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                         ActionTypeId = ActionTypeNoAction
                     };
 
-                    return new ProcessingResult(newVersion, discussion, new VersionFieldChanges { Id = Guid.NewGuid() }, null);
+                    return new QualificationProcessorResult(newVersion, discussion, new VersionFieldChanges { Id = Guid.NewGuid() }, null);
                 });
 
             // Act
@@ -265,8 +251,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             _qualificationsServiceMock.Setup(s => s.GetStagedQualificationsBatchAsync(It.IsAny<int>(), It.Is<int>(i => i > 0)))
                 .ReturnsAsync(new List<QualificationDTO>());
 
-            _qualificationProcessorMock.Setup(p => p.Process(It.IsAny<QualificationDTO>(), null, It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<bool>()))
-                .Returns((QualificationDTO dto, QualificationVersions v, Guid qId, Guid oId, bool b1, bool b2) =>
+            _qualificationProcessorMock.Setup(p => p.Process(It.IsAny<QualificationDTO>(), null, It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<QualificationProcessorSettings>()))
+                .Returns((QualificationDTO dto, QualificationVersions v, Guid qId, Guid oId, bool b1, bool b2, QualificationProcessorSettings s) =>
                 {
                     var newVersion = new QualificationVersions
                     {
@@ -292,7 +278,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                         ActionTypeId = ActionTypeDecision
                     };
 
-                    return new ProcessingResult(newVersion, discussion, new VersionFieldChanges { Id = Guid.NewGuid() }, null);
+                    return new QualificationProcessorResult(newVersion, discussion, new VersionFieldChanges { Id = Guid.NewGuid() }, null);
                 });
 
             // Act
@@ -323,8 +309,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             _qualificationsServiceMock.Setup(s => s.GetStagedQualificationsBatchAsync(It.IsAny<int>(), It.Is<int>(i => i > 0)))
                 .ReturnsAsync(new List<QualificationDTO>());
 
-            _qualificationProcessorMock.Setup(p => p.Process(It.IsAny<QualificationDTO>(), null, It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<bool>()))
-                .Returns((QualificationDTO dto, QualificationVersions v, Guid qId, Guid oId, bool b1, bool b2) =>
+            _qualificationProcessorMock.Setup(p => p.Process(It.IsAny<QualificationDTO>(), null, It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<QualificationProcessorSettings>()))
+                .Returns((QualificationDTO dto, QualificationVersions v, Guid qId, Guid oId, bool b1, bool b2, QualificationProcessorSettings s) =>
                 {
                     var newVersion = new QualificationVersions
                     {
@@ -342,7 +328,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                         Type = "Type"
                     };
 
-                    return new ProcessingResult(newVersion, new QualificationDiscussionHistory { QualificationId = qId, Notes = "Failed funding eligibility check on: Glh", ActionTypeId = ActionTypeNoAction }, new VersionFieldChanges { Id = Guid.NewGuid() }, null);
+                    return new QualificationProcessorResult(newVersion, new QualificationDiscussionHistory { QualificationId = qId, Notes = "Failed funding eligibility check on: Glh", ActionTypeId = ActionTypeNoAction }, new VersionFieldChanges { Id = Guid.NewGuid() }, null);
                 });
 
             // Act
@@ -409,8 +395,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             _qualificationsServiceMock.Setup(s => s.GetStagedQualificationsBatchAsync(It.IsAny<int>(), 0)).ReturnsAsync(importRecords);
             _qualificationsServiceMock.Setup(s => s.GetStagedQualificationsBatchAsync(It.IsAny<int>(), It.Is<int>(i => i > 0))).ReturnsAsync(new List<QualificationDTO>());
 
-            _qualificationProcessorMock.Setup(p => p.Process(It.IsAny<QualificationDTO>(), It.IsAny<QualificationVersions>(), It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<bool>()))
-                .Returns((QualificationDTO dto, QualificationVersions existingV, Guid qId, Guid oId, bool b1, bool b2) =>
+            _qualificationProcessorMock.Setup(p => p.Process(It.IsAny<QualificationDTO>(), It.IsAny<QualificationVersions>(), It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<QualificationProcessorSettings>()))
+                .Returns((QualificationDTO dto, QualificationVersions existingV, Guid qId, Guid oId, bool b1, bool b2, QualificationProcessorSettings s) =>
                 {
                     if (!changesPresent && previouslyEligible == currentlyEligible) return null;
 
@@ -437,20 +423,17 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
                     QualificationFundingTracker tracker = null;
                     if (existingV != null && currentlyEligible && previouslyEligible && !keyFieldsChanged)
+                    {
                         tracker = new QualificationFundingTracker { OldVersionId = existingV.Id, NewVersionId = newVersion.Id };
+                    }
 
-                    return new ProcessingResult(newVersion, new QualificationDiscussionHistory { Id = Guid.NewGuid(), QualificationId = qId, Notes = keyFieldsChanged ? "Decision Required - Changed Qualification" : "Minor Changes", ActionTypeId = ActionTypeDecision }, fieldChanges, tracker);
+                    return new QualificationProcessorResult(newVersion, new QualificationDiscussionHistory { Id = Guid.NewGuid(), QualificationId = qId, Notes = keyFieldsChanged ? "Decision Required - Changed Qualification" : "Minor Changes", ActionTypeId = ActionTypeDecision }, fieldChanges, tracker);
                 });
         }
 
         #endregion
 
-        //-----------------------------------new above, old below
-
-
-
-
-        
+      
 
         
 
@@ -492,8 +475,9 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 existingQual.Id,
                 It.IsAny<Guid>(),
                 It.IsAny<bool>(),
-                It.IsAny<bool>()))
-                .Returns((QualificationDTO dto, QualificationVersions v, Guid qId, Guid oId, bool b1, bool b2) =>
+                It.IsAny<bool>()
+                , It.IsAny<QualificationProcessorSettings>()))
+                .Returns((QualificationDTO dto, QualificationVersions v, Guid qId, Guid oId, bool b1, bool b2, QualificationProcessorSettings s) =>
                 {
                     var fieldChanges = new VersionFieldChanges
                     {
@@ -529,7 +513,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                         ActionTypeId = ActionTypeNoAction
                     };
 
-                    return new ProcessingResult(newVersion, discussion, fieldChanges, null);
+                    return new QualificationProcessorResult(newVersion, discussion, fieldChanges, null);
                 });
 
             // Act
@@ -629,8 +613,10 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 qualification.Id,
                 It.IsAny<Guid>(),
                 It.IsAny<bool>(),
-                It.IsAny<bool>()))
-                .Returns((QualificationDTO dto, QualificationVersions v, Guid qId, Guid oId, bool b1, bool b2) =>
+                It.IsAny<bool>(),
+                It.IsAny<QualificationProcessorSettings>()
+                ))
+                .Returns((QualificationDTO dto, QualificationVersions v, Guid qId, Guid oId, bool b1, bool b2, QualificationProcessorSettings s) =>
                 {
                     var fieldChanges = new VersionFieldChanges
                     {
@@ -667,7 +653,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                     };
 
                     // CRITICAL: tracker is NULL so funding is NOT copied
-                    return new ProcessingResult(newVersion, discussion, fieldChanges, null);
+                    return new QualificationProcessorResult(newVersion, discussion, fieldChanges, null);
                 });
 
             // Act
@@ -726,19 +712,20 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
             // Mock the Processor for an existing record update where funding should be tracked/copied
             _qualificationProcessorMock.Setup(p => p.Process(
-                It.IsAny<QualificationDTO>(),
-                It.Is<QualificationVersions>(v => v.Id == oldVersion.Id),
-                qualification.Id,
-                It.IsAny<Guid>(),
-                It.IsAny<bool>(),
-                It.IsAny<bool>()))
-                .Returns((QualificationDTO dto, QualificationVersions v, Guid qId, Guid oId, bool b1, bool b2) =>
+                It.IsAny<QualificationDTO>(),                             // 1. importRecord
+                It.Is<QualificationVersions>(v => v.Id == oldVersion.Id), // 2. existingVersion
+                qualification.Id,                                         // 3. qualificationId
+                It.IsAny<Guid>(),                                         // 4. organisationId
+                It.IsAny<bool>(),                                         // 5. hasActiveApps
+                It.IsAny<bool>(),                                         // 6. hasActiveFunding
+                It.IsAny<QualificationProcessorSettings>()                // 7. settings
+                ))
+                .Returns((QualificationDTO dto, QualificationVersions v, Guid qId, Guid oId, bool b1, bool b2, QualificationProcessorSettings s) =>
                 {
                     var fieldChanges = new VersionFieldChanges
                     {
                         Id = Guid.NewGuid(),
                         QualificationVersionNumber = 2,
-                        // Ensure this is not null if the service calls .Any() or .Split() on it
                         ChangedFieldNames = "Column1"
                     };
 
@@ -752,14 +739,12 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                         ProcessStatusId = v.ProcessStatusId,
                         VersionFieldChanges = fieldChanges,
                         VersionFieldChangesId = fieldChanges.Id,
-                        // EF Core Required Fields
                         EqfLevel = "3",
                         Level = "3",
                         Ssa = "1.1",
                         Status = "Active",
                         SubLevel = "N/A",
                         Type = "Type",
-                        // Check if your entity requires these to be non-null for the Service logic
                         Name = dto.Title,
                         EligibleForFundingChangeReason = string.Empty
                     };
@@ -778,7 +763,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                         NewVersionId = newVersion.Id
                     };
 
-                    return new ProcessingResult(newVersion, discussion, fieldChanges, tracker);
+                    return new QualificationProcessorResult(newVersion, discussion, fieldChanges, tracker);
                 });
 
             // Act
@@ -853,8 +838,6 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
         private OfqualImportService CreateImportServiceWithMocks()
         {            
-            _actionTypeServiceMock = new Mock<IReferenceDataService>().Object;
-
             return new OfqualImportService(
                 _loggerMock.Object,
                 _configurationMock.Object,
@@ -868,9 +851,6 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
         private OfqualImportService CreateImportServiceWithDb()
         {
-            var refdatalogger = new Mock<ILogger<ReferenceDataService>>();
-            _actionTypeServiceMock = new ReferenceDataService(refdatalogger.Object, _dbContext);
-
             return new OfqualImportService(
                 _loggerMock.Object,
                 _configurationMock.Object,
