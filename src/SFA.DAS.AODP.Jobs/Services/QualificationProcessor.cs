@@ -8,6 +8,16 @@ namespace SFA.DAS.AODP.Jobs.Services
 {
     public class QualificationProcessor : IQualificationProcessor
     {
+        private sealed record OutcomeContext(
+            Guid? ExistingStatusId,
+            Guid? ExistingStageId,
+            bool IsNew,
+            bool IsEligible,
+            bool HasKeyChanges,
+            bool EligibilityChanged,
+            bool HasActiveApps,
+            bool HasActiveFunding);
+
         private readonly IFundingEligibilityService _fundingService;
         private readonly IChangeDetectionService _changeService;
 
@@ -49,19 +59,17 @@ namespace SFA.DAS.AODP.Jobs.Services
                 eligibilityChanged = comparison.EligibilityChanged;
                 hasKeyChanges = changes.Value.KeyFieldsChanged;
             }
+                var context = new OutcomeContext(
+                    existingVersion?.ProcessStatusId,
+                    existingVersion?.LifecycleStageId,
+                    existingVersion == null,
+                    incomingEval.IsEligible,
+                    hasKeyChanges,
+                    eligibilityChanged,
+                    hasActiveApps,
+                    hasActiveFunding);
 
-
-            var outcome = DetermineOutcome(
-                existingVersion?.ProcessStatusId,
-                existingVersion?.LifecycleStageId,
-                existingVersion == null,
-                incomingEval.IsEligible,
-                hasKeyChanges,
-                eligibilityChanged,
-                hasActiveApps,
-                hasActiveFunding,
-                settings
-            );
+            var outcome = DetermineOutcome(context,settings);
 
             return BuildResult(
                 importRecord,
@@ -74,132 +82,143 @@ namespace SFA.DAS.AODP.Jobs.Services
             );
         }
 
-        private QualificationProcessorOutcome DetermineOutcome(
-            Guid? existingStatusId,
-            Guid? existingStageId,
-            bool isNew,
-            bool isEligible,
-            bool hasKeyChanges,
-            bool eligibilityChanged,
-            bool hasActiveApps,
-            bool hasActiveFunding,
+        private static QualificationProcessorOutcome DetermineOutcome(
+            OutcomeContext context,
             QualificationProcessorSettings settings)
         {
-            // 1. New Record Logic
-            if (isNew)
-            {
-                if (isEligible)
-                {
-                    return new QualificationProcessorOutcome(
-                        StatusId: settings.DecisionRequiredStatusId,
-                        StageId: settings.NewLifecycleStageId,
-                        ActionId: settings.ActionTypeDecisionId,
-                        BaseNote: "New Qualification (Eligible) - Decision Required",
-                        IncludeFieldChanges: true,
-                        IncludeEligibilityReasons: false,
-                        ReviewRequired: true,
-                        HasFunding: false
-                    );
-                }
+            var isApprovedOrRejected = 
+                context.ExistingStatusId == settings.ApprovedStatusId ||
+                context.ExistingStatusId == settings.RejectedStatusId;
 
-                bool isConflict = hasActiveApps;
+            var isInReview =
+                context.ExistingStatusId == settings.OnHoldStatusId ||
+                context.ExistingStatusId == settings.DecisionRequiredStatusId;
+
+            var hasUsageConflict = context.HasActiveApps || context.HasActiveFunding;
+            var requiresRereview = context.HasKeyChanges || context.EligibilityChanged;
+
+            //New and eligible
+            if (context.IsNew && context.IsEligible)
+            {
                 return new QualificationProcessorOutcome(
-                    StatusId: isConflict ? settings.DecisionRequiredStatusId : settings.NoActionRequiredStatusId,
+                    StatusId: settings.DecisionRequiredStatusId,
                     StageId: settings.NewLifecycleStageId,
-                    ActionId: isConflict ? settings.ActionTypeDecisionId : settings.ActionTypeNoActionId,
-                    BaseNote: isConflict ? "New Qualification (Ineligible) - Qualification has Active Applications" : "New Qualification (Ineligible) - No Action Required",
-                    IncludeFieldChanges: isConflict,
-                    IncludeEligibilityReasons: true,
-                    ReviewRequired: isConflict,
-                    HasFunding: false
-                );
+                    ActionId: settings.ActionTypeDecisionId,
+                    BaseNote: "New Qualification (Eligible) - Decision Required",
+                    IncludeFieldChanges: true,
+                    IncludeEligibilityReasons: false,
+                    ReviewRequired: true,
+                    HasFunding: false);
             }
 
-            // 2. Ineligible Logic
-            if (!isEligible)
+            //New and not eligible
+            if (context.IsNew )
             {
-                bool hasUsageConflict = hasActiveApps || hasActiveFunding;
-                if (hasUsageConflict || eligibilityChanged)
-                {
-                    return new QualificationProcessorOutcome(
-                        StatusId: settings.DecisionRequiredStatusId,
-                        StageId: settings.ChangedLifecycleStageId,
-                        ActionId: settings.ActionTypeDecisionId,
-                        BaseNote: "Review Required: Eligibility/Conflict detected.",
-                        IncludeFieldChanges: true,
-                        IncludeEligibilityReasons: true,
-                        ReviewRequired: true,
-                        HasFunding: hasActiveFunding
-                    );
-                }
+                var hasConflict = context.HasActiveApps;
 
+                var statusId = hasConflict
+                    ? settings.DecisionRequiredStatusId
+                    : settings.NoActionRequiredStatusId;
+
+                var actionId = hasConflict
+                    ? settings.ActionTypeDecisionId
+                    : settings.ActionTypeNoActionId;
+
+                var baseNote = hasConflict
+                    ? "New Qualification (Ineligible) - Decision required - Qualification has Active Applications"
+                    : "New Qualification (Ineligible) - No action required";
+
+                return new QualificationProcessorOutcome(
+                    StatusId: statusId,
+                    StageId: settings.NewLifecycleStageId,
+                    ActionId: actionId,
+                    BaseNote: baseNote,
+                    IncludeFieldChanges: hasConflict,
+                    IncludeEligibilityReasons: true,
+                    ReviewRequired: hasConflict,
+                    HasFunding: false);
+            }
+
+            //Changed and not eligible (conflict or eligibility changed)
+            if (!context.IsEligible && (hasUsageConflict || context.EligibilityChanged))
+            {
+                return new QualificationProcessorOutcome(
+                    StatusId: settings.DecisionRequiredStatusId,
+                    StageId: settings.ChangedLifecycleStageId,
+                    ActionId: settings.ActionTypeDecisionId,
+                    BaseNote: "Changed Qualification (Ineligible) - Decision required - Conflict or Eligibility Change",
+                    IncludeFieldChanges: true,
+                    IncludeEligibilityReasons: true,
+                    ReviewRequired: true,
+                    HasFunding: context.HasActiveFunding);
+            }
+
+            //Changed and not eligible (no conflict or eligibility change)
+            if (!context.IsEligible)
+            {
                 return new QualificationProcessorOutcome(
                     StatusId: settings.NoActionRequiredStatusId,
                     StageId: settings.ChangedLifecycleStageId,
                     ActionId: settings.ActionTypeNoActionId,
-                    BaseNote: "Ineligible - No status change or active conflicts.",
+                    BaseNote: "Changed Qualification (Ineligible) - No action required.",
                     IncludeFieldChanges: false,
                     IncludeEligibilityReasons: true,
                     ReviewRequired: false,
-                    HasFunding: false
-                );
+                    HasFunding: false);
             }
 
-            // 3. Approved/Rejected Logic
-            if (existingStatusId == settings.ApprovedStatusId || existingStatusId == settings.RejectedStatusId)
+            //Changed and eligible (Approved or Rejected + Key Changes or Eligibility Change)
+            if (isApprovedOrRejected && requiresRereview)
             {
-                if (hasKeyChanges || eligibilityChanged)
-                {
-                    return new QualificationProcessorOutcome(
-                        StatusId: settings.DecisionRequiredStatusId,
-                        StageId: settings.ChangedLifecycleStageId,
-                        ActionId: settings.ActionTypeDecisionId,
-                        BaseNote: "Key Fields or Eligibility Changed - Re-review required",
-                        IncludeFieldChanges: true,
-                        IncludeEligibilityReasons: true,
-                        ReviewRequired: true,
-                        HasFunding: hasActiveFunding
-                    );
-                }
-
                 return new QualificationProcessorOutcome(
-                    StatusId: existingStatusId.Value,
+                    StatusId: settings.DecisionRequiredStatusId,
                     StageId: settings.ChangedLifecycleStageId,
-                    ActionId: settings.ActionTypeNoActionId,
-                    BaseNote: "Minor Data Update - No Review Needed",
-                    IncludeFieldChanges: false,
-                    IncludeEligibilityReasons: true,
-                    ReviewRequired: false,
-                    HasFunding: hasActiveFunding
-                );
-            }
-
-            // 4. In-Review Logic
-            if (existingStatusId == settings.OnHoldStatusId || existingStatusId == settings.DecisionRequiredStatusId)
-            {
-                return new QualificationProcessorOutcome(
-                    StatusId: existingStatusId.Value,
-                    StageId: existingStageId ?? settings.ChangedLifecycleStageId,
                     ActionId: settings.ActionTypeDecisionId,
-                    BaseNote: $"Update to Record In-Review ({(hasKeyChanges ? "Major" : "Minor")})",
+                    BaseNote: "Changed Qualification (Eligible) - Decision required - Major change",
                     IncludeFieldChanges: true,
                     IncludeEligibilityReasons: true,
-                    ReviewRequired: hasKeyChanges || eligibilityChanged,
-                    HasFunding: hasActiveFunding
-                );
+                    ReviewRequired: true,
+                    HasFunding: context.HasActiveFunding);
             }
 
-            // 5. Default Fallback
+            //Changed and eligible (Approved or Rejected + Minor Change)
+            if (isApprovedOrRejected)
+            {
+                return new QualificationProcessorOutcome(
+                    StatusId: context.ExistingStatusId!.Value,
+                    StageId: settings.ChangedLifecycleStageId,
+                    ActionId: settings.ActionTypeNoActionId,
+                    BaseNote: "Changed Qualification (Eligible) - No action required - Minor change",
+                    IncludeFieldChanges: false,
+                    IncludeEligibilityReasons: true,
+                    ReviewRequired: false,
+                    HasFunding: context.HasActiveFunding);
+            }
+
+            //Changed and eligible (On Hold or Decision required)
+            if (isInReview)
+            {
+                return new QualificationProcessorOutcome(
+                    StatusId: context.ExistingStatusId!.Value,
+                    StageId: context.ExistingStageId ?? settings.ChangedLifecycleStageId,
+                    ActionId: settings.ActionTypeDecisionId,
+                    BaseNote: $"Changed Qualification (Eligible) - No status change - ({(context.HasKeyChanges ? "Major" : "Minor")} change)",
+                    IncludeFieldChanges: true,
+                    IncludeEligibilityReasons: true,
+                    ReviewRequired: requiresRereview,
+                    HasFunding: context.HasActiveFunding);
+            }
+
+            //Changed and eligible (unknown status)
             return new QualificationProcessorOutcome(
                 StatusId: settings.DecisionRequiredStatusId,
                 StageId: settings.ChangedLifecycleStageId,
                 ActionId: settings.ActionTypeDecisionId,
-                BaseNote: "Status Unknown - Review Required",
+                BaseNote: "Changed Qualification (Eligible) - Decision required",
                 IncludeFieldChanges: true,
                 IncludeEligibilityReasons: true,
                 ReviewRequired: true,
-                HasFunding: hasActiveFunding
-            );
+                HasFunding: context.HasActiveFunding);
         }
 
         private QualificationProcessorResult BuildResult(
@@ -227,7 +246,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             }
             if (outcome.IncludeFieldChanges && !string.IsNullOrEmpty(changes?.ChangedFieldsCsv))
             {
-                noteLines.Add($"Changes: {changes?.ChangedFieldsCsv}");
+                noteLines.Add($"Changes: {changes.Value.ChangedFieldsCsv}");
             }
 
             var discussion = new QualificationDiscussionHistory
@@ -265,7 +284,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             };
         }
 
-        private QualificationVersions CreateQualificationVersion(Guid qualificationId, Guid organisationId, Guid lifecycleStageId,
+        private static QualificationVersions CreateQualificationVersion(Guid qualificationId, Guid organisationId, Guid lifecycleStageId,
             Guid processStatusId, QualificationDTO qualificationData, VersionFieldChanges versionFieldChange, bool eligibleForFunding,
             int? version, string eligibilityChangeReason)
         {
@@ -335,4 +354,6 @@ namespace SFA.DAS.AODP.Jobs.Services
             };
         }
     }
+
+    
 }

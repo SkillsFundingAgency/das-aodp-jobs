@@ -129,7 +129,7 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                 var qualificationCache = (await _applicationDbContext.Qualification
                     .AsNoTracking()
-                    .Select(o => new { Qan = o.Qan, Id = o.Id, Title = o.QualificationName })
+                    .Select(o => new { Qan = o.Qan, Id = o.Id, Title = o.QualificationName ?? string.Empty })
                     .ToListAsync())
                     .ToDictionary(a => a.Qan, a => new { Id = a.Id, Title = a.Title });
 
@@ -163,7 +163,6 @@ namespace SFA.DAS.AODP.Jobs.Services
                     var newQualifications = new List<Qualification>();
                     var newQualificationVersions = new List<QualificationVersions>();
                     var newQualificationDiscussions = new List<QualificationDiscussionHistory>();
-                    var updatedQualifications = new List<Qualification>();
                     var updatedQualificationFundings = new List<QualificationFunding>();
                     var updatedQualificationFeedbacks = new List<QualificationFundingFeedback>();
 
@@ -237,8 +236,8 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                         existingVersionsCache.TryGetValue(qualificationId, out var existingVersion);
 
-                        bool hasActiveApps = activeApplicationsList.Contains(importRecord.QualificationNumberNoObliques);
-                        bool hasActiveFunding = activeFundingsList.Contains(qualificationId);
+                        bool hasActiveApps = await activeApplicationsList.ContainsAsync(importRecord.QualificationNumberNoObliques);
+                        bool hasActiveFunding = await activeFundingsList.ContainsAsync(qualificationId);
 
                         var result = _qualificationProcessor.Process(
                             importRecord,
@@ -296,12 +295,6 @@ namespace SFA.DAS.AODP.Jobs.Services
                 throw;
             }
         }
-
-        private async Task<bool> CheckForPreviousFundings(Guid currentQualificationVersionId)
-        {
-            return await _applicationDbContext.QualificationFundings.Where(w => w.QualificationVersionId == currentQualificationVersionId).AnyAsync();
-        }
-
         private async Task<List<QualificationFunding>> UpdateFundings(Guid currentQualificationVersionId, Guid newQualificationVersionId)
         {
             var fundings = await _applicationDbContext.QualificationFundings
@@ -330,7 +323,7 @@ namespace SFA.DAS.AODP.Jobs.Services
 
         private async Task<QualificationProcessorSettings> LoadProcessorSettingsAsync()
         {
-            // Fetch all required reference data in one go to minimize DB roundtrips
+            // Fetch all required reference data 
             var statuses = await _applicationDbContext.ProcessStatus.ToListAsync();
             var lifeCycles = await _applicationDbContext.LifecycleStages.ToListAsync();
             var actionTypes = await _applicationDbContext.ActionType.ToListAsync();

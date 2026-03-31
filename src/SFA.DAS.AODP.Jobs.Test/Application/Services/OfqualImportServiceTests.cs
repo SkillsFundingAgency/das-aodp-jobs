@@ -1,4 +1,5 @@
 ﻿using AutoFixture;
+using DocumentFormat.OpenXml.EMMA;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.EntityFrameworkCore;
@@ -358,8 +359,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             await _service.ProcessQualificationsDataAsync();
 
             // Assert
-            var insertedQual = await _dbContext.Qualification.SingleAsync(w => w.Qan == qualificationNumber1);
-            var insertedVersion = await _dbContext.QualificationVersions.Include(i => i.ProcessStatus).OrderByDescending(o => o.Version).FirstAsync(w => w.QualificationId == insertedQual.Id);
+            var insertedQual = await _dbContext.Qualification.SingleAsync(w => w.Qan == qualificationNumber1, CancellationToken.None);
+            var insertedVersion = await _dbContext.QualificationVersions.Include(i => i.ProcessStatus).OrderByDescending(o => o.Version).FirstAsync(w => w.QualificationId == insertedQual.Id, CancellationToken.None);
 
             Assert.Equal(2, insertedVersion.Version);
             Assert.Equal(Common.Enum.ProcessStatus.DecisionRequired, insertedVersion.ProcessStatus.Name);
@@ -384,8 +385,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             await _service.ProcessQualificationsDataAsync();
 
             // Assert
-            var qualification = await _dbContext.Qualification.SingleAsync(w => w.Qan == qualificationNumber1);
-            var insertedVersion = await _dbContext.QualificationVersions.OrderByDescending(o => o.Version).FirstAsync(w => w.QualificationId == qualification.Id);
+            var qualification = await _dbContext.Qualification.SingleAsync(w => w.Qan == qualificationNumber1, CancellationToken.None);
+            var insertedVersion = await _dbContext.QualificationVersions.OrderByDescending(o => o.Version).FirstAsync(w => w.QualificationId == qualification.Id, CancellationToken.None);
             Assert.Equal(2, insertedVersion.Version);
         }
 
@@ -421,7 +422,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                         Type = "Type"
                     };
 
-                    QualificationFundingTracker tracker = null;
+                    QualificationFundingTracker? tracker = null;
                     if (existingV != null && currentlyEligible && previouslyEligible && !keyFieldsChanged)
                     {
                         tracker = new QualificationFundingTracker { OldVersionId = existingV.Id, NewVersionId = newVersion.Id };
@@ -456,8 +457,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var _service = CreateImportServiceWithDb();
 
             // Get the existing qualification to ensure we use the correct ID in the mock
-            var existingQual = await _dbContext.Qualification.SingleAsync(q => q.Qan == qualificationNumber);
-            var existingVersion = await _dbContext.QualificationVersions.SingleAsync(v => v.QualificationId == existingQual.Id);
+            var existingQual = await _dbContext.Qualification.SingleAsync(q => q.Qan == qualificationNumber, CancellationToken.None);
+            var existingVersion = await _dbContext.QualificationVersions.SingleAsync(v => v.QualificationId == existingQual.Id, CancellationToken.None);
 
             // Create import record with the updated title
             var importRecord = this.CreateImportRecord(organisationId, qualificationNumber, updatedTitle);
@@ -521,7 +522,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
             // Assert
             // Check that qualification title was updated
-            var updatedQualification = await _dbContext.Qualification.Where(w => w.Qan == qualificationNumber).SingleAsync();
+            var updatedQualification = await _dbContext.Qualification.Where(w => w.Qan == qualificationNumber).SingleAsync(CancellationToken.None);
             Assert.Equal(qualificationNumber, updatedQualification.Qan);
             Assert.Equal(updatedTitle, updatedQualification.QualificationName);
             Assert.NotEqual(originalTitle, updatedQualification.QualificationName);
@@ -531,14 +532,14 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .Include(i => i.ProcessStatus)
                                     .OrderByDescending(o => o.Version)
                                     .Where(w => w.QualificationId == updatedQualification.Id)
-                                    .FirstAsync();
+                                    .FirstAsync(CancellationToken.None);
             Assert.NotNull(insertedVersion);
             Assert.Equal(2, insertedVersion.Version);
 
             // Verify version field changes contain Title
             var versionFieldChange = await _dbContext.VersionFieldChanges
                                     .Where(w => w.QualificationVersionNumber == insertedVersion.Version)
-                                    .FirstAsync();
+                                    .FirstAsync(CancellationToken.None);
             Assert.NotNull(versionFieldChange);
             Assert.Contains("Title", versionFieldChange.ChangedFieldNames);
         }
@@ -568,13 +569,13 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 changedFields: new(),
                 keyFieldsChanged: false);
 
-            var initialVersionCount = await _dbContext.QualificationVersions.CountAsync();
+            var initialVersionCount = await _dbContext.QualificationVersions.CountAsync(CancellationToken.None);
 
             //Act
             await _service.ProcessQualificationsDataAsync();
 
             //Assert
-            var finalVersionCount = await _dbContext.QualificationVersions.CountAsync();
+            var finalVersionCount = await _dbContext.QualificationVersions.CountAsync(CancellationToken.None);
             Assert.Equal(initialVersionCount, finalVersionCount); // Should remain 1
         }
 
@@ -593,7 +594,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
             var qualification = await _dbContext.Qualification
                                         .Include(i => i.QualificationVersions)
-                                        .SingleAsync(w => w.Qan == qualificationNumber1);
+                                        .SingleAsync(w => w.Qan == qualificationNumber1, CancellationToken.None);
 
             var oldVersion = qualification.QualificationVersions.First();
             await CreateFundingOffers(qualification.QualificationVersions.ToList());
@@ -660,13 +661,13 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             await _service.ProcessQualificationsDataAsync();
 
             // Assert
-            var insertedQualification = await _dbContext.Qualification.SingleAsync(w => w.Qan == qualificationNumber1);
+            var insertedQualification = await _dbContext.Qualification.SingleAsync(w => w.Qan == qualificationNumber1, CancellationToken.None);
 
             var insertedVersion = await _dbContext.QualificationVersions
                                     .Include(i => i.ProcessStatus)
                                     .Include(i => i.LifecycleStage)
                                     .OrderByDescending(o => o.Version)
-                                    .FirstAsync(w => w.QualificationId == insertedQualification.Id);
+                                    .FirstAsync(w => w.QualificationId == insertedQualification.Id, CancellationToken.None);
 
             Assert.NotNull(insertedVersion);
             Assert.Equal(2, insertedVersion.Version);
@@ -674,11 +675,11 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             Assert.Equal(Common.Enum.LifeCycleStage.Changed, insertedVersion.LifecycleStage.Name);
 
             // Check funding offers have NOT been copied (Should be empty)
-            var fundings = await _dbContext.QualificationFundings.Where(w => w.QualificationVersionId == insertedVersion.Id).ToListAsync();
+            var fundings = await _dbContext.QualificationFundings.Where(w => w.QualificationVersionId == insertedVersion.Id).ToListAsync(CancellationToken.None);
             Assert.Empty(fundings);
 
             // Check funding offers feedbacks have NOT been copied (Should be empty)
-            var feedbacks = await _dbContext.QualificationFundingFeedbacks.Where(w => w.QualificationVersionId == insertedVersion.Id).ToListAsync();
+            var feedbacks = await _dbContext.QualificationFundingFeedbacks.Where(w => w.QualificationVersionId == insertedVersion.Id).ToListAsync(CancellationToken.None);
             Assert.Empty(feedbacks);
         }
 
@@ -697,7 +698,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
             var qualification = await _dbContext.Qualification
                                         .Include(i => i.QualificationVersions)
-                                        .SingleAsync(w => w.Qan == qualificationNumber1);
+                                        .SingleAsync(w => w.Qan == qualificationNumber1, CancellationToken.None);
 
             var oldVersion = qualification.QualificationVersions.First();
             await CreateFundingOffers(qualification.QualificationVersions.ToList());
@@ -770,13 +771,13 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             await _service.ProcessQualificationsDataAsync();
 
             // Assert
-            var insertedQualification = await _dbContext.Qualification.SingleAsync(w => w.Qan == qualificationNumber1);
+            var insertedQualification = await _dbContext.Qualification.SingleAsync(w => w.Qan == qualificationNumber1, CancellationToken.None);
 
             var insertedVersion = await _dbContext.QualificationVersions
                                     .Include(i => i.ProcessStatus)
                                     .Include(i => i.LifecycleStage)
                                     .OrderByDescending(o => o.Version)
-                                    .FirstAsync(w => w.QualificationId == insertedQualification.Id);
+                                    .FirstAsync(w => w.QualificationId == insertedQualification.Id, CancellationToken.None);
 
             Assert.NotNull(insertedVersion);
             Assert.Equal(2, insertedVersion.Version);
@@ -784,19 +785,19 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var originalVersion = await _dbContext.QualificationVersions
                                     .Include(i => i.ProcessStatus)
                                     .Include(i => i.LifecycleStage)
-                                    .SingleAsync(w => w.QualificationId == insertedQualification.Id && w.Version == 1);
+                                    .SingleAsync(w => w.QualificationId == insertedQualification.Id && w.Version == 1, CancellationToken.None);
 
             // Verify Status and Stage were preserved as requested
             Assert.Equal(originalVersion.ProcessStatus.Name, insertedVersion.ProcessStatus.Name);
             Assert.Equal(originalVersion.LifecycleStage.Name, insertedVersion.LifecycleStage.Name);
 
             // Check funding offers have been copied
-            var fundings = await _dbContext.QualificationFundings.Where(w => w.QualificationVersionId == insertedVersion.Id).ToListAsync();
+            var fundings = await _dbContext.QualificationFundings.Where(w => w.QualificationVersionId == insertedVersion.Id).ToListAsync(CancellationToken.None);
             Assert.NotNull(fundings);
             Assert.Equal(2, fundings.Count);
 
             // Check funding offers feedbacks have been copied
-            var feedbacks = await _dbContext.QualificationFundingFeedbacks.Where(w => w.QualificationVersionId == insertedVersion.Id).ToListAsync();
+            var feedbacks = await _dbContext.QualificationFundingFeedbacks.Where(w => w.QualificationVersionId == insertedVersion.Id).ToListAsync(CancellationToken.None);
             Assert.NotNull(feedbacks);
             Assert.Single(feedbacks);
         }

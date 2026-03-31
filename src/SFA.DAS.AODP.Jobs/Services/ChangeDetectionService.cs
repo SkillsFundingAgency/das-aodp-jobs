@@ -119,7 +119,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             fields = fields.AppendIf(newRecord.UiLastUpdatedDate != qualificationVersion.UiLastUpdatedDate, "UiLastUpdatedDate");
             fields = fields.AppendIf(newRecord.IntentionToSeekFundingInEngland != qualificationVersion.IntentionToSeekFundingInEngland, "IntentionToSeekFundingInEngland");
 
-            var results = new DetectionResults() { ChangedFields = fields, ChangesPresent = fields.Any() };
+            var results = new DetectionResults() { ChangedFields = fields, ChangesPresent = fields.Count > 0 };
 
             if (results.ChangesPresent)
             {

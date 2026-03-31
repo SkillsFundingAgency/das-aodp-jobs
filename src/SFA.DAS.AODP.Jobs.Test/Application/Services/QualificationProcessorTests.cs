@@ -48,7 +48,13 @@ public class QualificationProcessorTests
         var orgId = Guid.NewGuid();
 
         // Reflection helper to get the Guid from your _settings object based on the property name string
-        var expectedStatusId = (Guid)_settings.GetType().GetProperty(expectedStatusProperty).GetValue(_settings);
+        var property = _settings.GetType().GetProperty(expectedStatusProperty)
+            ?? throw new InvalidOperationException($"Property '{expectedStatusProperty}' not found.");
+
+        var value = property.GetValue(_settings)
+            ?? throw new InvalidOperationException($"Property '{expectedStatusProperty}' is null.");
+
+        var expectedStatusId = (Guid)value;
 
         // Setup Mock based on 'isEligible' parameter
         _eligibilityMock.Setup(s => s.EvaluateFundingEligibilityRules(dto))
@@ -111,12 +117,19 @@ public class QualificationProcessorTests
         _changeMock.Setup(s => s.DetectChanges(It.IsAny<QualificationDTO>(), It.IsAny<QualificationVersions>()))
             .Returns(new DetectionResults { ChangesPresent = true });
 
-        var expectedStatusId = (Guid)_settings.GetType().GetProperty(expectedStatusProp).GetValue(_settings);
+        var property = _settings.GetType().GetProperty(expectedStatusProp)
+            ?? throw new InvalidOperationException($"Property '{expectedStatusProp}' not found.");
+
+        var value = property.GetValue(_settings)
+            ?? throw new InvalidOperationException($"Property '{expectedStatusProp}' is null.");
+
+        var expectedStatusId = (Guid)value;
 
         // Act
         var result = _processor.Process(new QualificationDTO(), existingVersion, Guid.NewGuid(), Guid.NewGuid(), hasApps, hasFunding, _settings);
 
         // Assert
+        Assert.NotNull(result);
         Assert.Equal(expectedStatusId, result.NewVersion.ProcessStatusId);
         Assert.Equal(_settings.ChangedLifecycleStageId, result.NewVersion.LifecycleStageId);
     }
@@ -153,12 +166,13 @@ public class QualificationProcessorTests
         _changeMock.Setup(s => s.DetectChanges(It.IsAny<QualificationDTO>(), existingVersion))
             .Returns(new DetectionResults { ChangesPresent = true, KeyFieldsChanged = hasKeyChanges });
 
-        var expectedStatusId = (Guid)_settings.GetType().GetProperty(expectedStatusProp).GetValue(_settings);
+        var expectedStatusId = GetGuidFromSettings(expectedStatusProp);
 
         // Act
         var result = _processor.Process(new QualificationDTO(), existingVersion, Guid.NewGuid(), Guid.NewGuid(), false, false, _settings);
 
         // Assert
+        Assert.NotNull(result);
         Assert.Equal(expectedStatusId, result.NewVersion.ProcessStatusId);
     }
 
@@ -175,7 +189,7 @@ public class QualificationProcessorTests
     string expectedNoteWord)
     {
         // Arrange
-        var statusId = (Guid)_settings.GetType().GetProperty(startingStatusProp).GetValue(_settings);
+        var statusId = GetGuidFromSettings(startingStatusProp);
 
         var existingVersion = new QualificationVersions
         {
@@ -204,6 +218,7 @@ public class QualificationProcessorTests
         var result = _processor.Process(new QualificationDTO(), existingVersion, existingVersion.QualificationId, Guid.NewGuid(), false, false, _settings);
 
         // Assert
+        Assert.NotNull(result);
         Assert.Equal(statusId, result.NewVersion.ProcessStatusId);
         Assert.Contains(expectedNoteWord, result.Discussion.Notes);
     }
@@ -229,8 +244,25 @@ public class QualificationProcessorTests
 
         // Assert
         // Safety check: Unknown status must trigger a review
+        Assert.NotNull(result);
         Assert.Equal(_settings.DecisionRequiredStatusId, result.NewVersion.ProcessStatusId);
-        Assert.Contains("Status Unknown", result.Discussion.Notes);
+        Assert.Contains("Changed Qualification (Eligible) - Decision required", result.Discussion.Notes);
+    }
+
+    private Guid GetGuidFromSettings(string propertyName)
+    {
+        var property = _settings.GetType().GetProperty(propertyName)
+            ?? throw new InvalidOperationException(
+                $"Property '{propertyName}' not found on {_settings.GetType().Name}.");
+
+        var value = property.GetValue(_settings);
+
+        return value switch
+        {
+            Guid g => g,
+            null => throw new InvalidOperationException($"Property '{propertyName}' is null."),
+            _ => throw new InvalidOperationException($"Property '{propertyName}' is not a Guid.")
+        };
     }
 
 }
