@@ -361,7 +361,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                 EligibleForFunding = request.EligibleForFunding,
                 Name = qualificationData.Title,
                 IntentionToSeekFundingInEngland = qualificationData.IntentionToSeekFundingInEngland,
-                EligibleForFundingChangeReason = request.IneligibleForFundingFieldNames,
+                FundingEligibilityFailedFields = request.IneligibleForFundingFieldNames,
             };
         }
     }

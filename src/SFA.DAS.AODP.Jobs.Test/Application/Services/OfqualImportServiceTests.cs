@@ -748,7 +748,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                         SubLevel = "N/A",
                         Type = "Type",
                         Name = dto.Title,
-                        EligibleForFundingChangeReason = string.Empty
+                        FundingEligibilityFailedFields = string.Empty
                     };
 
                     var discussion = new QualificationDiscussionHistory

@@ -130,7 +130,7 @@ public class QualificationProcessorTests
     [Theory]
     // Scenario: [Key Change], [Prev. Rules Passed], [Curr. Rules Passed], [Expected Status]
     [InlineData(true, true, true, "DecisionRequiredStatusId")] // Major change only
-    [InlineData(false, true, false, "DecisionRequiredStatusId")] // Eligibility dropped (Pass -> Fail)
+    [InlineData(false, true, false, "NoActionRequiredStatusId")] // Eligibility dropped (Pass -> Fail)
     [InlineData(false, false, true, "DecisionRequiredStatusId")] // Eligibility gained (Fail -> Pass)
     [InlineData(false, true, true, "ApprovedStatusId")]         // Minor change, no logic change
     public void Process_ExistingApproved_ReflectingRealLogic(bool hasKeyChanges, bool prevPassed, bool currPassed, string expectedStatusProp)

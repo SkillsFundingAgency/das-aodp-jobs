@@ -5,13 +5,6 @@ namespace SFA.DAS.AODP.Jobs.Services
 {
     public class FundingEligibilityService : IFundingEligibilityService
     {
-        private readonly ILogger<FundingEligibilityService> _logger;
-
-        public FundingEligibilityService(ILogger<FundingEligibilityService> logger)
-        {
-            _logger = logger;
-        }
-
         public FundingEligibilityEvaluation EvaluateFundingEligibilityRules(QualificationDTO qualification)
         {
             var rules = new List<FundingEligibilityRuleResult>

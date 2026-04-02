@@ -8,13 +8,11 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 {
     public class FundingEligibilityServiceTests
     {
-        private readonly Mock<ILogger<FundingEligibilityService>> _mockLogger;
         private readonly FundingEligibilityService _service;
 
         public FundingEligibilityServiceTests()
         {
-            _mockLogger = new Mock<ILogger<FundingEligibilityService>>();
-            _service = new FundingEligibilityService(_mockLogger.Object);
+            _service = new FundingEligibilityService();
         }
 
         [Fact]
