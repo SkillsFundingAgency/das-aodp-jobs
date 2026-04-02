@@ -49,8 +49,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                     qualification.Glh.HasValue
                         && qualification.Tqt.HasValue
                         && qualification.Glh < qualification.Tqt,
-                    "Glh",
-                    "Tqt")
+                    "TqtLessThanGlh")
             };
 
             return new FundingEligibilityEvaluation
