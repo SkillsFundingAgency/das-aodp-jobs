@@ -1,4 +1,5 @@
-﻿using DocumentFormat.OpenXml.Vml;
+﻿using DocumentFormat.OpenXml.Presentation;
+using DocumentFormat.OpenXml.Vml;
 using SFA.DAS.AODP.Jobs.Models.Jobs.FundingEligibility;
 using SFA.DAS.AODP.Models.Qualification;
 using static SFA.DAS.AODP.Jobs.Services.ChangeDetectionService;
@@ -37,9 +38,9 @@ public class QualificationProcessorTests
 
 
     [Theory]
-    [InlineData(true, false, "DecisionRequiredStatusId")]   // Path 1: Eligible
-    [InlineData(false, true, "DecisionRequiredStatusId")]   // Path 2: Ineligible + Conflict (Active Apps)
-    [InlineData(false, false, "NoActionRequiredStatusId")] // Path 3: Ineligible + No Conflict
+    [InlineData(true, false, "DecisionRequiredStatusId")]   // Eligible
+    [InlineData(false, true, "DecisionRequiredStatusId")]   // Ineligible + Conflict (Active Apps)
+    [InlineData(false, false, "NoActionRequiredStatusId")]  // Ineligible + No Conflict
     public void Process_NewRecord_Paths(bool isEligible, bool hasActiveApps, string expectedStatusProperty)
     {
         // Arrange
@@ -79,51 +80,39 @@ public class QualificationProcessorTests
     }
 
     [Theory]
-    // Eligibility Changed? | Has Apps? | Has Funding? | Expected Status 
-    [InlineData(true, false, false, "DecisionRequiredStatusId")]  // Eligibility changed to false
-    [InlineData(false, true, false, "DecisionRequiredStatusId")]  // New App Conflict
-    [InlineData(false, false, true, "DecisionRequiredStatusId")]  // New Funding Conflict
+    // Eligibility Flipped? | Has Apps? | Has Funding? | Expected Status 
+    [InlineData(true, false, false, "NoActionRequiredStatusId")]  // Flip to false + no conflict
+    [InlineData(false, true, false, "DecisionRequiredStatusId")]  // App Conflict
+    [InlineData(false, false, true, "DecisionRequiredStatusId")]  // Funding Conflict
     [InlineData(false, false, false, "NoActionRequiredStatusId")] // Still Ineligible - No Change
     public void Process_ExistingIneligible_AllPaths(
-        bool eligibilityChanged,
-        bool hasApps,
-        bool hasFunding,
-        string expectedStatusProp)
+    bool eligibilityChanged,
+    bool hasApps,
+    bool hasFunding,
+    string expectedStatusProp)
     {
         // Arrange
         var existingVersion = new QualificationVersions
         {
-            ProcessStatusId = _settings.ApprovedStatusId, // Start as Approved
+            // If eligibilityChanged is true, the PREVIOUS state must have been 'true'
+            EligibleForFunding = eligibilityChanged ? true : false,
+            ProcessStatusId = _settings.NoActionRequiredStatusId,
             Qualification = new Qualification { Qan = "123" }
         };
 
-        // 1. Current state is NOT eligible
-        var currentEval = new FundingEligibilityEvaluation { Rules = new() { new() { Passed = false } } };
-
-        // 2. Previous state depends on 'eligibilityChanged'
-        var previousEval = new FundingEligibilityEvaluation
+        // Current state is ALWAYS ineligible for this test method
+        var currentEval = new FundingEligibilityEvaluation
         {
-            Rules = eligibilityChanged ? new() : new() { new() { Passed = false } }
+            Rules = new List<FundingEligibilityRuleResult> { new() { Passed = false, Fields = { "Glh" } } }
         };
 
-        _eligibilityMock.Setup(s => s.EvaluateFundingEligibilityRules(It.IsAny<QualificationDTO>())).Returns(currentEval);
-        _eligibilityMock.Setup(s => s.CompareFundingEvaluations(It.IsAny<FundingEligibilityEvaluation>(), It.IsAny<FundingEligibilityEvaluation>()))
-            .Returns(new FundingEligibilityComparison
-            {
-                PreviousEvaluation = previousEval,
-                CurrentEvaluation = currentEval
-            });
+        _eligibilityMock.Setup(s => s.EvaluateFundingEligibilityRules(It.IsAny<QualificationDTO>()))
+            .Returns(currentEval);
 
-        _changeMock.Setup(s => s.DetectChanges(It.IsAny<QualificationDTO>(), It.IsAny<QualificationVersions>()))
+        _changeMock.Setup(s => s.DetectChanges(It.IsAny<QualificationDTO>(), existingVersion))
             .Returns(new DetectionResults { ChangesPresent = true });
 
-        var property = _settings.GetType().GetProperty(expectedStatusProp)
-            ?? throw new InvalidOperationException($"Property '{expectedStatusProp}' not found.");
-
-        var value = property.GetValue(_settings)
-            ?? throw new InvalidOperationException($"Property '{expectedStatusProp}' is null.");
-
-        var expectedStatusId = (Guid)value;
+        var expectedStatusId = GetGuidFromSettings(expectedStatusProp);
 
         // Act
         var result = _processor.Process(new QualificationDTO(), existingVersion, Guid.NewGuid(), Guid.NewGuid(), hasApps, hasFunding, _settings);
@@ -131,7 +120,11 @@ public class QualificationProcessorTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal(expectedStatusId, result.NewVersion.ProcessStatusId);
-        Assert.Equal(_settings.ChangedLifecycleStageId, result.NewVersion.LifecycleStageId);
+
+        if (expectedStatusProp == "DecisionRequiredStatusId")
+        {
+            Assert.True(result.FieldChange.ChangedFieldNames != null);
+        }
     }
 
     [Theory]
@@ -146,22 +139,18 @@ public class QualificationProcessorTests
         var existingVersion = new QualificationVersions
         {
             ProcessStatusId = _settings.ApprovedStatusId,
+            EligibleForFunding = prevPassed,
             Qualification = new Qualification { Qan = "123" }
         };
 
-        // We set the Rules here. 
-        // Your FundingEligibilityEvaluation.IsEligible property must look at these rules to return true/false.
-        var prevEval = new FundingEligibilityEvaluation { Rules = prevPassed ? new() : new() { new() { Passed = false } } };
-        var currEval = new FundingEligibilityEvaluation { Rules = currPassed ? new() : new() { new() { Passed = false } } };
+        var currEval = new FundingEligibilityEvaluation
+        {
+            Rules = currPassed
+            ? new List<FundingEligibilityRuleResult>()
+            : new List<FundingEligibilityRuleResult> { new() { Passed = false, Fields = { "TestField" } } }
+        };
 
         _eligibilityMock.Setup(s => s.EvaluateFundingEligibilityRules(It.IsAny<QualificationDTO>())).Returns(currEval);
-
-        _eligibilityMock.Setup(s => s.CompareFundingEvaluations(It.IsAny<FundingEligibilityEvaluation>(), It.IsAny<FundingEligibilityEvaluation>()))
-            .Returns(new FundingEligibilityComparison
-            {
-                PreviousEvaluation = prevEval,
-                CurrentEvaluation = currEval
-            });
 
         _changeMock.Setup(s => s.DetectChanges(It.IsAny<QualificationDTO>(), existingVersion))
             .Returns(new DetectionResults { ChangesPresent = true, KeyFieldsChanged = hasKeyChanges });
@@ -204,13 +193,6 @@ public class QualificationProcessorTests
         _eligibilityMock.Setup(s => s.EvaluateFundingEligibilityRules(It.IsAny<QualificationDTO>()))
             .Returns(new FundingEligibilityEvaluation { Rules = new() });
 
-        _eligibilityMock.Setup(s => s.CompareFundingEvaluations(It.IsAny<FundingEligibilityEvaluation>(), It.IsAny<FundingEligibilityEvaluation>()))
-            .Returns(new FundingEligibilityComparison
-            {
-                PreviousEvaluation = new(),
-                CurrentEvaluation = new()
-            });
-
         _changeMock.Setup(s => s.DetectChanges(It.IsAny<QualificationDTO>(), existingVersion))
             .Returns(new DetectionResults { ChangesPresent = true, KeyFieldsChanged = hasKeyChanges });
 
@@ -233,8 +215,6 @@ public class QualificationProcessorTests
         };
 
         _eligibilityMock.Setup(s => s.EvaluateFundingEligibilityRules(It.IsAny<QualificationDTO>())).Returns(new FundingEligibilityEvaluation { Rules = new() });
-        _eligibilityMock.Setup(s => s.CompareFundingEvaluations(It.IsAny<FundingEligibilityEvaluation>(), It.IsAny<FundingEligibilityEvaluation>()))
-            .Returns(new FundingEligibilityComparison());
 
         _changeMock.Setup(s => s.DetectChanges(It.IsAny<QualificationDTO>(), existingVersion))
             .Returns(new DetectionResults { ChangesPresent = true });

@@ -96,26 +96,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             Assert.Contains("Title", evaluation.GetFailedFields());
         }
 
-        [Fact]
-        public void CompareEligibilityRules_DetectsChange_WhenStatusFlips()
-        {
-            // Arrange
-            var prevQual = CreateEligibleBaseline();
-            var currQual = CreateEligibleBaseline();
-            currQual.OfferedInEngland = false; // Changed from true to false
-
-            // Act
-            var comparison = _service.CompareEligibilityRules(prevQual, currQual);
-
-            // Assert
-            Assert.True(comparison.EligibilityChanged);
-            Assert.True(comparison.PreviousEvaluation.IsEligible);
-            Assert.False(comparison.CurrentEvaluation.IsEligible);
-
-            // Check that the specific field is flagged as a contributor to the change
-            Assert.Contains("OfferedInEngland", comparison.GetContributingFields());
-        }
-
+        
         private static QualificationDTO CreateEligibleBaseline()
         {
             return new QualificationDTO

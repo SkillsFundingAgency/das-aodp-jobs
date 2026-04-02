@@ -26,7 +26,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             VersionFieldChanges VersionFieldChange,
             bool EligibleForFunding,
             int? Version,
-            string EligibilityChangeReason);
+            string IneligibleForFundingFieldNames);
         public record QualificationProcessorResult(
             QualificationVersions NewVersion,
             QualificationDiscussionHistory Discussion,
@@ -67,35 +67,37 @@ namespace SFA.DAS.AODP.Jobs.Services
             QualificationProcessorSettings settings)
         {
             var incomingEval = _fundingService.EvaluateFundingEligibilityRules(importRecord);
+            bool eligibilityChanged = existingVersion?.EligibleForFunding != incomingEval.IsEligible;
+
             DetectionResults? changes = null;
-            bool eligibilityChanged = false;
             bool hasKeyChanges = false;
 
             if (existingVersion != null)
             {
-                var previousVersionDTO = MapToQualificationDto(existingVersion);
-                var previousEval = _fundingService.EvaluateFundingEligibilityRules(previousVersionDTO);
-                var comparison = _fundingService.CompareFundingEvaluations(previousEval, incomingEval);
-
                 changes = _changeService.DetectChanges(importRecord, existingVersion);
 
-                if (!changes.Value.ChangesPresent && !comparison.EligibilityChanged)
+                if (!changes.Value.ChangesPresent && !eligibilityChanged)
                 {
                     return null;
                 }
 
-                eligibilityChanged = comparison.EligibilityChanged;
+                if (eligibilityChanged)
+                { 
+                    changes.Value.ChangedFields.Add(nameof(QualificationVersions.EligibleForFunding));
+                }
+
                 hasKeyChanges = changes.Value.KeyFieldsChanged;
             }
-                var context = new OutcomeContext(
-                    existingVersion?.ProcessStatusId,
-                    existingVersion?.LifecycleStageId,
-                    existingVersion == null,
-                    incomingEval.IsEligible,
-                    hasKeyChanges,
-                    eligibilityChanged,
-                    hasActiveApps,
-                    hasActiveFunding);
+
+            var context = new OutcomeContext(
+                existingVersion?.ProcessStatusId,
+                existingVersion?.LifecycleStageId,
+                existingVersion == null,
+                incomingEval.IsEligible,
+                hasKeyChanges,
+                eligibilityChanged,
+                hasActiveApps,
+                hasActiveFunding);
 
             var outcome = DetermineOutcome(context,settings);
 
@@ -142,7 +144,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                     ActionId: requiresRereview ? settings.ActionTypeDecisionId : settings.ActionTypeNoActionId,
                     BaseNote: requiresRereview ? "Eligible - Major change" : "Eligible - Minor change",
                     IncludeFieldChanges: requiresRereview,
-                    IncludeEligibilityReasons: true,
+                    IncludeEligibilityReasons: false,
                     ReviewRequired: requiresRereview,
                     HasFunding: context.HasActiveFunding);
             }
@@ -155,7 +157,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                     ActionId: settings.ActionTypeDecisionId,
                     BaseNote: $"Changed Qualification (Eligible) - No status change - ({(context.HasKeyChanges ? "Major" : "Minor")} change)",
                     IncludeFieldChanges: true,
-                    IncludeEligibilityReasons: true,
+                    IncludeEligibilityReasons: false,
                     ReviewRequired: requiresRereview,
                     HasFunding: context.HasActiveFunding);
             }
@@ -166,7 +168,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                 ActionId: settings.ActionTypeDecisionId,
                 BaseNote: "Changed Qualification (Eligible) - Decision required",
                 IncludeFieldChanges: true,
-                IncludeEligibilityReasons: true,
+                IncludeEligibilityReasons: false,
                 ReviewRequired: true,
                 HasFunding: context.HasActiveFunding);
         }
@@ -176,7 +178,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             QualificationProcessorSettings settings)
         {
             var hasUsageConflict = context.HasActiveApps || context.HasActiveFunding;
-            var needsDecision = hasUsageConflict || context.EligibilityChanged;
+            var needsDecision = hasUsageConflict;
 
             var statusId = needsDecision ? settings.DecisionRequiredStatusId : settings.NoActionRequiredStatusId;
             var actionId = needsDecision ? settings.ActionTypeDecisionId : settings.ActionTypeNoActionId;
@@ -204,7 +206,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                     StageId: settings.NewLifecycleStageId,
                     ActionId: settings.ActionTypeDecisionId,
                     BaseNote: "New Qualification (Eligible) - Decision Required",
-                    IncludeFieldChanges: true,
+                    IncludeFieldChanges: false,
                     IncludeEligibilityReasons: false,
                     ReviewRequired: true,
                     HasFunding: false);
@@ -229,7 +231,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                 StageId: settings.NewLifecycleStageId,
                 ActionId: actionId,
                 BaseNote: baseNote,
-                IncludeFieldChanges: hasConflict,
+                IncludeFieldChanges: false,
                 IncludeEligibilityReasons: true,
                 ReviewRequired: hasConflict,
                 HasFunding: false);
@@ -283,7 +285,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                     VersionFieldChange: fieldChange,
                     EligibleForFunding: eval.IsEligible,
                     Version: versionNumber,
-                    EligibilityChangeReason: eval.GetFailedFieldsCsv()));
+                    IneligibleForFundingFieldNames: eval.GetFailedFieldsCsv()));
 
             QualificationFundingTracker? tracker = null;
             if (existing != null && outcome.HasFunding)
@@ -292,21 +294,6 @@ namespace SFA.DAS.AODP.Jobs.Services
             }
 
             return new QualificationProcessorResult(newVersion, discussion, fieldChange, tracker);
-        }
-
-
-        private static QualificationDTO MapToQualificationDto(QualificationVersions version)
-        {
-            return new QualificationDTO
-            {
-                QualificationNumberNoObliques = version.Qualification?.Qan,
-                Title = version.Qualification?.QualificationName ?? string.Empty,
-                Type = version.Type,
-                OfferedInEngland = version.OfferedInEngland,
-                IntentionToSeekFundingInEngland = version.IntentionToSeekFundingInEngland,
-                Glh = version.Glh,
-                Tqt = version.Tqt
-            };
         }
 
         private static QualificationVersions CreateQualificationVersion(CreateQualificationVersionRequest request)
@@ -374,7 +361,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                 EligibleForFunding = request.EligibleForFunding,
                 Name = qualificationData.Title,
                 IntentionToSeekFundingInEngland = qualificationData.IntentionToSeekFundingInEngland,
-                EligibleForFundingChangeReason = request.EligibilityChangeReason,
+                EligibleForFundingChangeReason = request.IneligibleForFundingFieldNames,
             };
         }
     }
