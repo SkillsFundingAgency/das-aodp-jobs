@@ -13,7 +13,7 @@ namespace SFA.DAS.AODP.Common.Enum
         public const string EndPointAssessment = "End Point Assessment";
         public static DateTime MinOperationalDate = new DateTime(2024, 8, 1);
 
-        public static List<string> IneligibleQualifications =
+        public static IReadOnlyList<string> IneligibleQualifications =
         [
             "Certificate in Education",
             "Professional Graduate Certificate in Education",

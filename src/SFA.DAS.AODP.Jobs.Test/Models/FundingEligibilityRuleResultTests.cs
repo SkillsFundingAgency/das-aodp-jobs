@@ -19,12 +19,7 @@ namespace SFA.DAS.AODP.Jobs.UnitTests.Models
             // Arrange
 
             // Act
-            var result = new FundingEligibilityRuleResult
-            {
-                RuleName = Rule,
-                Passed = true,
-                Fields = new() { FieldA, FieldB }
-            };
+            var result = new FundingEligibilityRuleResult (Rule, true,[FieldA, FieldB]);
 
             // Assert
             Assert.Multiple(() =>

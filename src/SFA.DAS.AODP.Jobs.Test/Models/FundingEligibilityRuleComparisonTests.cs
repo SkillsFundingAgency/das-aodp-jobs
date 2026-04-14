@@ -1,9 +1,4 @@
 ﻿using SFA.DAS.AODP.Jobs.Models.Jobs.FundingEligibility;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SFA.DAS.AODP.Jobs.UnitTests.Models
 {
@@ -23,7 +18,7 @@ namespace SFA.DAS.AODP.Jobs.UnitTests.Models
                 RuleName = Rule,
                 PreviousPassed = false,
                 CurrentPassed = true,
-                Fields = new() { FieldA }
+                Fields = [FieldA]
             };
 
             // Assert

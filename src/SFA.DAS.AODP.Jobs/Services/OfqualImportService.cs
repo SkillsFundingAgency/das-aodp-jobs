@@ -16,6 +16,7 @@ namespace SFA.DAS.AODP.Jobs.Services
         private readonly IQualificationProcessor _qualificationProcessor;
         private Stopwatch _loopCycleStopWatch = new Stopwatch();
         private Stopwatch _processStopWatch = new Stopwatch();
+        private readonly ISystemClockService _clockService ;
 
         private static readonly string[] ActiveApplicationStatuses =
         {
@@ -26,13 +27,14 @@ namespace SFA.DAS.AODP.Jobs.Services
 
         public OfqualImportService(ILogger<OfqualImportService> logger, IConfiguration configuration, IApplicationDbContext applicationDbContext,
             IOfqualRegisterApi apiClient, IOfqualRegisterService ofqualRegisterService, IQualificationsService qualificationsService,
-            IQualificationProcessor qualificationProcessor)
+            IQualificationProcessor qualificationProcessor, ISystemClockService clockService)
         {
             _logger = logger;
             _applicationDbContext = applicationDbContext;
             _ofqualRegisterService = ofqualRegisterService;
             _qualificationsService = qualificationsService;
             _qualificationProcessor = qualificationProcessor;
+            _clockService = clockService;
         }
 
         public async Task<int> ImportApiData(HttpRequestData request)
@@ -142,17 +144,13 @@ namespace SFA.DAS.AODP.Jobs.Services
                     .ToListAsync())
                     .ToDictionary(x => x.QualificationId, x => x);
 
-                var today = DateOnly.FromDateTime(DateTime.Now);
-
                 var activeApplicationsList = _applicationDbContext.Applications
                     .Where(a => ActiveApplicationStatuses.Contains(a.Status))
                     .Select(a => a.QualificationNumber);
 
-                var activeFundingsList = _applicationDbContext.QualificationFundings
-                    .Where(f => !f.EndDate.HasValue || f.EndDate.Value > today)
+                var notEndedFundingsList = _applicationDbContext.QualificationFundings
+                    .Where(f => !f.EndDate.HasValue || f.EndDate.Value > _clockService.Today)
                     .Select(f => f.QualificationVersionId);
-
-                var settings = await LoadProcessorSettingsAsync();
 
                 while (processedCount < 1000000)
                 {
@@ -236,17 +234,16 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                         existingVersionsCache.TryGetValue(qualificationId, out var existingVersion);
 
-                        bool hasActiveApps = await activeApplicationsList.ContainsAsync(importRecord.QualificationNumberNoObliques);
-                        bool hasActiveFunding = await activeFundingsList.ContainsAsync(qualificationId);
+                        bool hasApplicationsInProgress = await activeApplicationsList.ContainsAsync(importRecord.QualificationNumberNoObliques);
+                        bool hasFundingWhichHasNotEnded = await notEndedFundingsList.ContainsAsync(qualificationId);
 
                         var result = _qualificationProcessor.Process(
                             importRecord,
                             existingVersion,
                             qualificationId,
                             organisationId,
-                            hasActiveApps, 
-                            hasActiveFunding,
-                            settings
+                            hasApplicationsInProgress, 
+                            hasFundingWhichHasNotEnded
                         );
 
                         if (result != null)
@@ -320,36 +317,6 @@ namespace SFA.DAS.AODP.Jobs.Services
 
             return fundingFeedbacks;
         }
-
-        private async Task<QualificationProcessorSettings> LoadProcessorSettingsAsync()
-        {
-            // Fetch all required reference data 
-            var statuses = await _applicationDbContext.ProcessStatus.ToListAsync();
-            var lifeCycles = await _applicationDbContext.LifecycleStages.ToListAsync();
-            var actionTypes = await _applicationDbContext.ActionType.ToListAsync();
-
-            return new QualificationProcessorSettings
-            {
-                // Map Process Status IDs
-                NoActionRequiredStatusId = statuses.First(s => s.Name == Common.Enum.ProcessStatus.NoActionRequired).Id,
-                DecisionRequiredStatusId = statuses.First(s => s.Name == Common.Enum.ProcessStatus.DecisionRequired).Id,
-
-                ApprovedStatusId = statuses.First(s => s.Name == Common.Enum.ProcessStatus.Approved).Id,
-                RejectedStatusId = statuses.First(s => s.Name == Common.Enum.ProcessStatus.Rejected).Id,
-                OnHoldStatusId = statuses.First(s => s.Name == Common.Enum.ProcessStatus.OnHold).Id,
-
-                // Map Lifecycle Stage IDs
-                NewLifecycleStageId = lifeCycles.First(l => l.Name == Common.Enum.LifeCycleStage.New).Id,
-                ChangedLifecycleStageId = lifeCycles.First(l => l.Name == Common.Enum.LifeCycleStage.Changed).Id,
-
-                // Map Action Type IDs (Used for Discussion History)
-                ActionTypeDecisionId = actionTypes.First(a => a.Description == "Action Required").Id,
-                ActionTypeNoActionId = actionTypes.First(a => a.Description == "No Action Required").Id,
-
-
-            };
-        }
-
 
     }
 }
