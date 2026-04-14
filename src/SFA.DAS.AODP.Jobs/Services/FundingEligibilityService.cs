@@ -9,47 +9,47 @@ namespace SFA.DAS.AODP.Jobs.Services
         {
             var rules = new List<FundingEligibilityRuleResult>
             {
-                CreateRuleResult(
+                new FundingEligibilityRuleResult(
                     "OfferedInEngland",
                     qualification.OfferedInEngland,
-                    "OfferedInEngland"),
+                    ["OfferedInEngland"]),
 
-                CreateRuleResult(
+                new FundingEligibilityRuleResult(
                     "IntentionToSeekFundingInEngland",
                     qualification.IntentionToSeekFundingInEngland ?? false,
-                    "IntentionToSeekFundingInEngland"),
+                    ["IntentionToSeekFundingInEngland"]),
 
-                CreateRuleResult(
+                new FundingEligibilityRuleResult(
                     "TypeIsNotEndPointAssessment",
                     qualification.Type != QualificationReference.EndPointAssessment,
-                    "Type"),
+                    ["Type"]),
 
-                CreateRuleResult(
+                new FundingEligibilityRuleResult(
                     "TitleDoesNotContainIneligibleQualifications",
                     !ContainsIneligibleQualification(qualification.Title),
-                    "Title"),
+                    ["Title"]),
 
-                CreateRuleResult(
+                new FundingEligibilityRuleResult(
                     "TitleDoesNotContainIneligibleQualificationShortForms",
                     !ContainsIneligibleQualificationShortForm(qualification.Title),
-                    "Title"),
+                    ["Title"]),
 
-                CreateRuleResult(
+                new FundingEligibilityRuleResult(
                     "GlhPresentAndGreaterThanZero",
                     qualification.Glh.HasValue && qualification.Glh.Value > 0,
-                    "Glh"),
+                    ["Glh"]),
 
-                CreateRuleResult(
+                new FundingEligibilityRuleResult(
                     "TqtPresentAndGreaterThanZero",
                     qualification.Tqt.HasValue && qualification.Tqt.Value > 0,
-                    "Tqt"),
+                    ["Tqt"] ),
 
-                CreateRuleResult(
+                new FundingEligibilityRuleResult(
                     "GlhLessThanTqt",
                     qualification.Glh.HasValue
                         && qualification.Tqt.HasValue
                         && qualification.Glh <= qualification.Tqt,
-                    "TqtLessThanGlh")
+                    ["TqtLessThanGlh"])
             };
 
             return new FundingEligibilityEvaluation
@@ -98,19 +98,6 @@ namespace SFA.DAS.AODP.Jobs.Services
                 PreviousEvaluation = previousEvaluation,
                 CurrentEvaluation = currentEvaluation,
                 RuleComparisons = ruleComparisons
-            };
-        }
-
-        private static FundingEligibilityRuleResult CreateRuleResult(
-            string ruleName,
-            bool passed,
-            params string[] fields)
-        {
-            return new FundingEligibilityRuleResult
-            {
-                RuleName = ruleName,
-                Passed = passed,
-                Fields = fields.ToList()
             };
         }
 

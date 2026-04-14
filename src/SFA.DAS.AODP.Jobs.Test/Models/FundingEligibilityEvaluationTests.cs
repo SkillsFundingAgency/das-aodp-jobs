@@ -19,10 +19,10 @@ namespace SFA.DAS.AODP.Jobs.UnitTests.Models
             var evaluation = new FundingEligibilityEvaluation
             {
                 Rules =
-            {
-                new FundingEligibilityRuleResult { Passed = true },
-                new FundingEligibilityRuleResult { Passed = true }
-            }
+                [
+                    new FundingEligibilityRuleResult ("rule one", true, [] ) ,
+                    new FundingEligibilityRuleResult ("rule two", true, []) 
+                ]
             };
 
             // Act
@@ -44,10 +44,10 @@ namespace SFA.DAS.AODP.Jobs.UnitTests.Models
             var evaluation = new FundingEligibilityEvaluation
             {
                 Rules =
-            {
-                new FundingEligibilityRuleResult { Passed = false, Fields = new() { FieldA } },
-                new FundingEligibilityRuleResult { Passed = false, Fields = new() { FieldB } }
-            }
+                {
+                    new FundingEligibilityRuleResult ("RuleA", false, [FieldA] ),
+                    new FundingEligibilityRuleResult ("RuleB", false, [FieldB] )
+                }
             };
 
             // Act

@@ -1,15 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SFA.DAS.AODP.Jobs.Models.Jobs.FundingEligibility
+﻿namespace SFA.DAS.AODP.Jobs.Models.Jobs.FundingEligibility
 {
-    public class FundingEligibilityRuleResult
+    [ExcludeFromCodeCoverage]
+    public record FundingEligibilityRuleResult
     {
-        public string RuleName { get; set; } = string.Empty;
-        public bool Passed { get; set; }
-        public List<string> Fields { get; set; } = new();
+        public string RuleName { get; init; } = string.Empty;
+        public bool Passed { get; init; }
+        public IReadOnlyList<string> Fields { get; init; } = new List<string>();
+
+        public FundingEligibilityRuleResult(string ruleName, bool passed, IReadOnlyList<string> fields)
+        {
+            RuleName = ruleName;
+            Passed = passed;
+            Fields = fields;
+        }
     }
 }

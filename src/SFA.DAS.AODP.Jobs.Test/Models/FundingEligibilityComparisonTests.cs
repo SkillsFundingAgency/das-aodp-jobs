@@ -17,12 +17,12 @@ namespace SFA.DAS.AODP.Jobs.UnitTests.Models
             // Arrange
             var previous = new FundingEligibilityEvaluation
             {
-                Rules = { new FundingEligibilityRuleResult { Passed = true } }
+                Rules = { new FundingEligibilityRuleResult("Passed rule", true, []) }
             };
 
             var current = new FundingEligibilityEvaluation
             {
-                Rules = { new FundingEligibilityRuleResult { Passed = false, Fields = new() { FieldA } } }
+                Rules = { new FundingEligibilityRuleResult("Failed rule", false, [FieldA]) }
             };
 
             var comparison = new FundingEligibilityComparison
@@ -30,15 +30,15 @@ namespace SFA.DAS.AODP.Jobs.UnitTests.Models
                 PreviousEvaluation = previous,
                 CurrentEvaluation = current,
                 RuleComparisons =
-            {
-                new FundingEligibilityRuleComparison
-                {
-                    RuleName = "GlhRule",
-                    PreviousPassed = true,
-                    CurrentPassed = false,
-                    Fields = new() { FieldA }
-                }
-            }
+                [
+                    new FundingEligibilityRuleComparison
+                    {
+                        RuleName = "GlhRule",
+                        PreviousPassed= true,
+                        CurrentPassed = false,
+                        Fields = [FieldA]
+                    }
+                    ]
             };
 
             // Act

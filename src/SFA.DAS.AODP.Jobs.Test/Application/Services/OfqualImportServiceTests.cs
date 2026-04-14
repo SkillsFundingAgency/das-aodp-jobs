@@ -22,7 +22,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         private readonly Mock<IOfqualRegisterApi> _apiClientMock;
         private readonly Mock<IOfqualRegisterService> _ofqualRegisterServiceMock;
         private readonly Mock<IQualificationsService> _qualificationsServiceMock;
-        private readonly Mock<IQualificationProcessor> _qualificationProcessorMock; 
+        private readonly Mock<IQualificationProcessor> _qualificationProcessorMock;
+        private readonly Mock<ISystemClockService> _clockServiceMock;
         private readonly FunctionContext _functionContext;
         private ApplicationDbContext _dbContext;
         private Fixture _fixture;
@@ -52,6 +53,10 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             _qualificationsServiceMock = new Mock<IQualificationsService>();            
             _functionContext = new Mock<FunctionContext>().Object;
             _qualificationProcessorMock = new Mock<IQualificationProcessor>();
+            _clockServiceMock = new Mock<ISystemClockService>();
+            var now = DateTime.UtcNow;
+            _clockServiceMock.Setup(c => c.UtcNow).Returns(now);
+
             var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseInMemoryDatabase("ApplicationDbContext" + Guid.NewGuid()).Options;
             var configuration = new Mock<IConfiguration>();
             _dbContext = new ApplicationDbContext(options);
@@ -197,8 +202,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             _qualificationsServiceMock.Setup(s => s.GetStagedQualificationsBatchAsync(It.IsAny<int>(), It.Is<int>(i => i > 0)))
                 .ReturnsAsync(new List<QualificationDTO>());
 
-            _qualificationProcessorMock.Setup(p => p.Process(It.IsAny<QualificationDTO>(), null, It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<QualificationProcessorSettings>()))
-                .Returns((QualificationDTO dto, QualificationVersions v, Guid qId, Guid oId, bool b1, bool b2, QualificationProcessorSettings s) =>
+            _qualificationProcessorMock.Setup(p => p.Process(It.IsAny<QualificationDTO>(), null, It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<bool>()))
+                .Returns((QualificationDTO dto, QualificationVersions v, Guid qId, Guid oId, bool b1, bool b2) =>
                 {
                     var newVersion = new QualificationVersions
                     {
@@ -253,8 +258,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             _qualificationsServiceMock.Setup(s => s.GetStagedQualificationsBatchAsync(It.IsAny<int>(), It.Is<int>(i => i > 0)))
                 .ReturnsAsync(new List<QualificationDTO>());
 
-            _qualificationProcessorMock.Setup(p => p.Process(It.IsAny<QualificationDTO>(), null, It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<QualificationProcessorSettings>()))
-                .Returns((QualificationDTO dto, QualificationVersions v, Guid qId, Guid oId, bool b1, bool b2, QualificationProcessorSettings s) =>
+            _qualificationProcessorMock.Setup(p => p.Process(It.IsAny<QualificationDTO>(), null, It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<bool>()))
+                .Returns((QualificationDTO dto, QualificationVersions v, Guid qId, Guid oId, bool b1, bool b2) =>
                 {
                     var newVersion = new QualificationVersions
                     {
@@ -311,8 +316,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             _qualificationsServiceMock.Setup(s => s.GetStagedQualificationsBatchAsync(It.IsAny<int>(), It.Is<int>(i => i > 0)))
                 .ReturnsAsync(new List<QualificationDTO>());
 
-            _qualificationProcessorMock.Setup(p => p.Process(It.IsAny<QualificationDTO>(), null, It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<QualificationProcessorSettings>()))
-                .Returns((QualificationDTO dto, QualificationVersions v, Guid qId, Guid oId, bool b1, bool b2, QualificationProcessorSettings s) =>
+            _qualificationProcessorMock.Setup(p => p.Process(It.IsAny<QualificationDTO>(), null, It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<bool>()))
+                .Returns((QualificationDTO dto, QualificationVersions v, Guid qId, Guid oId, bool b1, bool b2) =>
                 {
                     var newVersion = new QualificationVersions
                     {
@@ -397,8 +402,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             _qualificationsServiceMock.Setup(s => s.GetStagedQualificationsBatchAsync(It.IsAny<int>(), 0)).ReturnsAsync(importRecords);
             _qualificationsServiceMock.Setup(s => s.GetStagedQualificationsBatchAsync(It.IsAny<int>(), It.Is<int>(i => i > 0))).ReturnsAsync(new List<QualificationDTO>());
 
-            _qualificationProcessorMock.Setup(p => p.Process(It.IsAny<QualificationDTO>(), It.IsAny<QualificationVersions>(), It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<QualificationProcessorSettings>()))
-                .Returns((QualificationDTO dto, QualificationVersions existingV, Guid qId, Guid oId, bool b1, bool b2, QualificationProcessorSettings s) =>
+            _qualificationProcessorMock.Setup(p => p.Process(It.IsAny<QualificationDTO>(), It.IsAny<QualificationVersions>(), It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<bool>()))
+                .Returns((QualificationDTO dto, QualificationVersions existingV, Guid qId, Guid oId, bool b1, bool b2) =>
                 {
                     if (!changesPresent && previouslyEligible == currentlyEligible) return null;
 
@@ -477,9 +482,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 existingQual.Id,
                 It.IsAny<Guid>(),
                 It.IsAny<bool>(),
-                It.IsAny<bool>()
-                , It.IsAny<QualificationProcessorSettings>()))
-                .Returns((QualificationDTO dto, QualificationVersions v, Guid qId, Guid oId, bool b1, bool b2, QualificationProcessorSettings s) =>
+                It.IsAny<bool>()))
+                .Returns((QualificationDTO dto, QualificationVersions v, Guid qId, Guid oId, bool b1, bool b2) =>
                 {
                     var fieldChanges = new VersionFieldChanges
                     {
@@ -615,10 +619,9 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 qualification.Id,
                 It.IsAny<Guid>(),
                 It.IsAny<bool>(),
-                It.IsAny<bool>(),
-                It.IsAny<QualificationProcessorSettings>()
+                It.IsAny<bool>()
                 ))
-                .Returns((QualificationDTO dto, QualificationVersions v, Guid qId, Guid oId, bool b1, bool b2, QualificationProcessorSettings s) =>
+                .Returns((QualificationDTO dto, QualificationVersions v, Guid qId, Guid oId, bool b1, bool b2) =>
                 {
                     var fieldChanges = new VersionFieldChanges
                     {
@@ -719,10 +722,9 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 qualification.Id,                                         // 3. qualificationId
                 It.IsAny<Guid>(),                                         // 4. organisationId
                 It.IsAny<bool>(),                                         // 5. hasActiveApps
-                It.IsAny<bool>(),                                         // 6. hasActiveFunding
-                It.IsAny<QualificationProcessorSettings>()                // 7. settings
+                It.IsAny<bool>()                                          // 6. hasActiveFunding
                 ))
-                .Returns((QualificationDTO dto, QualificationVersions v, Guid qId, Guid oId, bool b1, bool b2, QualificationProcessorSettings s) =>
+                .Returns((QualificationDTO dto, QualificationVersions v, Guid qId, Guid oId, bool b1, bool b2) =>
                 {
                     var fieldChanges = new VersionFieldChanges
                     {
@@ -847,7 +849,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 _apiClientMock.Object,
                 _ofqualRegisterServiceMock.Object,
                 _qualificationsServiceMock.Object,
-                _qualificationProcessorMock.Object
+                _qualificationProcessorMock.Object,
+                _clockServiceMock.Object
             );
         }
 
@@ -860,7 +863,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 _apiClientMock.Object,
                 _ofqualRegisterServiceMock.Object,
                 _qualificationsServiceMock.Object,
-                _qualificationProcessorMock.Object
+                _qualificationProcessorMock.Object,
+                _clockServiceMock.Object
             );
         }
 

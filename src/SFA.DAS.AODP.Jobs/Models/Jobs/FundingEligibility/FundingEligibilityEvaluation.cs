@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SFA.DAS.AODP.Jobs.Models.Jobs.FundingEligibility
+﻿namespace SFA.DAS.AODP.Jobs.Models.Jobs.FundingEligibility
 {
-    public class FundingEligibilityEvaluation
+    [ExcludeFromCodeCoverage]
+    public record FundingEligibilityEvaluation
     {
         public List<FundingEligibilityRuleResult> Rules { get; set; } = new();
 

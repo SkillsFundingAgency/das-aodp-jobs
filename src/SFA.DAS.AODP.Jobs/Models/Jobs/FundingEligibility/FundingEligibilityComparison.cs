@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SFA.DAS.AODP.Jobs.Models.Jobs.FundingEligibility
+﻿namespace SFA.DAS.AODP.Jobs.Models.Jobs.FundingEligibility
 {
-    public class FundingEligibilityComparison
+    [ExcludeFromCodeCoverage]
+    public record FundingEligibilityComparison
     {
         public FundingEligibilityEvaluation PreviousEvaluation { get; set; } = new();
         public FundingEligibilityEvaluation CurrentEvaluation { get; set; } = new();
@@ -14,7 +9,7 @@ namespace SFA.DAS.AODP.Jobs.Models.Jobs.FundingEligibility
         public bool EligibilityChanged =>
             PreviousEvaluation.IsEligible != CurrentEvaluation.IsEligible;
 
-        public List<FundingEligibilityRuleComparison> RuleComparisons { get; set; } = new();
+        public IReadOnlyList<FundingEligibilityRuleComparison> RuleComparisons { get; set; } = new List<FundingEligibilityRuleComparison>();
 
         public IEnumerable<FundingEligibilityRuleComparison> ChangedRules =>
             RuleComparisons.Where(r => r.OutcomeChanged);
