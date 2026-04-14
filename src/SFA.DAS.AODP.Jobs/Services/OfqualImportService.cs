@@ -134,6 +134,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                     .ToDictionary(a => a.Qan, a => new { Id = a.Id, Title = a.Title });
 
                 var existingVersionsCache = (await _applicationDbContext.QualificationVersions
+                    .Include(qv => qv.Organisation)
+                    .Include(qv => qv.Qualification)
                     .Include(qv => qv.ProcessStatus)
                     .Include(qv => qv.LifecycleStage)
                     .AsNoTracking()

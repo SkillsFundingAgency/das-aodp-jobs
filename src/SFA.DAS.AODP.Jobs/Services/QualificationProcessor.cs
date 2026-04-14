@@ -13,6 +13,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             Guid? ExistingStageId,
             bool IsNew,
             bool IsEligible,
+            bool hasAnyChanges,
             bool HasKeyChanges,
             bool EligibilityChanged,
             bool HasActiveApps,
@@ -70,6 +71,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             bool eligibilityChanged = existingVersion?.EligibleForFunding != incomingEval.IsEligible;
 
             DetectionResults? changes = null;
+            bool hasChanges = false;
             bool hasKeyChanges = false;
 
             if (existingVersion != null)
@@ -86,6 +88,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                     changes.Value.ChangedFields.Add(nameof(QualificationVersions.EligibleForFunding));
                 }
 
+                hasChanges = changes.Value.ChangesPresent; 
                 hasKeyChanges = changes.Value.KeyFieldsChanged;
             }
 
@@ -94,6 +97,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                 existingVersion?.LifecycleStageId,
                 existingVersion == null,
                 incomingEval.IsEligible,
+                hasChanges,
                 hasKeyChanges,
                 eligibilityChanged,
                 hasActiveApps,
@@ -142,7 +146,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                     StatusId: requiresRereview ? settings.DecisionRequiredStatusId : context.ExistingStatusId!.Value,
                     StageId: settings.ChangedLifecycleStageId,
                     ActionId: requiresRereview ? settings.ActionTypeDecisionId : settings.ActionTypeNoActionId,
-                    BaseNote: requiresRereview ? "Eligible - Major change" : "Eligible - Minor change",
+                    BaseNote: requiresRereview ? "decision required - changed qualification" : "no action required - changed qualification",
                     IncludeFieldChanges: requiresRereview,
                     IncludeEligibilityReasons: false,
                     ReviewRequired: requiresRereview,
@@ -155,7 +159,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                     StatusId: context.ExistingStatusId!.Value,
                     StageId: context.ExistingStageId ?? settings.ChangedLifecycleStageId,
                     ActionId: settings.ActionTypeDecisionId,
-                    BaseNote: $"Changed Qualification (Eligible) - No status change - ({(context.HasKeyChanges ? "Major" : "Minor")} change)",
+                    BaseNote: $"no status change - changed qualification - ({(context.HasKeyChanges ? "major" : "minor")} change)",
                     IncludeFieldChanges: true,
                     IncludeEligibilityReasons: false,
                     ReviewRequired: requiresRereview,
@@ -166,7 +170,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                 StatusId: settings.DecisionRequiredStatusId,
                 StageId: settings.ChangedLifecycleStageId,
                 ActionId: settings.ActionTypeDecisionId,
-                BaseNote: "Changed Qualification (Eligible) - Decision required",
+                BaseNote: "decision required - changed qualification",
                 IncludeFieldChanges: true,
                 IncludeEligibilityReasons: false,
                 ReviewRequired: true,
@@ -183,15 +187,15 @@ namespace SFA.DAS.AODP.Jobs.Services
             var statusId = needsDecision ? settings.DecisionRequiredStatusId : settings.NoActionRequiredStatusId;
             var actionId = needsDecision ? settings.ActionTypeDecisionId : settings.ActionTypeNoActionId;
             var note = needsDecision
-                ? "Changed Qualification (Ineligible) - Decision required - Conflict or Eligibility Change"
-                : "Changed Qualification (Ineligible) - No action required.";
+                ? "decision required - changed qualifictaion - conflict or eligibility change"
+                : "no action required - changed qualifictaion";
 
             return new QualificationProcessorOutcome(
                 StatusId: statusId,
                 StageId: settings.ChangedLifecycleStageId,
                 ActionId: actionId,
                 BaseNote: note,
-                IncludeFieldChanges: needsDecision,
+                IncludeFieldChanges: context.hasAnyChanges,
                 IncludeEligibilityReasons: true,
                 ReviewRequired: needsDecision,
                 HasFunding: context.HasActiveFunding);
@@ -205,7 +209,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                     StatusId: settings.DecisionRequiredStatusId,
                     StageId: settings.NewLifecycleStageId,
                     ActionId: settings.ActionTypeDecisionId,
-                    BaseNote: "New Qualification (Eligible) - Decision Required",
+                    BaseNote: "decision required - new qualification",
                     IncludeFieldChanges: false,
                     IncludeEligibilityReasons: false,
                     ReviewRequired: true,
@@ -223,8 +227,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                 : settings.ActionTypeNoActionId;
 
             var baseNote = hasConflict
-                ? "New Qualification (Ineligible) - Decision required - Qualification has Active Applications"
-                : "New Qualification (Ineligible) - No action required";
+                ? "decision required - new qualification - active applications"
+                : "no action required - new qualification";
 
             return new QualificationProcessorOutcome(
                 StatusId: statusId,
@@ -255,22 +259,12 @@ namespace SFA.DAS.AODP.Jobs.Services
                 ChangedFieldNames = outcome.IncludeFieldChanges ? changes?.ChangedFieldsCsv : null
             };
 
-            var noteLines = new List<string> { outcome.BaseNote };
-            if (outcome.IncludeEligibilityReasons && !string.IsNullOrEmpty(eval.GetFailedFieldsCsv()))
-            {
-                noteLines.Add($"Ineligible: {eval.GetFailedFieldsCsv()}");
-            }
-            if (outcome.IncludeFieldChanges && !string.IsNullOrEmpty(changes?.ChangedFieldsCsv))
-            {
-                noteLines.Add($"Changes: {changes.Value.ChangedFieldsCsv}");
-            }
-
             var discussion = new QualificationDiscussionHistory
             {
                 Id = Guid.NewGuid(),
                 QualificationId = qId,
                 ActionTypeId = outcome.ActionId,
-                Notes = string.Join(" | ", noteLines),
+                Notes = outcome.BaseNote,
                 Timestamp = DateTime.Now,
                 UserDisplayName = "OFQUAL Import"
             };

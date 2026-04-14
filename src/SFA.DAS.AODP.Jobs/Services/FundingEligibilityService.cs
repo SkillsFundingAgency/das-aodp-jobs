@@ -48,7 +48,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                     "GlhLessThanTqt",
                     qualification.Glh.HasValue
                         && qualification.Tqt.HasValue
-                        && qualification.Glh < qualification.Tqt,
+                        && qualification.Glh <= qualification.Tqt,
                     "TqtLessThanGlh")
             };
 
