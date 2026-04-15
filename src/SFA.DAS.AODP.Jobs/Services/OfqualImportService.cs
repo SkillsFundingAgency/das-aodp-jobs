@@ -20,9 +20,9 @@ namespace SFA.DAS.AODP.Jobs.Services
 
         private static readonly string[] ActiveApplicationStatuses =
         {
-            "In Review",
+            "InReview",
             "Reviewed",
-            "On Hold"
+            "OnHold"
         };
 
         public OfqualImportService(ILogger<OfqualImportService> logger, IConfiguration configuration, IApplicationDbContext applicationDbContext,

@@ -183,8 +183,8 @@ namespace SFA.DAS.AODP.Jobs.Services
             var statusId = needsDecision ? ProcessStatusLookup.DecisionRequired.Id : ProcessStatusLookup.NoActionRequired.Id;
             var actionId = needsDecision ? ActionTypeLookup.ActionRequired.Id : ActionTypeLookup.NoActionRequired.Id;
             var note = needsDecision
-                ? "decision required - changed qualifictaion - conflict or eligibility change"
-                : "no action required - changed qualifictaion";
+                ? "decision required - changed qualification - conflict or eligibility change"
+                : "no action required - changed qualification";
 
             return new QualificationProcessorOutcome(
                 StatusId: statusId,
