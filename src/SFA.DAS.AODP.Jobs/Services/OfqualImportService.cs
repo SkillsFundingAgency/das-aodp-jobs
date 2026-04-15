@@ -20,7 +20,7 @@ namespace SFA.DAS.AODP.Jobs.Services
 
         private static readonly string[] ActiveApplicationStatuses =
         {
-            "In Review",
+            "InReview",
             "Reviewed",
             "On Hold"
         };
