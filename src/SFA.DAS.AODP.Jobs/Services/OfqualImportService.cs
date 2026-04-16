@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 using Newtonsoft.Json;
 using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Jobs.Models;
-using SFA.DAS.AODP.Jobs.Models.Jobs.FundingEligibility;
 
 namespace SFA.DAS.AODP.Jobs.Services
 {
@@ -22,7 +21,7 @@ namespace SFA.DAS.AODP.Jobs.Services
         {
             "InReview",
             "Reviewed",
-            "On Hold"
+            "OnHold"
         };
 
         public OfqualImportService(ILogger<OfqualImportService> logger, IConfiguration configuration, IApplicationDbContext applicationDbContext,
@@ -233,8 +232,10 @@ namespace SFA.DAS.AODP.Jobs.Services
                         #endregion Resolve Qualification
 
                         existingVersionsCache.TryGetValue(qualificationId, out var existingVersion);
+                        //2do: if it works with and without
 
-                        bool hasApplicationsInProgress = await activeApplicationsList.ContainsAsync(importRecord.QualificationNumberNoObliques);
+                        bool hasApplicationsInProgress = await activeApplicationsList.ContainsAsync(importRecord.QualificationNumberNoObliques) ||
+                            await activeApplicationsList.ContainsAsync(importRecord.QualificationNumber);
                         bool hasFundingWhichHasNotEnded = await notEndedFundingsList.ContainsAsync(qualificationId);
 
                         var result = _qualificationProcessor.Process(
