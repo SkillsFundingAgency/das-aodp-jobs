@@ -53,7 +53,12 @@ public class QualificationProcessorTests
         Assert.Equal(1, result.NewVersion.Version);
         Assert.Equal(qualId, result.NewVersion.QualificationId);
         Assert.Equal(expectedStatusId, result.NewVersion.ProcessStatusId);
-        Assert.Equal(LifecycleStageLookup.New.Id, result.NewVersion.LifecycleStageId);
+
+        var expectedStage = expectDecisionRequired
+            ? LifecycleStageLookup.New.Id
+            : LifecycleStageLookup.Completed.Id;
+
+        Assert.Equal(expectedStage, result.NewVersion.LifecycleStageId);
     }
 
     [Theory]
