@@ -138,9 +138,10 @@ namespace SFA.DAS.AODP.Jobs.Services
                     .Where(a => ActiveApplicationStatuses.Contains(a.Status))
                     .Select(a => a.QualificationNumber);
 
-                var notEndedFundingsList = _applicationDbContext.QualificationFundings
+                var notEndedQualificationIds = _applicationDbContext.QualificationFundings
                     .Where(f => !f.EndDate.HasValue || f.EndDate.Value > _clockService.Today)
-                    .Select(f => f.QualificationVersionId);
+                    .Select(f => f.QualificationVersion.Qualification.Id)
+                    .Distinct();
 
                 while (processedCount < 1000000)
                 {
@@ -224,7 +225,7 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                         bool hasApplicationsInProgress = await activeApplicationsList.ContainsAsync(importRecord.QualificationNumberNoObliques) ||
                             await activeApplicationsList.ContainsAsync(importRecord.QualificationNumber);
-                        bool hasFundingWhichHasNotEnded = await notEndedFundingsList.ContainsAsync(qualificationId);
+                        bool hasFundingWhichHasNotEnded = await notEndedQualificationIds.ContainsAsync(qualificationId);
 
                         var latestQualificationVersion = await _applicationDbContext.QualificationVersions
                             .Include(qv => qv.Qualification)
