@@ -183,7 +183,7 @@ namespace SFA.DAS.AODP.Jobs.Services
 
             var statusId = needsDecision ? ProcessStatusLookup.DecisionRequired.Id : ProcessStatusLookup.NoActionRequired.Id;
             var actionId = needsDecision ? ActionTypeLookup.ActionRequired.Id : ActionTypeLookup.NoActionRequired.Id;
-            var stageId = needsDecision ? LifecycleStageLookup.New.Id : LifecycleStageLookup.Completed.Id;
+            var stageId = needsDecision ? LifecycleStageLookup.Changed.Id : LifecycleStageLookup.Completed.Id;
             var note = needsDecision
                 ? "Changed Qualification (Ineligible) - Decision required - Conflict or Eligibility Change"
                 : "Changed Qualification (Ineligible) - No action required.";
