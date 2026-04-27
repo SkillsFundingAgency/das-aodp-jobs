@@ -45,9 +45,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
             _config = new AodpJobsConfiguration()
             {
                  FunctionAppBaseUrl = "https://localhost:7001",
-                 FunctionHostKey = "???",
-                 FundedQualificationsImportUrl = "https://localhost:5000/Funded.csv",
-                 ArchivedFundedQualificationsImportUrl = "https://localhost:5000/archived.csv"
+                 FunctionHostKey = "???"
             };
             _control = new FundedJobControl()
             {
@@ -97,10 +95,10 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
                 .ToList();
 
             _csvReaderServiceMock                                                                                             
-                .Setup(service => service.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(_config.FundedQualificationsImportUrl, qualifications, organisations, It.IsAny<ILogger>()))
+                .Setup(service => service.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(ImportStoragePaths.ApprovedFundingFileLogicalPath, qualifications, organisations, It.IsAny<ILogger>()))
                 .ReturnsAsync(fundedImport);
             _csvReaderServiceMock
-                .Setup(service => service.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(_config.ArchivedFundedQualificationsImportUrl, qualifications, organisations, It.IsAny<ILogger>()))
+                .Setup(service => service.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(ImportStoragePaths.ArchivedFundingFileLogicalPath, qualifications, organisations, It.IsAny<ILogger>()))
                 .ReturnsAsync(archivedImport);
 
             _qualificationsRepository.Setup(s => s.GetAwardingOrganisationsAsync()).ReturnsAsync(organisations).Verifiable();
@@ -149,7 +147,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
 
             // Arrange
             _csvReaderServiceMock
-                .Setup(service => service.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(_config.FundedQualificationsImportUrl, qualifications, organisations, It.IsAny<ILogger>()))
+                .Setup(service => service.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(ImportStoragePaths.ApprovedFundingFileLogicalPath, qualifications, organisations, It.IsAny<ILogger>()))
                 .ReturnsAsync(new List<FundedQualificationDTO>());
 
             var httpRequestData = new MockHttpRequestData(_functionContext);          
@@ -189,7 +187,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
 
             // Arrange
             _csvReaderServiceMock
-                .Setup(service => service.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(_config.FundedQualificationsImportUrl, qualifications, organisations, It.IsAny<ILogger>()));
+                .Setup(service => service.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(ImportStoragePaths.ApprovedFundingFileLogicalPath, qualifications, organisations, It.IsAny<ILogger>()));
 
             var httpRequestData = new MockHttpRequestData(_functionContext);
 
@@ -198,21 +196,6 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
 
             // Assert
             var okResult = Assert.IsType<StatusCodeResult>(response);
-        }
-
-        [Fact]
-        public async Task Run_ShouldReturnBadRequest_WhenUrlIsNotSet()
-        {
-            // Arrange 
-            _config.FundedQualificationsImportUrl = "";
-            var httpRequestData = new MockHttpRequestData(_functionContext);
-
-            // Act
-            var response = await _function.Run(httpRequestData);
-
-            // Assert
-            var okResult = Assert.IsType<BadRequestObjectResult>(response);
-            _csvReaderServiceMock.Verify(service => service.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(It.IsAny<string>()), Times.Never);
         }
     }
 }

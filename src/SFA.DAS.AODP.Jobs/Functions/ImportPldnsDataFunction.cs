@@ -1,18 +1,9 @@
 ﻿using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.Extensions.Logging;
-using RestEase;
-using SFA.DAS.AODP.Common.Enum;
 using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Infrastructure.Interfaces;
 using SFA.DAS.AODP.Jobs.Helpers;
-using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Models.Config;
 using System.Globalization;
-using System.Text;
 
 namespace SFA.DAS.AODP.Jobs.Functions;
 
@@ -77,7 +68,7 @@ public class ImportPldnsDataFunction
 
     private async Task<int> ImportPldns(CancellationToken cancellationToken)
     {
-        string? importFileUrl = _config.PldnsImportUrl;
+        string? importFileUrl = ImportStoragePaths.PldnsFileLogicalPath;
         await using var ms = await _blobStorageFileService.DownloadFileAsync(importFileUrl!, cancellationToken);
         ms.Position = 0;
 

@@ -42,8 +42,8 @@ namespace SFA.DAS.AODP.Functions
         public async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "api/approvedQualificationsImport/{username}")] HttpRequestData req, string username = "")
         {
-			string? fundedUrlFilePath = _config.FundedQualificationsImportUrl;
-			string? archivedUrlFilePath = _config.ArchivedFundedQualificationsImportUrl;      
+			string? fundedUrlFilePath = ImportStoragePaths.ApprovedFundingFileLogicalPath;
+			string? archivedUrlFilePath = ImportStoragePaths.ArchivedFundingFileLogicalPath;
 
             if (string.IsNullOrEmpty(fundedUrlFilePath))
             {

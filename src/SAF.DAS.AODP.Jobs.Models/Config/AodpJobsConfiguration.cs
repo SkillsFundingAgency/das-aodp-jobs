@@ -17,13 +17,13 @@ namespace SFA.DAS.AODP.Models.Config
 
         public int DefaultImportLimit { get; set; }
 
-        public string? FundedQualificationsImportUrl { get; set; }
+        //public string? FundedQualificationsImportUrl { get; set; }
 
-        public string? ArchivedFundedQualificationsImportUrl { get; set; }
+        //public string? ArchivedFundedQualificationsImportUrl { get; set; }
 
-        public string? PldnsImportUrl { get; set; }
+        //public string? PldnsImportUrl { get; set; }
 
-        public string? DefundingListImportUrl { get; set; }
+        //public string? DefundingListImportUrl { get; set; }
 
         public string? ConfigurationStorageConnectionString { get; set; }
 

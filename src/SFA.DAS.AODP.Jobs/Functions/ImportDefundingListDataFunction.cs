@@ -57,7 +57,7 @@ public class ImportDefundingListDataFunction
 
     private async Task<int> ImportDefundingList(CancellationToken cancellationToken)
     {
-        string? importFileUrl = _config.DefundingListImportUrl;
+        string? importFileUrl = ImportStoragePaths.DefundingListFileLogicalPath;
         await using var ms = await _blobStorageFileService.DownloadFileAsync(importFileUrl!, cancellationToken);
 
         ms.Position = 0;

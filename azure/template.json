@@ -91,6 +91,13 @@
         "vnetRouteAllEnabled": {
             "type": "bool",
             "defaultValue": false
+        },
+        "malwareScanHandlerFunctionName": {
+          "type": "string",
+          "defaultValue": "MalwareScanEventHandler",
+          "metadata": {
+            "description": "Name of the function inside the Function App that handles Defender malware scan events"
+          }
         }
     },
     "variables": {

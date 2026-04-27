@@ -35,10 +35,7 @@ public class ImportPldnsDataFunctionTests
         _jobConfigurationServiceMock = new Mock<IJobConfigurationService>();
         _importRepositoryMock = new Mock<IImportRepository>();
         _blobServiceMock = new Mock<IBlobStorageFileService>();
-        _config = new AodpJobsConfiguration
-        {
-            PldnsImportUrl = "https://somewhere/pldns.xlsx"
-        };
+        _config = new AodpJobsConfiguration();
 
         _function = new ImportPldnsDataFunction(
             _loggerMock.Object,
@@ -63,7 +60,7 @@ public class ImportPldnsDataFunctionTests
         downloadedStream.Position = 0;
 
         _blobServiceMock
-            .Setup(s => s.DownloadFileAsync(_config.PldnsImportUrl!, It.IsAny<CancellationToken>()))
+            .Setup(s => s.DownloadFileAsync(ImportStoragePaths.PldnsFileLogicalPath, It.IsAny<CancellationToken>()))
             .ReturnsAsync(downloadedStream);
 
         var capturedInserted = new List<Pldns>();
@@ -133,7 +130,7 @@ public class ImportPldnsDataFunctionTests
         downloadedStream.Position = 0;
 
         _blobServiceMock
-            .Setup(s => s.DownloadFileAsync(_config.PldnsImportUrl!, It.IsAny<CancellationToken>()))
+            .Setup(s => s.DownloadFileAsync(ImportStoragePaths.PldnsFileLogicalPath, It.IsAny<CancellationToken>()))
             .ReturnsAsync(downloadedStream);
 
         var control = new PldnsImportControl
@@ -177,7 +174,7 @@ public class ImportPldnsDataFunctionTests
     {
         // Arrange - job config throws SystemException
         _blobServiceMock
-            .Setup(s => s.DownloadFileAsync(_config.PldnsImportUrl!, It.IsAny<CancellationToken>()))
+            .Setup(s => s.DownloadFileAsync(ImportStoragePaths.PldnsFileLogicalPath, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MemoryStream());
 
         _jobConfigurationServiceMock
@@ -199,7 +196,7 @@ public class ImportPldnsDataFunctionTests
     {
         // Arrange - job config throws generic exception
         _blobServiceMock
-            .Setup(s => s.DownloadFileAsync(_config.PldnsImportUrl!, It.IsAny<CancellationToken>()))
+            .Setup(s => s.DownloadFileAsync(ImportStoragePaths.PldnsFileLogicalPath, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MemoryStream());
 
         _jobConfigurationServiceMock
