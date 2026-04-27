@@ -1,5 +1,8 @@
-﻿namespace SFA.DAS.AODP.Common.Enum;
+﻿using System.Diagnostics.CodeAnalysis;
 
+namespace SFA.DAS.AODP.Common.Enum;
+
+[ExcludeFromCodeCoverage]
 public record QualificationTitle(string Value)
 {
     public static readonly QualificationTitle EsolInternational = new("ESOL International");

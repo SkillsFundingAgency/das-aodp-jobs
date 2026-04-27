@@ -1,5 +1,8 @@
-﻿namespace SFA.DAS.AODP.Common.Enum;
+﻿using System.Diagnostics.CodeAnalysis;
 
+namespace SFA.DAS.AODP.Common.Enum;
+
+[ExcludeFromCodeCoverage]
 public record QualificationLevel(int? Code, string Value)
 {
     public static readonly QualificationLevel EntryLevel = new(null, "Entry Level");
