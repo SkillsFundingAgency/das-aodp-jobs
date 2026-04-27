@@ -137,12 +137,17 @@ namespace SFA.DAS.AODP.Jobs.Services
 
             var requiresRereview = context.HasKeyChanges || context.EligibilityChanged;
 
+
             if (isApprovedOrRejected)
             {
+                var statusId = requiresRereview ? ProcessStatusLookup.DecisionRequired.Id : context.ExistingStatusId!.Value;
+                var actionId = requiresRereview ? ActionTypeLookup.ActionRequired.Id : ActionTypeLookup.NoActionRequired.Id;
+                var stageId = requiresRereview ? LifecycleStageLookup.Changed.Id : LifecycleStageLookup.Completed.Id;
+
                 return new QualificationProcessorOutcome(
-                    StatusId: requiresRereview ? ProcessStatusLookup.DecisionRequired.Id : context.ExistingStatusId!.Value,
-                    StageId: LifecycleStageLookup.Changed.Id,
-                    ActionId: requiresRereview ? ActionTypeLookup.ActionRequired.Id : ActionTypeLookup.NoActionRequired.Id,
+                    StatusId: statusId,
+                    StageId: stageId,
+                    ActionId: actionId,
                     BaseNote: requiresRereview ? "decision required - changed qualification" : "no action required - changed qualification",
                     IncludeFieldChanges: requiresRereview,
                     IncludeEligibilityReasons: false,
@@ -182,13 +187,14 @@ namespace SFA.DAS.AODP.Jobs.Services
 
             var statusId = needsDecision ? ProcessStatusLookup.DecisionRequired.Id : ProcessStatusLookup.NoActionRequired.Id;
             var actionId = needsDecision ? ActionTypeLookup.ActionRequired.Id : ActionTypeLookup.NoActionRequired.Id;
+            var stageId = needsDecision ? LifecycleStageLookup.Changed.Id : LifecycleStageLookup.Completed.Id;
             var note = needsDecision
                 ? "decision required - changed qualification - conflict or eligibility change"
                 : "no action required - changed qualification";
 
             return new QualificationProcessorOutcome(
                 StatusId: statusId,
-                StageId: LifecycleStageLookup.Changed.Id,
+                StageId: stageId,
                 ActionId: actionId,
                 BaseNote: note,
                 IncludeFieldChanges: context.hasAnyChanges,
@@ -223,13 +229,17 @@ namespace SFA.DAS.AODP.Jobs.Services
                 ? ActionTypeLookup.ActionRequired.Id
                 : ActionTypeLookup.NoActionRequired.Id;
 
+            var stageId = hasConflict
+                ? LifecycleStageLookup.New.Id
+                : LifecycleStageLookup.Completed.Id;
+
             var baseNote = hasConflict
                 ? "decision required - new qualification - active applications"
                 : "no action required - new qualification";
 
             return new QualificationProcessorOutcome(
                 StatusId: statusId,
-                StageId: LifecycleStageLookup.New.Id,
+                StageId: stageId,
                 ActionId: actionId,
                 BaseNote: baseNote,
                 IncludeFieldChanges: false,

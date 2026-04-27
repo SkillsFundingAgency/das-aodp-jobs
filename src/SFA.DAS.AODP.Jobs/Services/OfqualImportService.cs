@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 using Newtonsoft.Json;
 using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Jobs.Models;
-using SFA.DAS.AODP.Jobs.Models.Jobs.FundingEligibility;
 
 namespace SFA.DAS.AODP.Jobs.Services
 {
@@ -135,24 +134,14 @@ namespace SFA.DAS.AODP.Jobs.Services
                     .ToListAsync())
                     .ToDictionary(a => a.Qan, a => new { Id = a.Id, Title = a.Title });
 
-                var existingVersionsCache = (await _applicationDbContext.QualificationVersions
-                    .Include(qv => qv.Organisation)
-                    .Include(qv => qv.Qualification)
-                    .Include(qv => qv.ProcessStatus)
-                    .Include(qv => qv.LifecycleStage)
-                    .AsNoTracking()
-                    .GroupBy(g => g.QualificationId)
-                    .Select(qv => qv.OrderByDescending(o => o.Version).First())
-                    .ToListAsync())
-                    .ToDictionary(x => x.QualificationId, x => x);
-
                 var activeApplicationsList = _applicationDbContext.Applications
                     .Where(a => ActiveApplicationStatuses.Contains(a.Status))
                     .Select(a => a.QualificationNumber);
 
-                var notEndedFundingsList = _applicationDbContext.QualificationFundings
+                var notEndedQualificationIds = _applicationDbContext.QualificationFundings
                     .Where(f => !f.EndDate.HasValue || f.EndDate.Value > _clockService.Today)
-                    .Select(f => f.QualificationVersionId);
+                    .Select(f => f.QualificationVersion.Qualification.Id)
+                    .Distinct();
 
                 while (processedCount < 1000000)
                 {
@@ -221,8 +210,8 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                             if (importRecord.Title != cachedQualification.Title)
                             {
-                                var existingQual = _applicationDbContext.Qualification.Local
-                                    .FirstOrDefault(q => q.Id == qualificationId);
+                                var existingQual = await _applicationDbContext.Qualification
+                                    .FirstOrDefaultAsync(q => q.Id == qualificationId);
 
                                 if (existingQual != null)
                                 {
@@ -234,14 +223,23 @@ namespace SFA.DAS.AODP.Jobs.Services
                         }
                         #endregion Resolve Qualification
 
-                        existingVersionsCache.TryGetValue(qualificationId, out var existingVersion);
+                        bool hasApplicationsInProgress = await activeApplicationsList.ContainsAsync(importRecord.QualificationNumberNoObliques) ||
+                            await activeApplicationsList.ContainsAsync(importRecord.QualificationNumber);
+                        bool hasFundingWhichHasNotEnded = await notEndedQualificationIds.ContainsAsync(qualificationId);
 
-                        bool hasApplicationsInProgress = await activeApplicationsList.ContainsAsync(importRecord.QualificationNumberNoObliques);
-                        bool hasFundingWhichHasNotEnded = await notEndedFundingsList.ContainsAsync(qualificationId);
+                        var latestQualificationVersion = await _applicationDbContext.QualificationVersions
+                            .Include(qv => qv.Qualification)
+                            .Include(qv => qv.Organisation)
+                            .Include(qv => qv.ProcessStatus)
+                            .Include(qv => qv.LifecycleStage)
+                            .Include(qv => qv.VersionFieldChanges)
+                            .AsNoTracking()
+                            .OrderByDescending(qv => qv.Version)
+                            .FirstOrDefaultAsync(qv => qv.QualificationId == qualificationId);
 
                         var result = _qualificationProcessor.Process(
                             importRecord,
-                            existingVersion,
+                            latestQualificationVersion,
                             qualificationId,
                             organisationId,
                             hasApplicationsInProgress, 
