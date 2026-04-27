@@ -72,11 +72,11 @@ namespace SFA.DAS.AODP.Functions.Functions
                     jobControl.JobRunId = await _jobConfigurationService.InsertJobRunAsync(jobControl.JobId, username, JobStatus.Running);
                 }
 
-                if (jobControl.RunApiImport)
-                {
-                    // STAGE 1 - Import Ofqual Api data to staging area
-                    totalRecords = await _ofqualImportService.ImportApiData(req);
-                }
+                //if (jobControl.RunApiImport)
+                //{
+                //    // STAGE 1 - Import Ofqual Api data to staging area
+                //    totalRecords = await _ofqualImportService.ImportApiData(req);
+                //}
 
                 if (jobControl.ProcessStagingData)
                 {
