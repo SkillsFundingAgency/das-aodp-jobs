@@ -143,6 +143,7 @@ public static class QualificationReference
         return Regex.IsMatch(
             title,
             pattern,
-            RegexOptions.IgnoreCase);
+            RegexOptions.IgnoreCase,
+            TimeSpan.FromSeconds(30));
     }
 }
