@@ -16,13 +16,8 @@ public class Program
             builder.AddFilter<ApplicationInsightsLoggerProvider>("Microsoft", LogLevel.Information);
             builder.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Warning);
             builder.AddFilter(typeof(Program).Namespace, LogLevel.Information);
-
-#if DEBUG
-            builder.SetMinimumLevel(LogLevel.Trace);
+            builder.SetMinimumLevel(LogLevel.Information);
             builder.AddConsole();
-#else
-    builder.SetMinimumLevel(LogLevel.Information);
-#endif
         });
 
         builder.Services
