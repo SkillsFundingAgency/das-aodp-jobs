@@ -14,6 +14,7 @@ global using SFA.DAS.AODP.Jobs.Functions;
 global using SFA.DAS.AODP.Jobs.Interfaces;
 global using SFA.DAS.AODP.Jobs.Models.Jobs;
 global using SFA.DAS.AODP.Jobs.Services;
+global using SFA.DAS.AODP.Jobs.UnitTests.Testing;
 global using SFA.DAS.AODP.Models.QaaQualification;
 global using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
 

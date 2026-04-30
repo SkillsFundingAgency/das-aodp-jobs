@@ -213,8 +213,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var writeResult = await _service.WriteQualifications(importedData);
             
             Assert.True(writeResult);
-            var insertedOffers = await _dbContext.QualificationOffers
-                                    .ToListAsync();
+            var insertedOffers = await _dbContext.QualificationOffers.ToListAsync();
             Assert.Equal(sets.Count, insertedOffers.Count);
 
             var seedResult = await _service.SeedFundingData();
@@ -222,17 +221,21 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             //Assert
             Assert.True(seedResult);
             var insertedFundings = await _dbContext.QualificationFundings
-                                        .Include(i => i.QualificationVersion)
-                                            .ThenInclude(t => t.Qualification)
-                                        .Include(i => i.FundingOffer)
-                                        .ToListAsync();
+                .Include(i => i.QualificationVersion)
+                .ThenInclude(t => t.Qualification)
+                .Include(i => i.FundingOffer)
+                .ToListAsync();
+
             Assert.Equal(6, insertedFundings.Count);
-            var matchingFunding = insertedFundings.Where(w => w.QualificationVersion.QualificationId == insertedOffers[0].Qualification.QualificationId
-                                                            && w.FundingOffer.Name == insertedOffers[0].Name).FirstOrDefault();
+            var matchingFunding = insertedFundings.FirstOrDefault(w =>
+                w.QualificationVersion.QualificationId == insertedOffers[0].Qualification!.QualificationId
+                && w.FundingOffer.Name == insertedOffers[0].Name);
+
             Assert.NotNull(matchingFunding);
             Assert.Equal(insertedOffers[0].Name, matchingFunding.FundingOffer.Name);
             Assert.Equal(DateOnly.FromDateTime(insertedOffers[0].FundingApprovalStartDate.Value), matchingFunding.StartDate);
             Assert.Equal(DateOnly.FromDateTime(insertedOffers[0].FundingApprovalEndDate.Value), matchingFunding.EndDate);
+            Assert.StartsWith("18+ only", insertedOffers[0].Notes);
         }
 
         //[Fact]
@@ -292,6 +295,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 var offer = _fixture.Create<FundedQualificationOfferDTO>();
                 offer.QualificationId = set.QualId;
                 offer.FundingAvailable = fundingAvailable.ToString();
+                offer.Notes = "18+ only";
+
                 var importRecord = _fixture.Build<FundedQualificationDTO>()
                                     .With(w => w.AwardingOrganisationId, set.OrgId)
                                     .With(w => w.Id, Guid.NewGuid())

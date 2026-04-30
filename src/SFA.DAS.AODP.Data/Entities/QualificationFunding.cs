@@ -14,5 +14,16 @@ namespace SFA.DAS.AODP.Data.Entities
 
         public virtual QualificationVersions QualificationVersion { get; set; }
         public virtual FundingOffer FundingOffer { get; set; }
+
+        public static QualificationFunding Create(Guid qualificationVersionId, Guid fundingOfferId, DateOnly? startDate, DateOnly? endDate, string? comments) =>
+            new()
+            {
+                Id = Guid.NewGuid(),
+                QualificationVersionId = qualificationVersionId,
+                FundingOfferId = fundingOfferId,
+                StartDate = startDate,
+                EndDate = endDate,
+                Comments = comments
+            };
     }
 }

@@ -27,7 +27,7 @@ namespace SFA.DAS.AODP.Infrastructure.Services
             {
                 const int _batchSize = 1000;
                 _logger.LogInformation("Writing funded qualifications to db");
-                for (int i = 0; i < qualifications.Count; i += _batchSize)
+                for (var i = 0; i < qualifications.Count; i += _batchSize)
                 {
                     var batch = qualifications
                         .Skip(i)
@@ -79,8 +79,8 @@ namespace SFA.DAS.AODP.Infrastructure.Services
 
             try
             {
-                var offerTypeLookup = await _applicationDbContext.FundingOffers.ToDictionaryAsync(r => r.Name, r => r.Id);
-                var actionLookup = await _applicationDbContext.ActionType.ToDictionaryAsync(r => r.Description ?? "", r => r.Id);
+                var offerTypeLookup = await _applicationDbContext.FundingOffers.AsNoTracking().ToDictionaryAsync(r => r.Name, r => r.Id);
+                var actionLookup = await _applicationDbContext.ActionType.AsNoTracking().ToDictionaryAsync(r => r.Description ?? "", r => r.Id);
                 var noActionNeededId = actionLookup[ActionTypeEnum.NoActionRequired];
 
                 // Funding offers from imported data
@@ -126,9 +126,10 @@ namespace SFA.DAS.AODP.Infrastructure.Services
                 {
                     _logger.LogInformation($"SeedFundingData -> Adding missing offers to funded.QualificationFundings");
 
-                    var missingQualLookup = await _applicationDbContext.QualificationVersions                                                    
-                                                    .Where(w => qualsMissingFunding.Contains(w.QualificationId))                                                    
-                                                    .ToListAsync();
+                    var missingQualLookup = await _applicationDbContext.QualificationVersions
+                        .AsNoTracking()
+                        .Where(w => qualsMissingFunding.Contains(w.QualificationId))                                                    
+                        .ToListAsync();
 
                     var batchSize = 1000;
                     var batchCounter = 0;
@@ -139,9 +140,9 @@ namespace SFA.DAS.AODP.Infrastructure.Services
                     {
                         // Exists in FundedQualifications, Create new QualificationFunding record
                         var latestVersion = missingQualLookup
-                                                .Where(w => w.QualificationId == id)
-                                                .OrderByDescending(o => o.Version)
-                                                .FirstOrDefault();
+                            .Where(w => w.QualificationId == id)
+                            .OrderByDescending(o => o.Version)
+                            .FirstOrDefault();
 
                         if (latestVersion == null)
                         {
@@ -150,14 +151,14 @@ namespace SFA.DAS.AODP.Infrastructure.Services
                         }
 
                         var fundedQualToBeAdded = importedOffers
-                                                    .Where(w => w.QualificationId == id && w.QualificationOffers.Any(a => a.FundingAvailable ?? false))
-                                                    .FirstOrDefault();
+                            .Where(w => w.QualificationId == id && w.QualificationOffers.Any(a => a.FundingAvailable ?? false))
+                            .FirstOrDefault();
 
                         if (fundedQualToBeAdded != null)
                         {
                             var offers = fundedQualToBeAdded.QualificationOffers.Where(w => w.FundingAvailable ?? false).ToList();
                             
-                            int added = 0;
+                            var added = 0;
                             foreach (var offer in offers)
                             {
                                 if (offerTypeLookup.ContainsKey(offer.Name))
@@ -174,15 +175,13 @@ namespace SFA.DAS.AODP.Infrastructure.Services
                                         endDate = new DateOnly(offer.FundingApprovalEndDate.Value.Year, offer.FundingApprovalEndDate.Value.Month, offer.FundingApprovalEndDate.Value.Day);
                                     }
 
-                                    var newRecord = new QualificationFunding()
-                                    {
-                                        Id = Guid.NewGuid(),
-                                        QualificationVersionId = latestVersion.Id,
-                                        FundingOfferId = offerTypeId,
-                                        StartDate = startDate,
-                                        EndDate = endDate,
-                                        Comments = $"Imported from Funded CSV on {importRun.ToShortDateString()}"
-                                    };
+                                    var newRecord = QualificationFunding.Create(
+                                        latestVersion.Id, 
+                                        offerTypeId,
+                                        startDate, 
+                                        endDate, 
+                                        offer.Notes);
+
                                     newRecords.Add(newRecord);
                                     added++;
                                 }
@@ -241,17 +240,19 @@ namespace SFA.DAS.AODP.Infrastructure.Services
                     var updatedOffers = new List<QualificationFunding>();
                     var newDiscussions = new List<QualificationDiscussionHistory>();
 
-                    var updatingQualLookup = await _applicationDbContext.QualificationVersions                                                    
-                                                    .Where(w => qualsNeedUpdating.Contains(w.QualificationId))
-                                                    .ToListAsync();
+                    var updatingQualLookup = await _applicationDbContext.QualificationVersions
+                        .AsNoTracking()
+                        .Where(w => qualsNeedUpdating.Contains(w.QualificationId))
+                        .ToListAsync();
 
                     foreach (var id in qualsNeedUpdating)
                     {
-                        
+
                         var latestVersion = updatingQualLookup
-                                                    .Where(w => w.QualificationId == id)
-                                                    .OrderByDescending(o => o.Version)
-                                                    .FirstOrDefault();
+                            .Where(w => w.QualificationId == id)
+                            .OrderByDescending(o => o.Version)
+                            .FirstOrDefault();
+
                         if (latestVersion == null)
                         {
                             _logger.LogError($"SeedFundingData -> Unable to process Qual Id {id} as it has no qualification versions");
@@ -259,15 +260,16 @@ namespace SFA.DAS.AODP.Infrastructure.Services
                         }
 
                         var importedOfferToBeUpdated = importedOffers
-                                                    .Where(w => w.QualificationId == id && w.QualificationOffers.Any(a => a.FundingAvailable ?? false))
-                                                    .FirstOrDefault();
+                            .Where(w => w.QualificationId == id && w.QualificationOffers.Any(a => a.FundingAvailable ?? false))
+                            .FirstOrDefault();
+
                         if (importedOfferToBeUpdated != null)
                         {
-                            
                             var existingUserOffers = userCreatedOffers.Where(w => w.QualificationVersion.QualificationId == id).ToList();
                             var offers = importedOfferToBeUpdated.QualificationOffers.Where(w => w.FundingAvailable ?? false).ToList();
-                            int added = 0;
-                            int updated = 0;
+                            var added = 0;
+                            var updated = 0;
+
                             foreach (var offer in offers)
                             {
                                 if (offerTypeLookup.ContainsKey(offer.Name))
@@ -301,20 +303,20 @@ namespace SFA.DAS.AODP.Infrastructure.Services
                                     else
                                     {
                                         // create missing offer
-                                        var newRecord = new QualificationFunding()
-                                        {
-                                            Id = Guid.NewGuid(),
-                                            QualificationVersionId = latestVersion.Id,
-                                            FundingOfferId = offerTypeId,
-                                            StartDate = startDate,
-                                            EndDate = endDate,
-                                            Comments = $"Imported from Funded CSV on {importRun.ToShortDateString()}"
-                                        };
+                                        var newRecord = QualificationFunding.Create(
+                                            latestVersion.Id,
+                                            offerTypeId,
+                                            startDate,
+                                            endDate,
+                                            offer.Notes
+                                        );
+
                                         newOffers.Add(newRecord);
                                         added++;
                                     }
                                 }
                             }
+
                             if ((added + updated) > 0)
                             {
                                 _logger.LogInformation($"Added {added} and updated {updated} offers for {latestVersion.Name}");                             
