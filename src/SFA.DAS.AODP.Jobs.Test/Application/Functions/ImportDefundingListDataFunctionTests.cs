@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using SFA.DAS.AODP.Common.Enum;
 using SFA.DAS.AODP.Data.Entities;
+using SFA.DAS.AODP.Data.Repositories.Jobs;
 using SFA.DAS.AODP.Infrastructure.Interfaces;
 using SFA.DAS.AODP.Jobs.Functions;
 using SFA.DAS.AODP.Jobs.Interfaces;
@@ -23,7 +24,7 @@ public class ImportDefundingListDataFunctionTests
     private readonly Mock<ILogger<ImportDefundingListDataFunction>> _loggerMock;
     private readonly Mock<IJobConfigurationService> _jobConfigurationServiceMock;
     private readonly Mock<IImportRepository> _importRepositoryMock;
-    private readonly Mock<IBlobStorageFileService> _blobServiceMock;
+    private readonly Mock<IFileProcessingService> _fileProcessingService;
     private readonly AodpJobsConfiguration _config;
     private readonly ImportDefundingListDataFunction _function;
     private readonly FunctionContext _functionContext;
@@ -36,7 +37,7 @@ public class ImportDefundingListDataFunctionTests
         _loggerMock = new Mock<ILogger<ImportDefundingListDataFunction>>();
         _jobConfigurationServiceMock = new Mock<IJobConfigurationService>();
         _importRepositoryMock = new Mock<IImportRepository>();
-        _blobServiceMock = new Mock<IBlobStorageFileService>();
+        _fileProcessingService = new Mock<IFileProcessingService>();
         _config = new AodpJobsConfiguration();
 
         _function = new ImportDefundingListDataFunction(
@@ -44,7 +45,7 @@ public class ImportDefundingListDataFunctionTests
             _config,
             _jobConfigurationServiceMock.Object,
             _importRepositoryMock.Object,
-            _blobServiceMock.Object);
+            _fileProcessingService.Object);
 
         _functionContext = new Mock<FunctionContext>().Object;
     }
@@ -52,16 +53,17 @@ public class ImportDefundingListDataFunctionTests
     [Fact]
     public async Task ImportDefundingList_ShouldReturnOkAndNotInsert_WhenRowsInsufficient()
     {
-        using var ms = CreateDefundingWorkbookStream(
-            includeTargetSheet: true,
-            headerRowIndex: 1,
-            dataRows: Array.Empty<string[]>());
+        using var stream = CreateMinimalDefundingListXlsx();
 
-        ms.Position = 0;
-
-        _blobServiceMock
-            .Setup(s => s.DownloadFileAsync(ImportStoragePaths.DefundingListFileLogicalPath, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreateMinimalDefundingListXlsx());
+        _fileProcessingService
+            .Setup(s => s.GetReadyFileAsync(
+                It.IsAny<FileCategory>(),
+                It.IsAny<string>(),
+                It.IsAny<Guid>(),
+                It.IsAny<Guid>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FileProcessingResult(true, false, stream));
 
         var control = new DefundingListImportControl
         {
@@ -77,15 +79,15 @@ public class ImportDefundingListDataFunctionTests
             Id = Guid.NewGuid(),
             JobId = control.JobId,
             User = "tester",
-            Status = "RequestSent"
+            Status = "RequestSent",
+            StartTime = DateTime.UtcNow
         };
 
         _jobConfigurationServiceMock.Setup(s => s.ReadDefundingListImportConfiguration()).ReturnsAsync(control);
         _jobConfigurationServiceMock.Setup(s => s.GetLastJobRunAsync(It.IsAny<string>())).ReturnsAsync(lastJobRun);
         _jobConfigurationServiceMock.Setup(s =>
             s.UpdateJobRun("tester1", control.JobId, lastJobRun.Id, 0, It.IsAny<JobStatus>()))
-            .Returns(Task.CompletedTask)
-            .Verifiable();
+            .Returns(Task.CompletedTask);
 
         var req = new MockHttpRequestData(_functionContext);
 
@@ -96,6 +98,105 @@ public class ImportDefundingListDataFunctionTests
         _importRepositoryMock.Verify(
             r => r.BulkInsertAsync(It.IsAny<IEnumerable<DefundingList>>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    [Fact]
+    public async Task ImportDefundingList_ShouldReturnOk_WhenFileNotReady()
+    {
+        _fileProcessingService
+            .Setup(s => s.GetReadyFileAsync(
+                It.IsAny<FileCategory>(),
+                It.IsAny<string>(),
+                It.IsAny<Guid>(),
+                It.IsAny<Guid>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FileProcessingResult(false, false, null));
+
+        var control = new DefundingListImportControl
+        {
+            JobId = Guid.NewGuid(),
+            JobEnabled = true
+        };
+
+        var lastJobRun = new JobRunControl
+        {
+            Id = Guid.NewGuid(),
+            JobId = control.JobId,
+            Status = "RequestSent",
+            StartTime = DateTime.UtcNow
+        };
+
+        _jobConfigurationServiceMock.Setup(s => s.ReadDefundingListImportConfiguration()).ReturnsAsync(control);
+        _jobConfigurationServiceMock.Setup(s => s.GetLastJobRunAsync(It.IsAny<string>())).ReturnsAsync(lastJobRun);
+
+        var req = new MockHttpRequestData(_functionContext);
+
+        var result = await _function.ImportDefundingList(req, "tester1");
+
+        Assert.IsType<OkObjectResult>(result);
+
+        _importRepositoryMock.Verify(
+            r => r.BulkInsertAsync(It.IsAny<IEnumerable<DefundingList>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ImportDefundingList_ShouldInsert_WhenValidRowsPresent()
+    {
+        using var stream = CreateDefundingWorkbookStream(
+            includeTargetSheet: true,
+            headerRowIndex: 1,
+            dataRows: new[]
+            {
+            new[] { "QAN-001", "Title one", "1", "comment 1" }
+            });
+
+        _fileProcessingService
+            .Setup(s => s.GetReadyFileAsync(
+                It.IsAny<FileCategory>(),
+                It.IsAny<string>(),
+                It.IsAny<Guid>(),
+                It.IsAny<Guid>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FileProcessingResult(true, false, stream));
+
+        var control = new DefundingListImportControl
+        {
+            JobId = Guid.NewGuid(),
+            ImportDefundingList = true,
+            JobEnabled = true
+        };
+
+        var lastJobRun = new JobRunControl
+        {
+            Id = Guid.NewGuid(),
+            JobId = control.JobId,
+            Status = "RequestSent",
+            StartTime = DateTime.UtcNow
+        };
+
+        _jobConfigurationServiceMock.Setup(s => s.ReadDefundingListImportConfiguration()).ReturnsAsync(control);
+        _jobConfigurationServiceMock.Setup(s => s.GetLastJobRunAsync(It.IsAny<string>())).ReturnsAsync(lastJobRun);
+
+        _jobConfigurationServiceMock.Setup(s =>
+            s.UpdateJobRun(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<JobStatus>()))
+            .Returns(Task.CompletedTask);
+
+        var req = new MockHttpRequestData(_functionContext);
+
+        var result = await _function.ImportDefundingList(req, "tester1");
+
+        Assert.IsType<OkObjectResult>(result);
+
+        _importRepositoryMock.Verify(
+            r => r.BulkInsertAsync(It.IsAny<IEnumerable<DefundingList>>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _importRepositoryMock.Verify(
+            r => r.DeleteDuplicateAsync(It.IsAny<string>(), null, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     private static MemoryStream CreateDefundingWorkbookStream(

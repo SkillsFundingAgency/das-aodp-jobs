@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using SFA.DAS.AODP.Data.Entities;
+using SFA.DAS.AODP.Data.Entities.Files;
 
 namespace SFA.DAS.AODP.Infrastructure.Context
 {
@@ -26,6 +27,7 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         DbSet<Pldns> Pldns { get; set; }
         DbSet<DefundingList> DefundingLists { get; set; }
         DbSet<RegulatedQaaQualification> RegulatedQaaQualification { get; set; }
+        DbSet<FileRecord> FileRecords { get; set; }
 
         void StartingBulkInsert();
 

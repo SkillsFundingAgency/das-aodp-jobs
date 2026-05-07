@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SFA.DAS.AODP.Data.Entities;
+using SFA.DAS.AODP.Data.Entities.Files;
 
 
 namespace SFA.DAS.AODP.Infrastructure.Context
@@ -49,6 +50,8 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         
         public virtual DbSet<RegulatedQaaQualification> RegulatedQaaQualification { get; set; }
 
+        public virtual DbSet<FileRecord> FileRecords { get; set; }
+
         public virtual void StartingBulkInsert() => ChangeTracker.AutoDetectChangesEnabled = false;
 
         public virtual void FinishedBulkInsert() => ChangeTracker.AutoDetectChangesEnabled = true;
@@ -62,6 +65,15 @@ namespace SFA.DAS.AODP.Infrastructure.Context
                 .HasConversion(
                     ssaTier => ssaTier.Name,
                     ssaName => SectorSubjectArea.FromName(ssaName));
+
+            modelBuilder.Entity<FileRecord>()
+               .Property(e => e.FileCategory)
+               .HasConversion<string>();
+
+            modelBuilder.Entity<FileRecord>()
+                .Property(e => e.ScanResult)
+                .HasConversion<string>();
+
         }
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

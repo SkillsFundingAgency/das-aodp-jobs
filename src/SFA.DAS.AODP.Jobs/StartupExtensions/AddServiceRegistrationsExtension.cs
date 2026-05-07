@@ -31,6 +31,7 @@ public static class AddServiceRegistrationsExtension
         services.AddTransient<IOfqualImportService, OfqualImportService>();
         services.AddTransient<IReferenceDataService, ReferenceDataService>();
         services.AddTransient<IFundingEligibilityService, FundingEligibilityService>();
+        services.AddScoped<IFileProcessingService, FileProcessingService>();
         services.AddScoped<ICsvReaderService, CsvReaderService>();
         services.AddScoped<ISystemClockService, SystemClockService>();
         services.AddScoped<IJobConfigurationService, JobConfigurationService>();
@@ -39,7 +40,8 @@ public static class AddServiceRegistrationsExtension
         services.AddScoped<IFundedQualificationWriter, FundedQualificationWriter>();
         services.AddScoped<IQualificationsRepository, QualificationsRepository>();
         services.AddScoped<IImportRepository, ImportRepository>();
-        
+        services.AddScoped<IFileRecordRepository, FileRecordRepository>();
+
         services.AddSingleton(sp =>
         {
             var configuration = sp.GetRequiredService<IConfiguration>();

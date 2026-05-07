@@ -7,5 +7,7 @@ namespace SFA.DAS.AODP.Jobs.Interfaces
         List<T> ReadCSVFromFilePath<T, TMap>(string filePath, params object[] additionalParameters) where TMap : ClassMap<T>;
 
         Task<List<T>> ReadCsvFileFromUrlAsync<T, TMap>(string urlFilePath, params object[] additionalParameters) where TMap : ClassMap<T>;
+
+        Task<List<T>> ReadCsvFromStreamAsync<T, TMap>(Stream stream, params object[] additionalParameters) where TMap : ClassMap<T>;
     }
 }
