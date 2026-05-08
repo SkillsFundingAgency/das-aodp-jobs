@@ -403,7 +403,6 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 .With(w => w.OfferedInEngland, true)
                 .With(w => w.Glh, 5)
                 .With(w => w.Tqt, 10)
-                .With(w => w.OperationalStartDate, QualificationReference.MinOperationalDate)
                 .With(w => w.LifecycleStageId, LifeCycleStageNew)
                 .With(w => w.ProcessStatusId, record.ProcessStatus)
                 .With(w => w.QualificationId, record.QualId)

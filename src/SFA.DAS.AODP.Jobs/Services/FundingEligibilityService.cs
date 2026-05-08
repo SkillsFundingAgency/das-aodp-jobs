@@ -5,6 +5,8 @@ namespace SFA.DAS.AODP.Jobs.Services
 {
     public class FundingEligibilityService : IFundingEligibilityService
     {
+        private readonly ILogger<FundingEligibilityService> _logger;
+
         public FundingEligibilityEvaluation EvaluateFundingEligibilityRules(QualificationDTO qualification)
         {
             var rules = new List<FundingEligibilityRuleResult>
@@ -20,37 +22,17 @@ namespace SFA.DAS.AODP.Jobs.Services
                     ["IntentionToSeekFundingInEngland"]),
 
                 new FundingEligibilityRuleResult(
-                    "TypeIsNotEndPointAssessment",
-                    qualification.Type != QualificationReference.EndPointAssessment,
+                    "Type",
+                    !QualificationReference.IsIneligibleType(qualification.Type),
                     ["Type"]),
 
                 new FundingEligibilityRuleResult(
-                    "TitleDoesNotContainIneligibleQualifications",
-                    !ContainsIneligibleQualification(qualification.Title),
+                    "Title",
+                    !QualificationReference.HasIneligibleTitle(qualification.Level, qualification.Title),
                     ["Title"]),
-
-                new FundingEligibilityRuleResult(
-                    "TitleDoesNotContainIneligibleQualificationShortForms",
-                    !ContainsIneligibleQualificationShortForm(qualification.Title),
-                    ["Title"]),
-
-                new FundingEligibilityRuleResult(
-                    "GlhPresentAndGreaterThanZero",
-                    qualification.Glh.HasValue && qualification.Glh.Value > 0,
-                    ["Glh"]),
-
-                new FundingEligibilityRuleResult(
-                    "TqtPresentAndGreaterThanZero",
-                    qualification.Tqt.HasValue && qualification.Tqt.Value > 0,
-                    ["Tqt"] ),
-
-                new FundingEligibilityRuleResult(
-                    "GlhLessThanTqt",
-                    qualification.Glh.HasValue
-                        && qualification.Tqt.HasValue
-                        && qualification.Glh <= qualification.Tqt,
-                    ["TqtLessThanGlh"])
             };
+
+
 
             return new FundingEligibilityEvaluation
             {
@@ -100,29 +82,5 @@ namespace SFA.DAS.AODP.Jobs.Services
                 RuleComparisons = ruleComparisons
             };
         }
-
-        private static bool ContainsIneligibleQualification(string? title)
-        {
-            if (string.IsNullOrWhiteSpace(title))
-            {
-                return false;
-            }
-
-            return QualificationReference.IneligibleQualifications.Any(s =>
-                title.Contains(s, StringComparison.OrdinalIgnoreCase));
-        }
-
-        private static bool ContainsIneligibleQualificationShortForm(string? title)
-        {
-            if (string.IsNullOrWhiteSpace(title))
-            {
-                return false;
-            }
-
-            return QualificationReference.IneligibleQualificationsShortForms.Any(s =>
-                title.Contains(s, StringComparison.OrdinalIgnoreCase));
-        }
-
-        
     }
 }
