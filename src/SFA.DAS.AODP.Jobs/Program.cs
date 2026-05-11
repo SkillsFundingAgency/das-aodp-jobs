@@ -16,12 +16,10 @@ public class Program
             builder.AddFilter<ApplicationInsightsLoggerProvider>("Microsoft", LogLevel.Information);
             builder.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Warning);
             builder.AddFilter(typeof(Program).Namespace, LogLevel.Information);
+            builder.SetMinimumLevel(LogLevel.Information);
 
 #if DEBUG
-            builder.SetMinimumLevel(LogLevel.Trace);
             builder.AddConsole();
-#else
-    builder.SetMinimumLevel(LogLevel.Information);
 #endif
         });
 
