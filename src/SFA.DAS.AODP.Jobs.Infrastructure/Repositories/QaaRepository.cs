@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Infrastructure.Context;
+using SFA.DAS.AODP.Models.QaaQualification;
 
 namespace SFA.DAS.AODP.Infrastructure.Repositories;
 
@@ -16,26 +17,176 @@ public class QaaRepository(ILogger<QaaRepository> logger, IDbContextFactory<Appl
     private readonly IDbContextFactory<ApplicationDbContext> _applicationDbContext = dbContextFactory;
 
     /// <inheritdoc/>.
-    public async Task<int> RunPrerequisitesForImportAsync(CancellationToken cancellationToken)
+    public async Task<int> ImportQaaQualificationsAsync(
+        IReadOnlyCollection<QaaQualificationResponse> proposedQualifications,
+        DateTime snapshotTakenAt,
+        CancellationToken cancellationToken)
     {
         await using var context = await _applicationDbContext.CreateDbContextAsync(cancellationToken);
 
-        _logger.LogInformation("Executing delete on {TableName}", nameof(RegulatedQaaQualification));
+        var importSnapshot = await StartQaaImportSnapshotAsync(context, snapshotTakenAt, cancellationToken);
 
-        return await context.RegulatedQaaQualification.ExecuteDeleteAsync(cancellationToken);
+        try
+        {
+            var currentQualifications = await ReadCurrentQualificationsByAimCodeAsync(context, cancellationToken);
+            var nextChangeVersion = WorkOutNextChangeVersion(currentQualifications);
+
+            foreach (var proposedQaaQualification in proposedQualifications.Select(ReadQaaQualification))
+            {
+                nextChangeVersion = await AddOrRefreshCurrentQaaQualificationAsync(
+                    context,
+                    currentQualifications,
+                    proposedQaaQualification,
+                    snapshotTakenAt,
+                    nextChangeVersion,
+                    cancellationToken);
+            }
+
+            importSnapshot.Complete(snapshotTakenAt, proposedQualifications.Count);
+
+            await context.SaveChangesAsync(cancellationToken);
+
+            return proposedQualifications.Count;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "QAA qualification import failed.");
+
+            try
+            {
+                importSnapshot.Fail(snapshotTakenAt, ex.Message);
+
+                await using var failureContext = await _applicationDbContext.CreateDbContextAsync(CancellationToken.None);
+                await failureContext.RegulatedQaaDataSnapshots.AddAsync(importSnapshot, CancellationToken.None);
+                await failureContext.SaveChangesAsync(CancellationToken.None);
+            }
+            catch (Exception failException)
+            {
+                _logger.LogError(failException, "Failed to save QAA data snapshot failure status.");
+            }
+
+            throw;
+        }
     }
 
-    /// <inheritdoc/>.
-    public async Task RunImportAsync(IEnumerable<RegulatedQaaQualification> entries, CancellationToken cancellationToken)
+    private static async Task<RegulatedQaaDataSnapshot> StartQaaImportSnapshotAsync(
+        ApplicationDbContext context,
+        DateTime snapshotTakenAt,
+        CancellationToken cancellationToken)
     {
-        await using var context = await _applicationDbContext.CreateDbContextAsync(cancellationToken);
+        var importSnapshot = RegulatedQaaDataSnapshot.Start(snapshotTakenAt);
 
-        context.StartingBulkInsert();
+        await context.RegulatedQaaDataSnapshots.AddAsync(importSnapshot, cancellationToken);
 
-        await context.RegulatedQaaQualification.AddRangeAsync(entries, cancellationToken);
-
-        await context.SaveChangesAsync(cancellationToken);
-
-        context.FinishedBulkInsert();
+        return importSnapshot;
     }
+
+    private static async Task<Dictionary<string, RegulatedQaaQualification>> ReadCurrentQualificationsByAimCodeAsync(
+        ApplicationDbContext context,
+        CancellationToken cancellationToken)
+    {
+        return await context.RegulatedQaaQualification
+            .ToDictionaryAsync(qualification => qualification.AimCode, cancellationToken);
+    }
+
+    private static long WorkOutNextChangeVersion(
+        IReadOnlyDictionary<string, RegulatedQaaQualification> currentQualifications)
+    {
+        return currentQualifications.Count == 0
+            ? 1
+            : currentQualifications.Values.Max(qualification => qualification.ChangeVersion) + 1;
+    }
+
+    private static ProposedQaaQualification ReadQaaQualification(QaaQualificationResponse qualification)
+    {
+        return new ProposedQaaQualification(
+            qualification.AimCode,
+            qualification.DiplomaTitle,
+            qualification.AwardingBody,
+            qualification.StartDateOfQualification,
+            qualification.LastDateForRegistrations,
+            qualification.DiscontinuedDate.HasValue,
+            SectorSubjectArea.FromTiers(qualification.SsaTier1, qualification.SsaTier2));
+    }
+
+    private static async Task<long> AddOrRefreshCurrentQaaQualificationAsync(
+        ApplicationDbContext context,
+        IDictionary<string, RegulatedQaaQualification> currentQualifications,
+        ProposedQaaQualification proposedQaaQualification,
+        DateTime snapshotTakenAt,
+        long nextChangeVersion,
+        CancellationToken cancellationToken)
+    {
+        if (!currentQualifications.TryGetValue(proposedQaaQualification.AimCode, out var currentQualification))
+        {
+            var newQualification = CreateCurrentQaaQualification(
+                proposedQaaQualification,
+                snapshotTakenAt,
+                nextChangeVersion);
+
+            await context.RegulatedQaaQualification.AddAsync(newQualification, cancellationToken);
+            currentQualifications.Add(proposedQaaQualification.AimCode, newQualification);
+
+            return nextChangeVersion + 1;
+        }
+
+        return RefreshCurrentQaaQualification(
+            currentQualification,
+            proposedQaaQualification,
+            snapshotTakenAt,
+            nextChangeVersion);
+    }
+
+    private static RegulatedQaaQualification CreateCurrentQaaQualification(
+        ProposedQaaQualification proposedQaaQualification,
+        DateTime snapshotTakenAt,
+        long changeVersion)
+    {
+        return RegulatedQaaQualification.Create(
+            snapshotTakenAt,
+            proposedQaaQualification.AimCode,
+            proposedQaaQualification.Title,
+            proposedQaaQualification.AwardingBodyName,
+            proposedQaaQualification.RegistrationOpenedOn,
+            proposedQaaQualification.RegistrationClosesOn,
+            proposedQaaQualification.SectorSubjectArea,
+            proposedQaaQualification.HasBeenDiscontinuedByQaa,
+            changeVersion,
+            snapshotTakenAt);
+    }
+
+    private static long RefreshCurrentQaaQualification(
+        RegulatedQaaQualification currentQualification,
+        ProposedQaaQualification proposedQaaQualification,
+        DateTime snapshotTakenAt,
+        long nextChangeVersion)
+    {
+        var hasMaterialChange = currentQualification.HasMaterialQaaChange(
+            proposedQaaQualification.RegistrationClosesOn,
+            proposedQaaQualification.HasBeenDiscontinuedByQaa);
+
+        currentQualification.ApplyImportedQaaData(
+            snapshotTakenAt,
+            proposedQaaQualification.Title,
+            proposedQaaQualification.AwardingBodyName,
+            proposedQaaQualification.RegistrationOpenedOn,
+            proposedQaaQualification.RegistrationClosesOn,
+            proposedQaaQualification.HasBeenDiscontinuedByQaa,
+            proposedQaaQualification.SectorSubjectArea,
+            hasMaterialChange ? nextChangeVersion : null,
+            snapshotTakenAt);
+
+        return hasMaterialChange
+            ? nextChangeVersion + 1
+            : nextChangeVersion;
+    }
+
+    private sealed record ProposedQaaQualification(
+        string AimCode,
+        string Title,
+        string AwardingBodyName,
+        DateOnly RegistrationOpenedOn,
+        DateOnly RegistrationClosesOn,
+        bool HasBeenDiscontinuedByQaa,
+        SectorSubjectArea SectorSubjectArea);
 }

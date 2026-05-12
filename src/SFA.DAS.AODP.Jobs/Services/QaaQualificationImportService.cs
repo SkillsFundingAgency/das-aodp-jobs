@@ -1,5 +1,4 @@
-﻿using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Jobs.Functions;
+﻿using SFA.DAS.AODP.Jobs.Functions;
 using SFA.DAS.AODP.Jobs.LoggerMessages;
 using QaaQualificationImportServiceLoggerMessages = SFA.DAS.AODP.Jobs.LoggerMessages.QaaQualificationImportServiceLoggerMessages;
 
@@ -34,30 +33,10 @@ public class QaaQualificationImportService(ILogger<QaaQualificationImportService
             }
 
             var dateOfSnapshot = _clockService.UtcNow;
-            var rowsDeleted = await _qaaRepository.RunPrerequisitesForImportAsync(cancellationToken);
-
-            QaaQualificationImportServiceLoggerMessages.DeletedExistingRows(_logger, rowsDeleted);
-
-            var qualificationsToCreate = new List<RegulatedQaaQualification>();
-
-            foreach (var proposedQualification in proposedQualifications)
-            {
-                var ssa = SectorSubjectArea.FromTiers(proposedQualification.SsaTier1, proposedQualification.SsaTier2)!;
-
-                var regulatedQualification = RegulatedQaaQualification.Create(
-                    dateOfSnapshot,
-                    proposedQualification.AimCode,
-                    proposedQualification.DiplomaTitle, 
-                    proposedQualification.AwardingBody,
-                    proposedQualification.StartDateOfQualification,
-                    proposedQualification.LastDateForRegistrations,
-                    ssa);
-
-                qualificationsToCreate.Add(regulatedQualification);
-            }
-
-            await _qaaRepository.RunImportAsync(qualificationsToCreate, cancellationToken);
-            totalCountOfRecordsProcessed = qualificationsToCreate.Count;
+            totalCountOfRecordsProcessed = await _qaaRepository.ImportQaaQualificationsAsync(
+                proposedQualifications.ToList(),
+                dateOfSnapshot,
+                cancellationToken);
 
             QaaQualificationImportServiceLoggerMessages.FinishedImport(_logger, totalCountOfRecordsProcessed);
             

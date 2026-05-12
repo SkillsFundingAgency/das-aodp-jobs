@@ -49,6 +49,8 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         
         public virtual DbSet<RegulatedQaaQualification> RegulatedQaaQualification { get; set; }
 
+        public virtual DbSet<RegulatedQaaDataSnapshot> RegulatedQaaDataSnapshots { get; set; }
+
         public virtual void StartingBulkInsert() => ChangeTracker.AutoDetectChangesEnabled = false;
 
         public virtual void FinishedBulkInsert() => ChangeTracker.AutoDetectChangesEnabled = true;
@@ -57,11 +59,25 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         {
             base.OnModelCreating(modelBuilder);
 
-            modelBuilder.Entity<RegulatedQaaQualification>()
-                .Property(q => q.SectorSubjectArea)
-                .HasConversion(
-                    ssaTier => ssaTier.Name,
-                    ssaName => SectorSubjectArea.FromName(ssaName));
+            modelBuilder.Entity<RegulatedQaaQualification>(entity =>
+            {
+                entity.HasIndex(q => q.AimCode).IsUnique();
+                entity.HasIndex(q => q.ChangeVersion);
+                entity.HasIndex(q => q.DateOfDataSnapshot);
+                entity.HasIndex(q => q.LastDateForRegistration);
+                entity.HasIndex(q => q.IsDiscontinued);
+
+                entity.Property(q => q.SectorSubjectArea)
+                    .HasConversion(
+                        ssaTier => ssaTier.Name,
+                        ssaName => SectorSubjectArea.FromName(ssaName));
+            });
+
+            modelBuilder.Entity<RegulatedQaaDataSnapshot>(entity =>
+            {
+                entity.HasIndex(q => q.Status);
+                entity.HasIndex(q => q.StartedAt);
+            });
         }
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
