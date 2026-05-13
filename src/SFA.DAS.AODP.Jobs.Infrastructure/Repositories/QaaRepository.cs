@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Models.QaaQualification;
@@ -9,11 +8,9 @@ namespace SFA.DAS.AODP.Infrastructure.Repositories;
 /// <summary>
 /// Default implementation for <see cref="IQaaRepository"/>.
 /// </summary>
-/// <param name="logger"></param>
 /// <param name="dbContextFactory"></param>
-public class QaaRepository(ILogger<QaaRepository> logger, IDbContextFactory<ApplicationDbContext> dbContextFactory) : IQaaRepository
+public class QaaRepository(IDbContextFactory<ApplicationDbContext> dbContextFactory) : IQaaRepository
 {
-    private readonly ILogger<QaaRepository> _logger = logger;
     private readonly IDbContextFactory<ApplicationDbContext> _applicationDbContext = dbContextFactory;
 
     /// <inheritdoc/>.
@@ -24,61 +21,23 @@ public class QaaRepository(ILogger<QaaRepository> logger, IDbContextFactory<Appl
     {
         await using var context = await _applicationDbContext.CreateDbContextAsync(cancellationToken);
 
-        var importSnapshot = await StartQaaImportSnapshotAsync(context, snapshotTakenAt, cancellationToken);
+        var currentQualifications = await ReadCurrentQualificationsByAimCodeAsync(context, cancellationToken);
+        var nextChangeVersion = WorkOutNextChangeVersion(currentQualifications);
 
-        try
+        foreach (var proposedQaaQualification in proposedQualifications.Select(ReadQaaQualification))
         {
-            var currentQualifications = await ReadCurrentQualificationsByAimCodeAsync(context, cancellationToken);
-            var nextChangeVersion = WorkOutNextChangeVersion(currentQualifications);
-
-            foreach (var proposedQaaQualification in proposedQualifications.Select(ReadQaaQualification))
-            {
-                nextChangeVersion = await AddOrRefreshCurrentQaaQualificationAsync(
-                    context,
-                    currentQualifications,
-                    proposedQaaQualification,
-                    snapshotTakenAt,
-                    nextChangeVersion,
-                    cancellationToken);
-            }
-
-            importSnapshot.Complete(snapshotTakenAt, proposedQualifications.Count);
-
-            await context.SaveChangesAsync(cancellationToken);
-
-            return proposedQualifications.Count;
+            nextChangeVersion = await AddOrRefreshCurrentQaaQualificationAsync(
+                context,
+                currentQualifications,
+                proposedQaaQualification,
+                snapshotTakenAt,
+                nextChangeVersion,
+                cancellationToken);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "QAA qualification import failed.");
 
-            try
-            {
-                importSnapshot.Fail(snapshotTakenAt, ex.Message);
+        await context.SaveChangesAsync(cancellationToken);
 
-                await using var failureContext = await _applicationDbContext.CreateDbContextAsync(CancellationToken.None);
-                await failureContext.RegulatedQaaDataSnapshots.AddAsync(importSnapshot, CancellationToken.None);
-                await failureContext.SaveChangesAsync(CancellationToken.None);
-            }
-            catch (Exception failException)
-            {
-                _logger.LogError(failException, "Failed to save QAA data snapshot failure status.");
-            }
-
-            throw;
-        }
-    }
-
-    private static async Task<RegulatedQaaDataSnapshot> StartQaaImportSnapshotAsync(
-        ApplicationDbContext context,
-        DateTime snapshotTakenAt,
-        CancellationToken cancellationToken)
-    {
-        var importSnapshot = RegulatedQaaDataSnapshot.Start(snapshotTakenAt);
-
-        await context.RegulatedQaaDataSnapshots.AddAsync(importSnapshot, cancellationToken);
-
-        return importSnapshot;
+        return proposedQualifications.Count;
     }
 
     private static async Task<Dictionary<string, RegulatedQaaQualification>> ReadCurrentQualificationsByAimCodeAsync(

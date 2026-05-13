@@ -49,8 +49,6 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         
         public virtual DbSet<RegulatedQaaQualification> RegulatedQaaQualification { get; set; }
 
-        public virtual DbSet<RegulatedQaaDataSnapshot> RegulatedQaaDataSnapshots { get; set; }
-
         public virtual void StartingBulkInsert() => ChangeTracker.AutoDetectChangesEnabled = false;
 
         public virtual void FinishedBulkInsert() => ChangeTracker.AutoDetectChangesEnabled = true;
@@ -73,11 +71,6 @@ namespace SFA.DAS.AODP.Infrastructure.Context
                         ssaName => SectorSubjectArea.FromName(ssaName));
             });
 
-            modelBuilder.Entity<RegulatedQaaDataSnapshot>(entity =>
-            {
-                entity.HasIndex(q => q.Status);
-                entity.HasIndex(q => q.StartedAt);
-            });
         }
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

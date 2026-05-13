@@ -102,68 +102,6 @@ public class QaaRepositoryTests
     }
 
     [Fact]
-    public async Task ImportQaaQualificationsAsync_WhenSuccessful_CreatesCompletedDataSnapshot()
-    {
-        var (context, repository) = CreateRepository();
-
-        await repository.ImportQaaQualificationsAsync(
-            [CreateResponse("Z1234567"), CreateResponse("Z1234568")],
-            _snapshotDate,
-            CancellationToken.None);
-
-        context.ChangeTracker.Clear();
-        var dataSnapshot = await context.RegulatedQaaDataSnapshots.SingleAsync();
-        Assert.Equal(RegulatedQaaDataSnapshot.CompletedStatus, dataSnapshot.Status);
-        Assert.Equal(_snapshotDate, dataSnapshot.StartedAt);
-        Assert.Equal(_snapshotDate, dataSnapshot.CompletedAt);
-        Assert.Equal(2, dataSnapshot.TotalRecords);
-        Assert.Null(dataSnapshot.FailureReason);
-    }
-
-    [Fact]
-    public async Task ImportQaaQualificationsAsync_WhenSaveFails_CreatesFailedDataSnapshotAndRethrows()
-    {
-        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-        await using var assertionContext = new ApplicationDbContext(options);
-        var repository = new QaaRepository(
-            NullLogger<QaaRepository>.Instance,
-            new SaveFailureThenSuccessDbContextFactory(options));
-
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => repository.ImportQaaQualificationsAsync(
-            [CreateResponse("Z1234567")],
-            _snapshotDate,
-            CancellationToken.None));
-
-        Assert.Equal("Save failed", exception.Message);
-
-        var dataSnapshot = await assertionContext.RegulatedQaaDataSnapshots.SingleAsync();
-        Assert.Equal(RegulatedQaaDataSnapshot.FailedStatus, dataSnapshot.Status);
-        Assert.Equal(_snapshotDate, dataSnapshot.StartedAt);
-        Assert.Equal(_snapshotDate, dataSnapshot.CompletedAt);
-        Assert.Equal("Save failed", dataSnapshot.FailureReason);
-    }
-
-    [Fact]
-    public async Task ImportQaaQualificationsAsync_WhenSavingFailedSnapshotFails_RethrowsOriginalException()
-    {
-        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-        var repository = new QaaRepository(
-            NullLogger<QaaRepository>.Instance,
-            new AlwaysSaveFailureDbContextFactory(options));
-
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => repository.ImportQaaQualificationsAsync(
-            [CreateResponse("Z1234567")],
-            _snapshotDate,
-            CancellationToken.None));
-
-        Assert.Equal("Save failed", exception.Message);
-    }
-
-    [Fact]
     public async Task ImportQaaQualificationsAsync_WhenExistingRowsAreEmpty_UsesInitialChangeVersion()
     {
         var (context, repository) = CreateRepository();
@@ -188,9 +126,7 @@ public class QaaRepositoryTests
             .Options;
 
         var context = new ApplicationDbContext(options);
-        var repository = new QaaRepository(
-            NullLogger<QaaRepository>.Instance,
-            new TestDbContextFactory(options));
+        var repository = new QaaRepository(new TestDbContextFactory(options));
 
         return (context, repository);
     }
@@ -238,38 +174,6 @@ public class QaaRepositoryTests
         public ApplicationDbContext CreateDbContext()
         {
             return new ApplicationDbContext(options);
-        }
-    }
-
-    private sealed class SaveFailureThenSuccessDbContextFactory(DbContextOptions<ApplicationDbContext> options)
-        : IDbContextFactory<ApplicationDbContext>
-    {
-        private int _contextCount;
-
-        public ApplicationDbContext CreateDbContext()
-        {
-            _contextCount++;
-            return _contextCount == 1
-                ? new SaveFailureApplicationDbContext(options)
-                : new ApplicationDbContext(options);
-        }
-    }
-
-    private sealed class AlwaysSaveFailureDbContextFactory(DbContextOptions<ApplicationDbContext> options)
-        : IDbContextFactory<ApplicationDbContext>
-    {
-        public ApplicationDbContext CreateDbContext()
-        {
-            return new SaveFailureApplicationDbContext(options);
-        }
-    }
-
-    private sealed class SaveFailureApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-        : ApplicationDbContext(options)
-    {
-        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-        {
-            throw new InvalidOperationException("Save failed");
         }
     }
 }
