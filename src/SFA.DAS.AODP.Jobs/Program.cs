@@ -7,7 +7,6 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        // 1. PLACE IT HERE: Define and enforce the global culture first thing
         var targetCulture = new CultureInfo("en-GB");
         CultureInfo.DefaultThreadCurrentCulture = targetCulture;
         CultureInfo.DefaultThreadCurrentUICulture = targetCulture;
