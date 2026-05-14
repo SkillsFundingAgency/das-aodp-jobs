@@ -26,6 +26,7 @@ public class QaaRepositoryTests
         Assert.Equal(existing.Id, stored.Id);
         Assert.Equal("Updated title", stored.QualificationTitle);
         Assert.Equal(5, stored.ChangeVersion);
+        Assert.Equal(QaaImportComparisonOutcome.Unchanged, stored.LatestImportComparisonOutcome);
     }
 
     [Fact]
@@ -43,6 +44,13 @@ public class QaaRepositoryTests
         Assert.Equal("Z1234567", stored.AimCode);
         Assert.Equal(1, stored.ChangeVersion);
         Assert.Equal(_snapshotDate, stored.LastChangedAt);
+        Assert.Equal(QaaImportComparisonOutcome.New, stored.LatestImportComparisonOutcome);
+        Assert.Equal(QaaPublicationStatus.PendingNew, stored.PublicationStatus);
+        Assert.Equal(QaaLastDateForRegistrationChangeType.NotChanged, stored.LastDateForRegistrationChangeType);
+
+        var history = await context.RegulatedQaaQualificationVersion.SingleAsync();
+        Assert.Equal(stored.Id, history.QaaQualificationId);
+        Assert.Equal(stored.ChangeVersion, history.ChangeVersion);
     }
 
     [Fact]
@@ -63,6 +71,9 @@ public class QaaRepositoryTests
         var stored = await context.RegulatedQaaQualification.SingleAsync();
         Assert.Equal(5, stored.ChangeVersion);
         Assert.Equal(originalContentHash, stored.ContentHash);
+        Assert.Equal(QaaImportComparisonOutcome.Unchanged, stored.LatestImportComparisonOutcome);
+        Assert.Equal(QaaPublicationStatus.PendingNew, stored.PublicationStatus);
+        Assert.Empty(await context.RegulatedQaaQualificationVersion.ToListAsync());
     }
 
     [Fact]
@@ -81,6 +92,12 @@ public class QaaRepositoryTests
         var stored = await context.RegulatedQaaQualification.SingleAsync();
         Assert.Equal(6, stored.ChangeVersion);
         Assert.Equal(new DateOnly(2026, 08, 31), stored.LastDateForRegistration);
+        Assert.Equal(QaaImportComparisonOutcome.MaterialChanged, stored.LatestImportComparisonOutcome);
+        Assert.Equal(QaaPublicationStatus.PendingNew, stored.PublicationStatus);
+        Assert.Equal(QaaLastDateForRegistrationChangeType.Extended, stored.LastDateForRegistrationChangeType);
+        Assert.True(stored.IsRegistrationDateExtended);
+        Assert.False(stored.IsRegistrationDateBroughtForward);
+        Assert.Single(await context.RegulatedQaaQualificationVersion.ToListAsync());
     }
 
     [Fact]
@@ -99,6 +116,9 @@ public class QaaRepositoryTests
         var stored = await context.RegulatedQaaQualification.SingleAsync();
         Assert.Equal(6, stored.ChangeVersion);
         Assert.True(stored.IsDiscontinued);
+        Assert.Equal(new DateOnly(2024, 01, 31), stored.DiscontinuedDate);
+        Assert.Equal(QaaImportComparisonOutcome.MaterialChanged, stored.LatestImportComparisonOutcome);
+        Assert.Equal(QaaLastDateForRegistrationChangeType.NotChanged, stored.LastDateForRegistrationChangeType);
     }
 
     [Fact]
@@ -117,6 +137,61 @@ public class QaaRepositoryTests
             .ToListAsync();
         Assert.Equal(1, stored[0].ChangeVersion);
         Assert.Equal(2, stored[1].ChangeVersion);
+        Assert.Equal(2, await context.RegulatedQaaQualificationVersion.CountAsync());
+    }
+
+    [Fact]
+    public async Task ImportQaaQualificationsAsync_WhenMaterialChangeAfterPublished_SetsPendingChange()
+    {
+        var (context, repository) = CreateRepository();
+        var existing = CreateExistingQualification("Z1234567", changeVersion: 5);
+        existing.MarkAsPublished(new DateTime(2024, 01, 20));
+        context.RegulatedQaaQualification.Add(existing);
+        await context.SaveChangesAsync();
+
+        await repository.ImportQaaQualificationsAsync(
+            [CreateResponse("Z1234567", lastDateForRegistration: new DateOnly(2024, 08, 31))],
+            _snapshotDate,
+            CancellationToken.None);
+
+        context.ChangeTracker.Clear();
+        var stored = await context.RegulatedQaaQualification.SingleAsync();
+        Assert.Equal(QaaPublicationStatus.PendingChange, stored.PublicationStatus);
+        Assert.Equal(QaaLastDateForRegistrationChangeType.BroughtForward, stored.LastDateForRegistrationChangeType);
+        Assert.False(stored.IsRegistrationDateExtended);
+        Assert.True(stored.IsRegistrationDateBroughtForward);
+        Assert.Single(await context.RegulatedQaaQualificationVersion.ToListAsync());
+    }
+
+    [Fact]
+    public async Task ImportQaaQualificationsAsync_WhenUnchangedAfterPendingChange_KeepsPendingChange()
+    {
+        var (context, repository) = CreateRepository();
+        var existing = CreateExistingQualification("Z1234567", changeVersion: 5);
+        existing.MarkAsPublished(new DateTime(2024, 01, 20));
+        existing.ApplyImportedQaaData(
+            new DateTime(2024, 01, 21),
+            "Access to Higher Education Diploma (Science)",
+            "Test Awarding Body",
+            new DateOnly(2023, 09, 01),
+            new DateOnly(2026, 08, 31),
+            null,
+            SectorSubjectArea.Science,
+            6,
+            new DateTime(2024, 01, 21));
+        context.RegulatedQaaQualification.Add(existing);
+        await context.SaveChangesAsync();
+
+        await repository.ImportQaaQualificationsAsync(
+            [CreateResponse("Z1234567", lastDateForRegistration: new DateOnly(2026, 08, 31))],
+            _snapshotDate,
+            CancellationToken.None);
+
+        context.ChangeTracker.Clear();
+        var stored = await context.RegulatedQaaQualification.SingleAsync();
+        Assert.Equal(QaaImportComparisonOutcome.Unchanged, stored.LatestImportComparisonOutcome);
+        Assert.Equal(QaaPublicationStatus.PendingChange, stored.PublicationStatus);
+        Assert.Empty(await context.RegulatedQaaQualificationVersion.ToListAsync());
     }
 
     private static (ApplicationDbContext Context, QaaRepository Repository) CreateRepository()
@@ -144,7 +219,7 @@ public class QaaRepositoryTests
             new DateOnly(2023, 09, 01),
             new DateOnly(2025, 08, 31),
             SectorSubjectArea.Science,
-            isDiscontinued,
+            isDiscontinued ? new DateOnly(2024, 01, 31) : null,
             changeVersion,
             new DateTime(2024, 01, 15));
     }

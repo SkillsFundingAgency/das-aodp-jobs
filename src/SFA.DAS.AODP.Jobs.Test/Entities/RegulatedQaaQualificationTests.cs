@@ -30,6 +30,12 @@ public class RegulatedQaaQualificationTests : UnitTest
         Assert.Equal(_testSnapshot, qualification.LastChangedAt);
         Assert.NotNull(qualification.ContentHash);
         Assert.Null(qualification.LastFundingApprovalEndDate);
+        Assert.Equal(QaaImportComparisonOutcome.New, qualification.LatestImportComparisonOutcome);
+        Assert.Equal(QaaPublicationStatus.PendingNew, qualification.PublicationStatus);
+        Assert.Equal(QaaLastDateForRegistrationChangeType.NotChanged, qualification.LastDateForRegistrationChangeType);
+        Assert.False(qualification.IsRegistrationDateExtended);
+        Assert.False(qualification.IsRegistrationDateBroughtForward);
+        Assert.NotEqual(Guid.Empty, qualification.Id);
     }
 
     [Fact]
@@ -63,7 +69,7 @@ public class RegulatedQaaQualificationTests : UnitTest
             TestAwardingBody,
             _testStartDate,
             _testLastRegistrationDate,
-            false,
+            null,
             _testSectorSubjectArea,
             null,
             new DateTime(2024, 03, 15));
@@ -87,7 +93,7 @@ public class RegulatedQaaQualificationTests : UnitTest
             "Updated awarding body",
             new DateOnly(2024, 09, 01),
             _testLastRegistrationDate,
-            false,
+            null,
             SectorSubjectArea.FromTiers("4", "1"),
             null,
             newSnapshot);
@@ -100,6 +106,8 @@ public class RegulatedQaaQualificationTests : UnitTest
         Assert.Equal(7, qualification.ChangeVersion);
         Assert.Equal(originalLastChangedAt, qualification.LastChangedAt);
         Assert.Equal(originalContentHash, qualification.ContentHash);
+        Assert.Equal(QaaImportComparisonOutcome.Unchanged, qualification.LatestImportComparisonOutcome);
+        Assert.Equal(QaaPublicationStatus.PendingNew, qualification.PublicationStatus);
     }
 
     [Fact]
@@ -115,7 +123,7 @@ public class RegulatedQaaQualificationTests : UnitTest
             TestAwardingBody,
             _testStartDate,
             new DateOnly(2026, 08, 31),
-            false,
+            null,
             _testSectorSubjectArea,
             8,
             changedAt);
@@ -123,6 +131,11 @@ public class RegulatedQaaQualificationTests : UnitTest
         Assert.Equal(8, qualification.ChangeVersion);
         Assert.Equal(changedAt, qualification.LastChangedAt);
         Assert.NotEqual(originalContentHash, qualification.ContentHash);
+        Assert.Equal(QaaImportComparisonOutcome.MaterialChanged, qualification.LatestImportComparisonOutcome);
+        Assert.Equal(QaaPublicationStatus.PendingNew, qualification.PublicationStatus);
+        Assert.Equal(QaaLastDateForRegistrationChangeType.Extended, qualification.LastDateForRegistrationChangeType);
+        Assert.True(qualification.IsRegistrationDateExtended);
+        Assert.False(qualification.IsRegistrationDateBroughtForward);
     }
 
     [Fact]
@@ -138,12 +151,13 @@ public class RegulatedQaaQualificationTests : UnitTest
             TestAwardingBody,
             _testStartDate,
             _testLastRegistrationDate,
-            true,
+            new DateOnly(2024, 01, 31),
             _testSectorSubjectArea,
             8,
             changedAt);
 
         Assert.True(qualification.IsDiscontinued);
+        Assert.Equal(new DateOnly(2024, 01, 31), qualification.DiscontinuedDate);
         Assert.Equal(8, qualification.ChangeVersion);
         Assert.Equal(changedAt, qualification.LastChangedAt);
         Assert.NotEqual(originalContentHash, qualification.ContentHash);
@@ -160,7 +174,7 @@ public class RegulatedQaaQualificationTests : UnitTest
             TestAwardingBody,
             _testStartDate,
             new DateOnly(2026, 08, 31),
-            false,
+            null,
             _testSectorSubjectArea,
             null,
             new DateTime(2024, 03, 15)));
@@ -182,6 +196,45 @@ public class RegulatedQaaQualificationTests : UnitTest
         Assert.Equal(7, qualification.ChangeVersion);
         Assert.Equal(originalLastChangedAt, qualification.LastChangedAt);
         Assert.Equal(originalContentHash, qualification.ContentHash);
+    }
+
+    [Fact]
+    public void ApplyImportedQaaData_WhenLastDateForRegistrationIsBroughtForward_RecordsMovement()
+    {
+        var qualification = CreateQualification(changeVersion: 7);
+        qualification.MarkAsPublished(new DateTime(2024, 02, 20));
+        var changedAt = new DateTime(2024, 03, 15);
+
+        qualification.ApplyImportedQaaData(
+            changedAt,
+            TestQualificationTitle,
+            TestAwardingBody,
+            _testStartDate,
+            new DateOnly(2024, 08, 31),
+            null,
+            _testSectorSubjectArea,
+            8,
+            changedAt);
+
+        Assert.Equal(QaaImportComparisonOutcome.MaterialChanged, qualification.LatestImportComparisonOutcome);
+        Assert.Equal(QaaPublicationStatus.PendingChange, qualification.PublicationStatus);
+        Assert.Equal(QaaLastDateForRegistrationChangeType.BroughtForward, qualification.LastDateForRegistrationChangeType);
+        Assert.False(qualification.IsRegistrationDateExtended);
+        Assert.True(qualification.IsRegistrationDateBroughtForward);
+    }
+
+    [Fact]
+    public void MarkAsPublished_RecordsPublishedVersionWithoutChangingImportComparisonOutcome()
+    {
+        var qualification = CreateQualification(changeVersion: 7);
+        var publishedAt = new DateTime(2024, 03, 15);
+
+        qualification.MarkAsPublished(publishedAt);
+
+        Assert.Equal(QaaPublicationStatus.Published, qualification.PublicationStatus);
+        Assert.Equal(publishedAt, qualification.LastPublishedAt);
+        Assert.Equal(7, qualification.LastPublishedChangeVersion);
+        Assert.Equal(QaaImportComparisonOutcome.New, qualification.LatestImportComparisonOutcome);
     }
 
     [Fact]
@@ -209,7 +262,7 @@ public class RegulatedQaaQualificationTests : UnitTest
             _testStartDate,
             _testLastRegistrationDate,
             _testSectorSubjectArea,
-            isDiscontinued,
+            isDiscontinued ? new DateOnly(2024, 01, 31) : null,
             changeVersion,
             _testSnapshot);
     }

@@ -49,6 +49,8 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         
         public virtual DbSet<RegulatedQaaQualification> RegulatedQaaQualification { get; set; }
 
+        public virtual DbSet<RegulatedQaaQualificationVersion> RegulatedQaaQualificationVersion { get; set; }
+
         public virtual void StartingBulkInsert() => ChangeTracker.AutoDetectChangesEnabled = false;
 
         public virtual void FinishedBulkInsert() => ChangeTracker.AutoDetectChangesEnabled = true;
@@ -64,6 +66,26 @@ namespace SFA.DAS.AODP.Infrastructure.Context
                 entity.HasIndex(q => q.DateOfDataSnapshot);
                 entity.HasIndex(q => q.LastDateForRegistration);
                 entity.HasIndex(q => q.IsDiscontinued);
+                entity.HasIndex(q => q.LatestImportComparisonOutcome);
+                entity.HasIndex(q => q.PublicationStatus);
+                entity.HasIndex(q => q.LastDateForRegistrationChangeType);
+                entity.HasIndex(q => q.IsRegistrationDateExtended);
+                entity.HasIndex(q => q.IsRegistrationDateBroughtForward);
+                entity.HasIndex(q => q.DiscontinuedDate);
+
+                entity.Property(q => q.SectorSubjectArea)
+                    .HasConversion(
+                        ssaTier => ssaTier.Name,
+                        ssaName => SectorSubjectArea.FromName(ssaName));
+            });
+
+            modelBuilder.Entity<RegulatedQaaQualificationVersion>(entity =>
+            {
+                entity.HasIndex(q => q.QaaQualificationId);
+                entity.HasIndex(q => q.AimCode);
+                entity.HasIndex(q => q.ChangeVersion);
+                entity.HasIndex(q => q.ChangedAt);
+                entity.HasIndex(q => q.LastDateForRegistrationChangeType);
 
                 entity.Property(q => q.SectorSubjectArea)
                     .HasConversion(

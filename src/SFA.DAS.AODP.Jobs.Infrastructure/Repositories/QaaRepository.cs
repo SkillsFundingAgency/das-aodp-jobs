@@ -64,7 +64,7 @@ public class QaaRepository(IDbContextFactory<ApplicationDbContext> dbContextFact
             qualification.AwardingBody,
             qualification.StartDateOfQualification,
             qualification.LastDateForRegistrations,
-            qualification.DiscontinuedDate.HasValue,
+            qualification.DiscontinuedDate,
             SectorSubjectArea.FromTiers(qualification.SsaTier1, qualification.SsaTier2));
     }
 
@@ -84,12 +84,18 @@ public class QaaRepository(IDbContextFactory<ApplicationDbContext> dbContextFact
                 nextChangeVersion);
 
             await context.RegulatedQaaQualification.AddAsync(newQualification, cancellationToken);
+            await context.RegulatedQaaQualificationVersion.AddAsync(
+                RegulatedQaaQualificationVersion.Create(
+                    newQualification,
+                    QaaLastDateForRegistrationChangeType.NotChanged),
+                cancellationToken);
             currentQualifications.Add(proposedQaaQualification.AimCode, newQualification);
 
             return nextChangeVersion + 1;
         }
 
         return RefreshCurrentQaaQualification(
+            context,
             currentQualification,
             proposedQaaQualification,
             snapshotTakenAt,
@@ -109,12 +115,13 @@ public class QaaRepository(IDbContextFactory<ApplicationDbContext> dbContextFact
             proposedQaaQualification.RegistrationOpenedOn,
             proposedQaaQualification.RegistrationClosesOn,
             proposedQaaQualification.SectorSubjectArea,
-            proposedQaaQualification.HasBeenDiscontinuedByQaa,
+            proposedQaaQualification.DiscontinuedDate,
             changeVersion,
             snapshotTakenAt);
     }
 
     private static long RefreshCurrentQaaQualification(
+        ApplicationDbContext context,
         RegulatedQaaQualification currentQualification,
         ProposedQaaQualification proposedQaaQualification,
         DateTime snapshotTakenAt,
@@ -130,10 +137,18 @@ public class QaaRepository(IDbContextFactory<ApplicationDbContext> dbContextFact
             proposedQaaQualification.AwardingBodyName,
             proposedQaaQualification.RegistrationOpenedOn,
             proposedQaaQualification.RegistrationClosesOn,
-            proposedQaaQualification.HasBeenDiscontinuedByQaa,
+            proposedQaaQualification.DiscontinuedDate,
             proposedQaaQualification.SectorSubjectArea,
             hasMaterialChange ? nextChangeVersion : null,
             snapshotTakenAt);
+
+        if (hasMaterialChange)
+        {
+            context.RegulatedQaaQualificationVersion.Add(
+                RegulatedQaaQualificationVersion.Create(
+                    currentQualification,
+                    currentQualification.LastDateForRegistrationChangeType));
+        }
 
         return hasMaterialChange
             ? nextChangeVersion + 1
@@ -146,6 +161,9 @@ public class QaaRepository(IDbContextFactory<ApplicationDbContext> dbContextFact
         string AwardingBodyName,
         DateOnly RegistrationOpenedOn,
         DateOnly RegistrationClosesOn,
-        bool HasBeenDiscontinuedByQaa,
-        SectorSubjectArea SectorSubjectArea);
+        DateOnly? DiscontinuedDate,
+        SectorSubjectArea SectorSubjectArea)
+    {
+        public bool HasBeenDiscontinuedByQaa => DiscontinuedDate.HasValue;
+    }
 }
