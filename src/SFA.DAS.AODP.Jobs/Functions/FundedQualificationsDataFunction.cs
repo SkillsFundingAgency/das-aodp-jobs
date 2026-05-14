@@ -1,15 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using RestEase;
-using SFA.DAS.AODP.Common.Enum;
-using SFA.DAS.AODP.Infrastructure.Context;
-using SFA.DAS.AODP.Infrastructure.Interfaces;
-using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Jobs.Services.CSV;
-using SFA.DAS.AODP.Models.Config;
 using SFA.DAS.AODP.Models.Qualification;
 
 namespace SFA.DAS.AODP.Functions
@@ -22,13 +11,15 @@ namespace SFA.DAS.AODP.Functions
         private readonly IJobConfigurationService _jobConfigurationService;
         private readonly IFundedQualificationWriter _fundedQualificationWriter;
         private readonly IQualificationsRepository _qualificationsRepository;
+        private readonly IQualificationVersionRepository _qualificationVersionRepository;
 
         public FundedQualificationsDataFunction(ILogger<FundedQualificationsDataFunction> logger,            
             ICsvReaderService csvReaderService,
             AodpJobsConfiguration config, 
             IJobConfigurationService jobConfigurationService, 
             IFundedQualificationWriter fundedQualificationWriter,
-            IQualificationsRepository qualificationsRepository)
+            IQualificationsRepository qualificationsRepository,
+            IQualificationVersionRepository qualificationVersionRepository)
         {
             _logger = logger;        
             _csvReaderService = csvReaderService;     
@@ -36,6 +27,7 @@ namespace SFA.DAS.AODP.Functions
             _jobConfigurationService = jobConfigurationService;
             _fundedQualificationWriter = fundedQualificationWriter;
             _qualificationsRepository = qualificationsRepository;
+            _qualificationVersionRepository = qualificationVersionRepository;
         }
 
         [Function("ApprovedQualificationsDataFunction")]
@@ -86,9 +78,8 @@ namespace SFA.DAS.AODP.Functions
                     jobControl.JobRunId = await _jobConfigurationService.InsertJobRunAsync(jobControl.JobId, username, JobStatus.Running);
                 }
 
-                var qualifications = await _qualificationsRepository.GetQualificationsAsync();              
-                var organisations = await _qualificationsRepository.GetAwardingOrganisationsAsync();
-                
+                var qualificationCache = await _qualificationVersionRepository.GetLatestQualificationVersionSnapshotsAsync();
+
                 var totalRecords = 0;
                 var totalArchivedRecords = 0;
 
@@ -96,7 +87,7 @@ namespace SFA.DAS.AODP.Functions
                 if (jobControl.ImportFundedCsv)
                 {
                     _logger.LogInformation($"[{nameof(FundedQualificationsDataFunction)}] -> Importing Funded CSV");
-                    var approvedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(fundedUrlFilePath, qualifications, organisations, _logger);
+                    var approvedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(fundedUrlFilePath, qualificationCache, _logger);
                     //Commented out method to read a file from disk, useful for testing
                     //var path = "D:\\Source\\Repos\\das-aodp-jobs\\src\\SFA.DAS.AODP.Jobs\\Data\\approved.csv";
                     //var approvedQualifications = _csvReaderService.ReadCSVFromFilePath<FundedQualificationDTO, FundedQualificationsImportClassMap>(path, qualifications, organisations, _logger);
@@ -120,7 +111,7 @@ namespace SFA.DAS.AODP.Functions
                 if (jobControl.ImportArchivedCsv)
                 {
                     _logger.LogInformation($"[{nameof(FundedQualificationsDataFunction)}] -> Importing Archived CSV");
-                    var archivedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(archivedUrlFilePath, qualifications, organisations, _logger);
+                    var archivedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(archivedUrlFilePath, qualificationCache, _logger);
                     if (archivedQualifications.Any())
                     {
                         if (!tablesCleared)

@@ -1,26 +1,22 @@
 ﻿using CsvHelper.Configuration;
-using Microsoft.Extensions.Logging;
-using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Models.Qualification;
+using static SFA.DAS.AODP.Infrastructure.Repositories.QualificationVersionRepository;
 
 namespace SFA.DAS.AODP.Jobs.Services.CSV
 {
     public class FundedQualificationsImportClassMap : ClassMap<FundedQualificationDTO>
     {
-        private readonly Dictionary<string, Guid> _qualificationNumberToIdCache;
-        private readonly Dictionary<string, Guid> _organsationNameToIdCache;
+        private readonly Dictionary<string, (Guid? qualificationId, Guid? organisationId)> _qualificationLookupCache;
         private readonly ILogger _logger;
-        private Guid? _currentQualificationId;
+        private readonly DateTime _minDate = new DateTime(1753, 1, 1);
 
         public FundedQualificationsImportClassMap(
             List<string> headers,
-            List<Qualification> qualifications,
-            List<AwardingOrganisation> organisations,
+            List<QualificationLookupItem> qualificationLookupItems,
             ILogger logger)         
         {
             _logger = logger;
-            _qualificationNumberToIdCache = qualifications.ToDictionary(q => q.Qan, q => q.Id);
-            _organsationNameToIdCache = organisations.ToDictionary(q => q.NameOfqual, q => q.Id);
+            _qualificationLookupCache = qualificationLookupItems.ToDictionary(q => q.Qan, q => (q.QualificationId, q.AwardingOrganisationId));
 
             Map(m => m.Id).Convert(row => {
                 return Guid.NewGuid();
@@ -30,47 +26,34 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
                 .Name("DateOfOfqualDataSnapshot")
                 .TypeConverterOption.Format("dd/MM/yyyy");
 
-            // Map QualificationId by looking up qualification number in the cache
-            Map(m => m.QualificationId).Convert(row => {
-                var qualificationNumber = row.Row.GetField<string>("QualificationNumber");
+            Map(m => m.QualificationId).Convert(row =>
+            {
+                var qan = row.Row.GetField<string>("QualificationNumber");
 
-                if (string.IsNullOrEmpty(qualificationNumber))
+                if (string.IsNullOrWhiteSpace(qan))
                 {
                     _logger.LogWarning("Empty qualification number found in CSV data");
-                    _currentQualificationId = default;
                     return default;
                 }
 
-                if (_qualificationNumberToIdCache.TryGetValue(qualificationNumber, out Guid qualificationId))
-                {
-                    _currentQualificationId = qualificationId;
-                    return _currentQualificationId;
-                }
-                else
-                {                    
-                    _currentQualificationId = default;
-                    return default;
-                }
+                return _qualificationLookupCache.TryGetValue(qan, out var value)
+                    ? value.qualificationId
+                    : null;
             });
 
-            // Map AwardingOrganisationId by looking up the org name in the cache
-            Map(m => m.AwardingOrganisationId).Convert(row => {
-                var awardingOrganisationName = row.Row.GetField<string>("AwardingOrganisation");
+            Map(m => m.AwardingOrganisationId).Convert(row =>
+            {
+                var qan = row.Row.GetField<string>("QualificationNumber");
 
-                if (string.IsNullOrEmpty(awardingOrganisationName))
+                if (string.IsNullOrWhiteSpace(qan))
                 {
-                    _logger.LogWarning("Empty awarding organistion name found in CSV data");
+                    _logger.LogWarning("Empty qualification number found in CSV data");
                     return default;
                 }
 
-                if (_organsationNameToIdCache.TryGetValue(awardingOrganisationName, out Guid organisationId))
-                {
-                    return organisationId;
-                }
-                else
-                {                   
-                    return default;
-                }
+                return _qualificationLookupCache.TryGetValue(qan, out var value)
+                    ? value.organisationId
+                    : null;
             });
 
             Map(m => m.Level).Name("Level");
@@ -79,40 +62,63 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
             Map(m => m.SectorSubjectArea).Name("SectorSubjectArea");
             Map(m => m.Status).Name("Status");
             Map(m => m.AwardingOrganisationURL).Name("AwardingOrganisationURL");
-            Map(m => m.Offers).Convert(r =>
+
+            Map(m => m.Offers).Convert(row =>
             {
                 var offers = new List<FundedQualificationOfferDTO>();
 
+                var qan = row.Row.GetField<string>("QualificationNumber");
+
+                if (string.IsNullOrWhiteSpace(qan))
+                {
+                    _logger.LogWarning("Empty qualification number found in CSV data for offers");
+                    return offers;
+                }
+
+                if (!_qualificationLookupCache.TryGetValue(qan, out var lookup))
+                {
+                    return offers;
+                }
+
+                if (!lookup.qualificationId.HasValue)
+                {
+                    return offers;
+                }
+
                 foreach (var item in headers)
                 {
-                    var offerName = item.Split("_")[0];
+                    var offerName = item.Split('_')[0];
 
-                    DateTime? endDate = null;
-                    if (DateTime.TryParse(r.Row.GetField($"{offerName}_FundingApprovalEndDate"), out DateTime parsedEnd) && parsedEnd >= new DateTime(1753, 1, 1))
-                    {
-                        endDate = parsedEnd;
-                    }
+                    var endKey = $"{offerName}_FundingApprovalEndDate";
+                    var startKey = $"{offerName}_FundingApprovalStartDate";
+                    var notesKey = $"{offerName}_Notes";
+                    var fundingKey = $"{offerName}_FundingAvailable";
 
-                    DateTime? startDate = null;
-                    if (DateTime.TryParse(r.Row.GetField($"{offerName}_FundingApprovalStartDate"), out DateTime parsedStart) && parsedStart >= new DateTime(1753, 1, 1))
-                    {
-                        startDate = parsedStart;
-                    }
+                    var endDateRaw = row.Row.GetField(endKey);
+                    var startDateRaw = row.Row.GetField(startKey);
 
-                    if (_currentQualificationId.HasValue)
+                    DateTime? endDate =
+                        DateTime.TryParse(endDateRaw, out var e) && e >= _minDate
+                            ? e
+                            : null;
+
+                    DateTime? startDate =
+                        DateTime.TryParse(startDateRaw, out var s) && s >= _minDate
+                            ? s
+                            : null;
+
+                    offers.Add(new FundedQualificationOfferDTO
                     {
-                        offers.Add(new FundedQualificationOfferDTO()
-                        {
-                            Id = Guid.NewGuid(),
-                            QualificationId = _currentQualificationId.Value,
-                            Name = offerName,
-                            Notes = r.Row.GetField($"{offerName}_Notes"),
-                            FundingAvailable = r.Row.GetField($"{offerName}_FundingAvailable"),
-                            FundingApprovalEndDate = endDate,
-                            FundingApprovalStartDate = startDate,
-                        });
-                    }
-                };
+                        Id = Guid.NewGuid(),
+                        QualificationId = lookup.qualificationId.Value,
+                        Name = offerName,
+                        Notes = row.Row.GetField(notesKey),
+                        FundingAvailable = row.Row.GetField(fundingKey),
+                        FundingApprovalEndDate = endDate,
+                        FundingApprovalStartDate = startDate,
+                    });
+                }
+
                 return offers;
             });
 
