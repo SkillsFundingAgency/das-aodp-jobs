@@ -21,6 +21,8 @@ public static class AddServiceRegistrationsExtension
 
         services.Configure<BlobStorageSettings>(configuration.GetSection("BlobStorageSettings"));
         services.AddSingleton(cfg => cfg.GetRequiredService<IOptions<BlobStorageSettings>>().Value);
+        services.Configure<QaaSeedDataConfiguration>(configuration.GetSection(QaaSeedDataConfiguration.SectionName));
+        services.AddSingleton(cfg => cfg.GetRequiredService<IOptions<QaaSeedDataConfiguration>>().Value);
 
         services.AddHttpClient("importPldns", clinet => clinet.Timeout = TimeSpan.FromMinutes(5));
         services.AddScoped<IApplicationDbContext, ApplicationDbContext>();
@@ -38,6 +40,8 @@ public static class AddServiceRegistrationsExtension
         services.AddScoped<IFundedQualificationWriter, FundedQualificationWriter>();
         services.AddScoped<IQualificationsRepository, QualificationsRepository>();
         services.AddScoped<IImportRepository, ImportRepository>();
+        services.AddScoped<IQaaSeedCsvBlobReader, QaaSeedCsvBlobReader>();
+        services.AddScoped<IQaaQualificationSeedService, QaaQualificationSeedService>();
         services.AddAzureClients(clientBuilder =>
         {
             clientBuilder.AddBlobServiceClient(configuration.GetValue<string>("BlobStorageSettings:ConnectionString"));
