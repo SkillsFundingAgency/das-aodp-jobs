@@ -9,7 +9,7 @@ public class SeedQaaQualificationsDataFunction(
 {
     [Function("SeedQaaQualificationsDataFunction")]
     public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "admin/qaa-qualifications/seed")] HttpRequestData request,
+        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "gov/qaa-qualifications/seed")] HttpRequestData request,
         FunctionContext functionContext)
     {
         if (!configuration.Enabled)

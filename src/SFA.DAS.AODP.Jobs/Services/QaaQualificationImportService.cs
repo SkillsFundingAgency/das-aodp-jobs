@@ -32,7 +32,7 @@ public class QaaQualificationImportService(ILogger<QaaQualificationImportService
                 return 0;
             }
 
-            var dateOfSnapshot = _clockService.UtcNow;
+            var dateOfSnapshot = _clockService.Today;
             totalCountOfRecordsProcessed = await _qaaRepository.ImportQaaQualificationsAsync(
                 proposedQualifications.ToList(),
                 dateOfSnapshot,

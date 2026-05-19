@@ -23,7 +23,7 @@ public class RegulatedQaaQualification
     /// <summary>
     /// The date which this snapshot of data was loaded.
     /// </summary>
-    public DateTime DateOfDataSnapshot { get; private set; }
+    public DateOnly DateOfDataSnapshot { get; private set; }
 
     /// <summary>
     /// The version assigned when material QAA data last changed.
@@ -118,12 +118,12 @@ public class RegulatedQaaQualification
     /// <summary>
     /// What date is the last date that funding can be approved for, this is set as part of the output file generation.
     /// </summary>
-    public DateTime? LastFundingApprovalEndDate { get; private set; }
+    public DateOnly? LastFundingApprovalEndDate { get; private set; }
 
     /// <summary>
     /// When the qualification was last included in the output publication process.
     /// </summary>
-    public DateTime? LastPublishedAt { get; private set; }
+    public DateOnly? LastPublishedAt { get; private set; }
 
     /// <summary>
     /// The material change version last included in the output publication process.
@@ -140,7 +140,7 @@ public class RegulatedQaaQualification
     /// </summary>
     /// <returns>The newly created entry.</returns>
     public static RegulatedQaaQualification Create(
-        DateTime snapshotTakenAt,
+        DateOnly snapshotTakenAt,
         string aimCode,
         string qualificationTitle,
         string awardingBody,
@@ -159,7 +159,7 @@ public class RegulatedQaaQualification
             Id = Guid.NewGuid(),
             DateOfDataSnapshot = snapshotTakenAt,
             ChangeVersion = changeVersion,
-            LastChangedAt = changedAt ?? snapshotTakenAt,
+            LastChangedAt = changedAt ?? new DateTime(snapshotTakenAt.Year, snapshotTakenAt.Month, snapshotTakenAt.Day),
             AimCode = aimCode,
             QualificationTitle = qualificationTitle,
             AwardingBody = awardingBody,
@@ -195,7 +195,7 @@ public class RegulatedQaaQualification
     /// Applies the latest imported QAA data.
     /// </summary>
     public void ApplyImportedQaaData(
-        DateTime snapshotTakenAt,
+        DateOnly snapshotTakenAt,
         string latestQualificationTitle,
         string latestAwardingBody,
         DateOnly registrationOpenedOn,
@@ -203,7 +203,7 @@ public class RegulatedQaaQualification
         DateOnly? discontinuedDate,
         SectorSubjectArea sectorSubjectArea,
         long? changeVersion,
-        DateTime changedAt)
+        DateTime? changedAt = null)
     {
         var qaaHasDiscontinuedQualification = discontinuedDate.HasValue;
         var importedQaaState = MaterialQaaState.From(
@@ -235,7 +235,7 @@ public class RegulatedQaaQualification
         RecordMaterialQaaChange(
             importedQaaState,
             changeVersion.GetValueOrDefault(),
-            changedAt,
+            changedAt.GetValueOrDefault(),
             lastDateForRegistrationChangeType);
     }
 
@@ -243,7 +243,7 @@ public class RegulatedQaaQualification
     /// Marks that this qualification was included in the latest QAA snapshot.
     /// </summary>
     /// <param name="dateOfDataSnapshot">The date and time of the snapshot.</param>
-    public void MarkSnapshotSeen(DateTime dateOfDataSnapshot)
+    public void MarkSnapshotSeen(DateOnly dateOfDataSnapshot)
     {
         DateOfDataSnapshot = dateOfDataSnapshot;
     }
@@ -252,7 +252,7 @@ public class RegulatedQaaQualification
     /// Sets the last date that funding can be approved for.
     /// </summary>
     /// <param name="lastFundingApprovalEndDate">The last funding approval end date.</param>
-    public void SetLastFundingApprovalEndDate(DateTime? lastFundingApprovalEndDate)
+    public void SetLastFundingApprovalEndDate(DateOnly? lastFundingApprovalEndDate)
     {
         LastFundingApprovalEndDate = lastFundingApprovalEndDate;
     }
@@ -260,7 +260,7 @@ public class RegulatedQaaQualification
     /// <summary>
     /// Marks this qualification as having been included in an output publication.
     /// </summary>
-    public void MarkAsPublished(DateTime publishedAt)
+    public void MarkAsPublished(DateOnly publishedAt)
     {
         PublicationStatus = QaaPublicationStatus.Published;
         LastPublishedAt = publishedAt;
@@ -292,7 +292,7 @@ public class RegulatedQaaQualification
     }
 
     private void RememberLatestQaaDetails(
-        DateTime snapshotTakenAt,
+        DateOnly snapshotTakenAt,
         string latestQualificationTitle,
         string latestAwardingBody,
         DateOnly registrationOpenedOn,

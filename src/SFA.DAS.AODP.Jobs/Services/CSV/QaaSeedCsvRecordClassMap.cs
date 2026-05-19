@@ -11,23 +11,23 @@ public class QaaSeedCsvRecordClassMap : ClassMap<QaaSeedCsvRecord>
     public QaaSeedCsvRecordClassMap()
     {
         Map(m => m.AimCode).Name("AIM code");
-        Map(m => m.AwardingBody).Name("Awarding body");
+        Map(m => m.AwardingBody).Name("Awarding Body");
         Map(m => m.DiplomaTitle).Name("Diploma Title");
         Map(m => m.SsaTier1).Name("SSA Tier 1");
         Map(m => m.SsaTier2).Name("SSA Tier 2");
-        Map(m => m.StartDateOfQualification).Name("Start date of qualification");
+        //Map(m => m.StartDateOfQualification).Name("Start date of qualification");
         Map(m => m.FullStartDateOfQualification)
             .Name("Full start date of qualification")
             .Convert(args => ParseRequiredDate(args.Row.GetField("Full start date of qualification")));
-        Map(m => m.LastDateForRegistration).Name("Last date for registration");
+        //Map(m => m.LastDateForRegistration).Name("Last date for registrations");
         Map(m => m.FullLastDateForRegistration)
-            .Name("Full Last date for registration")
-            .Convert(args => ParseRequiredDate(args.Row.GetField("Full Last date for registration")));
-        Map(m => m.LastDateForCertification).Name("Last date for certification");
+            .Name("Full Last date for registrations")
+            .Convert(args => ParseRequiredDate(args.Row.GetField("Full Last date for registrations")));
+        //Map(m => m.LastDateForCertification).Name("Last date for certifications");
         Map(m => m.FullLastDateForCertification)
-            .Name("Full Last date for certification")
-            .Convert(args => ParseRequiredDate(args.Row.GetField("Full Last date for certification")));
-        Map(m => m.AwardStatus).Name("Award status");
+            .Name("Full last date for certifications")
+            .Convert(args => ParseRequiredDate(args.Row.GetField("Full last date for certifications")));
+        Map(m => m.AwardStatus).Name("Award Status");
         Map(m => m.DiscontinuedDate)
             .Name("Discontinued date")
             .Convert(args => ParseOptionalDate(args.Row.GetField("Discontinued date")));

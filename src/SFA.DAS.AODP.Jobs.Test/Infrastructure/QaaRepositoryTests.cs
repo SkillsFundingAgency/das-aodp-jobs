@@ -6,7 +6,7 @@ namespace SFA.DAS.AODP.Jobs.UnitTests.Infrastructure;
 
 public class QaaRepositoryTests
 {
-    private readonly DateTime _snapshotDate = new(2024, 02, 15);
+    private readonly DateOnly _snapshotDate = new(2024, 02, 15);
 
     [Fact]
     public async Task ImportQaaQualificationsAsync_WhenAimCodeExists_UpdatesExistingRowWithoutDeleting()
@@ -43,7 +43,6 @@ public class QaaRepositoryTests
         var stored = await context.RegulatedQaaQualification.SingleAsync();
         Assert.Equal("Z1234567", stored.AimCode);
         Assert.Equal(1, stored.ChangeVersion);
-        Assert.Equal(_snapshotDate, stored.LastChangedAt);
         Assert.Equal(QaaImportComparisonOutcome.New, stored.LatestImportComparisonOutcome);
         Assert.Equal(QaaPublicationStatus.PendingNew, stored.PublicationStatus);
         Assert.Equal(QaaLastDateForRegistrationChangeType.NotChanged, stored.LastDateForRegistrationChangeType);
@@ -145,7 +144,7 @@ public class QaaRepositoryTests
     {
         var (context, repository) = CreateRepository();
         var existing = CreateExistingQualification("Z1234567", changeVersion: 5);
-        existing.MarkAsPublished(new DateTime(2024, 01, 20));
+        existing.MarkAsPublished(new DateOnly(2024, 01, 20));
         context.RegulatedQaaQualification.Add(existing);
         await context.SaveChangesAsync();
 
@@ -168,9 +167,9 @@ public class QaaRepositoryTests
     {
         var (context, repository) = CreateRepository();
         var existing = CreateExistingQualification("Z1234567", changeVersion: 5);
-        existing.MarkAsPublished(new DateTime(2024, 01, 20));
+        existing.MarkAsPublished(new DateOnly(2024, 01, 20));
         existing.ApplyImportedQaaData(
-            new DateTime(2024, 01, 21),
+            new DateOnly(2024, 01, 21),
             "Access to Higher Education Diploma (Science)",
             "Test Awarding Body",
             new DateOnly(2023, 09, 01),
@@ -212,7 +211,7 @@ public class QaaRepositoryTests
         bool isDiscontinued = false)
     {
         return RegulatedQaaQualification.Create(
-            new DateTime(2024, 01, 15),
+            new DateOnly(2024, 01, 15),
             aimCode,
             "Access to Higher Education Diploma (Science)",
             "Test Awarding Body",

@@ -16,7 +16,7 @@ public class QaaRepository(IDbContextFactory<ApplicationDbContext> dbContextFact
     /// <inheritdoc/>.
     public async Task<int> ImportQaaQualificationsAsync(
         IReadOnlyCollection<QaaQualificationResponse> proposedQualifications,
-        DateTime snapshotTakenAt,
+        DateOnly snapshotTakenAt,
         CancellationToken cancellationToken)
     {
         await using var context = await _applicationDbContext.CreateDbContextAsync(cancellationToken);
@@ -72,7 +72,7 @@ public class QaaRepository(IDbContextFactory<ApplicationDbContext> dbContextFact
         ApplicationDbContext context,
         IDictionary<string, RegulatedQaaQualification> currentQualifications,
         ProposedQaaQualification proposedQaaQualification,
-        DateTime snapshotTakenAt,
+        DateOnly snapshotTakenAt,
         long nextChangeVersion,
         CancellationToken cancellationToken)
     {
@@ -104,7 +104,7 @@ public class QaaRepository(IDbContextFactory<ApplicationDbContext> dbContextFact
 
     private static RegulatedQaaQualification CreateCurrentQaaQualification(
         ProposedQaaQualification proposedQaaQualification,
-        DateTime snapshotTakenAt,
+        DateOnly snapshotTakenAt,
         long changeVersion)
     {
         return RegulatedQaaQualification.Create(
@@ -116,15 +116,14 @@ public class QaaRepository(IDbContextFactory<ApplicationDbContext> dbContextFact
             proposedQaaQualification.RegistrationClosesOn,
             proposedQaaQualification.SectorSubjectArea,
             proposedQaaQualification.DiscontinuedDate,
-            changeVersion,
-            snapshotTakenAt);
+            changeVersion);
     }
 
     private static long RefreshCurrentQaaQualification(
         ApplicationDbContext context,
         RegulatedQaaQualification currentQualification,
         ProposedQaaQualification proposedQaaQualification,
-        DateTime snapshotTakenAt,
+        DateOnly snapshotTakenAt,
         long nextChangeVersion)
     {
         var hasMaterialChange = currentQualification.HasMaterialQaaChange(
@@ -139,8 +138,7 @@ public class QaaRepository(IDbContextFactory<ApplicationDbContext> dbContextFact
             proposedQaaQualification.RegistrationClosesOn,
             proposedQaaQualification.DiscontinuedDate,
             proposedQaaQualification.SectorSubjectArea,
-            hasMaterialChange ? nextChangeVersion : null,
-            snapshotTakenAt);
+            hasMaterialChange ? nextChangeVersion : null);
 
         if (hasMaterialChange)
         {

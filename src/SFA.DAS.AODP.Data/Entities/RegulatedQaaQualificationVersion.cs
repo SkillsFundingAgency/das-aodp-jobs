@@ -17,7 +17,7 @@ public class RegulatedQaaQualificationVersion
 
     public long ChangeVersion { get; private set; }
 
-    public DateTime DateOfDataSnapshot { get; private set; }
+    public DateOnly DateOfDataSnapshot { get; private set; }
 
     public DateTime ChangedAt { get; private set; }
 

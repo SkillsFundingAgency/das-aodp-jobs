@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using SFA.DAS.AODP.Infrastructure.Services;
 
 namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Services;
 
@@ -26,13 +27,13 @@ public class QaaQualificationImportServiceTests
     public async Task ImportDataAsync_WithValidQualifications_CallsRepositoryAndReturnsProcessedCount()
     {
         var cancellationToken = CancellationToken.None;
-        var dateOfSnapshot = new DateTime(2024, 02, 15);
+        var dateOfSnapshot = new DateOnly(2024, 02, 15);
         var qualifications = new List<QaaQualificationResponse>
         {
             CreateQualification("Z1234567")
         };
 
-        _mockClockService.Setup(service => service.UtcNow).Returns(dateOfSnapshot);
+        _mockClockService.Setup(service => service.Today).Returns(dateOfSnapshot);
         _mockQaaApiClient.Setup(client => client.GetQualificationsAsync(cancellationToken))
             .ReturnsAsync(qualifications);
         _mockQaaRepository
@@ -52,7 +53,7 @@ public class QaaQualificationImportServiceTests
     public async Task ImportDataAsync_WithMultipleQualifications_ReturnsRepositoryProcessedCount()
     {
         var cancellationToken = CancellationToken.None;
-        var dateOfSnapshot = new DateTime(2024, 02, 15);
+        var dateOfSnapshot = new DateOnly(2024, 02, 15);
         var qualifications = new List<QaaQualificationResponse>
         {
             CreateQualification("Z1234567"),
@@ -60,7 +61,7 @@ public class QaaQualificationImportServiceTests
             CreateQualification("Z1234569")
         };
 
-        _mockClockService.Setup(service => service.UtcNow).Returns(dateOfSnapshot);
+        _mockClockService.Setup(service => service.Today).Returns(dateOfSnapshot);
         _mockQaaApiClient.Setup(client => client.GetQualificationsAsync(cancellationToken))
             .ReturnsAsync(qualifications);
         _mockQaaRepository
@@ -88,7 +89,7 @@ public class QaaQualificationImportServiceTests
         _mockQaaRepository.Verify(
             repo => repo.ImportQaaQualificationsAsync(
                 It.IsAny<IReadOnlyCollection<QaaQualificationResponse>>(),
-                It.IsAny<DateTime>(),
+                It.IsAny<DateOnly>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -109,7 +110,7 @@ public class QaaQualificationImportServiceTests
         _mockQaaRepository.Verify(
             repo => repo.ImportQaaQualificationsAsync(
                 It.IsAny<IReadOnlyCollection<QaaQualificationResponse>>(),
-                It.IsAny<DateTime>(),
+                It.IsAny<DateOnly>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -118,13 +119,13 @@ public class QaaQualificationImportServiceTests
     public async Task ImportDataAsync_PassesApiDataAndSnapshotDateToRepository()
     {
         var cancellationToken = CancellationToken.None;
-        var dateOfSnapshot = new DateTime(2024, 02, 15);
+        var dateOfSnapshot = new DateOnly(2024, 02, 15);
         var qualifications = new List<QaaQualificationResponse>
         {
             CreateQualification("Z1234567", discontinuedDate: new DateOnly(2024, 01, 31))
         };
 
-        _mockClockService.Setup(service => service.UtcNow).Returns(dateOfSnapshot);
+        _mockClockService.Setup(service => service.Today).Returns(dateOfSnapshot);
         _mockQaaApiClient.Setup(client => client.GetQualificationsAsync(cancellationToken))
             .ReturnsAsync(qualifications);
         _mockQaaRepository

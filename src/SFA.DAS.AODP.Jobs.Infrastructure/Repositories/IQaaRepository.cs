@@ -16,6 +16,6 @@ public interface IQaaRepository
     /// <returns>The number of records processed.</returns>
     Task<int> ImportQaaQualificationsAsync(
         IReadOnlyCollection<QaaQualificationResponse> proposedQualifications,
-        DateTime dateOfSnapshot,
+        DateOnly dateOfSnapshot,
         CancellationToken cancellationToken);
 }
