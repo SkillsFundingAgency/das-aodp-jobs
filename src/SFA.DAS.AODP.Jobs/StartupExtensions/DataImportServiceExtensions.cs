@@ -1,4 +1,5 @@
-﻿using SFA.DAS.AODP.Infrastructure.Authentication;
+﻿using Azure.Core;
+using SFA.DAS.AODP.Infrastructure.Authentication;
 
 namespace SFA.DAS.AODP.Jobs.StartupExtensions;
 

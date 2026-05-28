@@ -3,6 +3,7 @@ using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Jobs.Services;
 using SFA.DAS.AODP.Models.Qualification;
 using Xunit;
+using Shouldly;
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 {
@@ -33,9 +34,9 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var result = sut.DetectChanges(dto, version, org, qual);
 
             // Assert
-            Assert.False(result.ChangesPresent);
-            Assert.Empty(result.Fields);
-            Assert.False(result.KeyFieldsChanged);
+            result.ChangesPresent.ShouldBeFalse();
+            result.Fields.ShouldBeEmpty();
+            result.KeyFieldsChanged.ShouldBeFalse();
         }
 
         [Fact]
@@ -52,9 +53,9 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var result = sut.DetectChanges(dto, version, org, qual);
 
             // Assert
-            Assert.True(result.ChangesPresent);
-            Assert.Contains("Status", result.Fields);
-            Assert.False(result.KeyFieldsChanged);
+            result.ChangesPresent.ShouldBeTrue();
+            result.Fields.ShouldContain("Status");
+            result.KeyFieldsChanged.ShouldBeFalse();
         }
 
         [Fact]
@@ -71,18 +72,56 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var result = sut.DetectChanges(dto, version, org, qual);
 
             // Assert
-            Assert.True(result.ChangesPresent);
-            Assert.Contains("Level", result.Fields);
-            Assert.True(result.KeyFieldsChanged);
+            result.ChangesPresent.ShouldBeTrue();
+            result.Fields.ShouldContain("Level");
+            result.KeyFieldsChanged.ShouldBeTrue();
         }
 
         public static IEnumerable<object[]> TitleWhitespaceCases =>
             new List<object[]>
             {
+                // multiple spaces
                 new object[] { "My Qualification Title", "My  Qualification   Title" },
+                // leading/trailing spaces
                 new object[] { "My Qualification Title", " My Qualification Title " },
+                // newline
                 new object[] { "My Qualification Title", "My Qualification Title\n" },
-                new object[] { "My Qualification Title", "My Qualification Title\u00A0" }
+                // no-break space
+                new object[] { "My Qualification Title", "My Qualification Title\u00A0" },
+                // tab
+                new object[] { "My Qualification Title", "My\tQualification Title" },
+                // vertical tab and form feed
+                new object[] { "My Qualification Title", "My Qualification\u000B Title" },
+                new object[] { "My Qualification Title", "My Qualification\u000C Title" },
+                // carriage return
+                new object[] { "My Qualification Title", "My Qualification Title\r" },
+                // various unicode space separators
+                new object[] { "My Qualification Title", "My Qualification\u1680 Title" },
+                new object[] { "My Qualification Title", "My Qualification\u2003 Title" },
+                new object[] { "My Qualification Title", "My Qualification\u2009 Title" },
+                new object[] { "My Qualification Title", "My Qualification\u200A Title" },
+                new object[] { "My Qualification Title", "My Qualification\u2028 Title" },
+                new object[] { "My Qualification Title", "My Qualification\u2029 Title" },
+                new object[] { "My Qualification Title", "My Qualification\u202F Title" },
+                new object[] { "My Qualification Title", "My Qualification\u205F Title" },
+                new object[] { "My Qualification Title", "My Qualification\u3000 Title" },
+                // zero-width / invisible characters
+                new object[] { "My Qualification Title", "My\u200B Qualification Title" },
+                new object[] { "My Qualification Title", "My Qualification\u200C Title" },
+                new object[] { "My Qualification Title", "My\u200D Qualification Title" },
+                new object[] { "My Qualification Title", "My Qualification\u2060 Title" },
+                new object[] { "My Qualification Title", "\uFEFFMy Qualification Title" },
+                // apostrophe/quote variants should normalise to straight apostrophe
+                new object[] { "O'Connor", "O\u2019Connor" },
+                new object[] { "O'Connor", "O\u2018Connor" },
+                new object[] { "O'Connor", "O\u201AConnor" },
+                new object[] { "O'Connor", "O\u201BConnor" },
+                new object[] { "O'Connor", "O\u2032Connor" },
+                new object[] { "O'Connor", "O\uFF07Connor" },
+                // case-only change should be treated as non-key (normalisation compares ignoring case)
+                new object[] { "My Qualification Title", "my qualification title" },
+                // mixed invisible and spacing characters
+                new object[] { "My Qualification Title", " My\u200B Qualification\u00A0 Title\u200D " }
             };
 
         [Theory]
@@ -102,9 +141,10 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var result = sut.DetectChanges(dto, version, org, qual);
 
             // Assert
-            Assert.True(result.ChangesPresent);
-            Assert.Contains("Title", result.Fields);
-            Assert.False(result.KeyFieldsChanged);
+            // Whitespace / invisible / case-only changes are normalised away and should not be treated as changes
+            result.ChangesPresent.ShouldBeFalse();
+            result.Fields.ShouldBeEmpty();
+            result.KeyFieldsChanged.ShouldBeFalse();
         }
 
         [Fact]
@@ -121,9 +161,9 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var result = sut.DetectChanges(dto, version, org, qual);
 
             // Assert
-            Assert.True(result.ChangesPresent);
-            Assert.Contains("Title", result.Fields);
-            Assert.True(result.KeyFieldsChanged);
+            result.ChangesPresent.ShouldBeTrue();
+            result.Fields.ShouldContain("Title");
+            result.KeyFieldsChanged.ShouldBeTrue();
         }
 
         [Fact]
@@ -143,10 +183,11 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var result = sut.DetectChanges(dto, version, org, qual);
 
             // Assert
-            Assert.True(result.ChangesPresent);
-            Assert.Contains("Title", result.Fields);
-            Assert.Contains("Level", result.Fields);
-            Assert.True(result.KeyFieldsChanged);
+            // Title whitespace change should be normalised away; Level remains a key change
+            result.ChangesPresent.ShouldBeTrue();
+            result.Fields.ShouldNotContain("Title");
+            result.Fields.ShouldContain("Level");
+            result.KeyFieldsChanged.ShouldBeTrue();
         }
     }
 }
