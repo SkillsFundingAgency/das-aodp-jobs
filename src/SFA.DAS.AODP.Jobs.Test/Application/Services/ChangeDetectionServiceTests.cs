@@ -1,8 +1,4 @@
-﻿using System.Collections.Generic;
-using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Jobs.Services;
-using SFA.DAS.AODP.Models.Qualification;
-using Xunit;
+﻿using SFA.DAS.AODP.Models.Qualification;
 using Shouldly;
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Services
@@ -75,6 +71,81 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             result.ChangesPresent.ShouldBeTrue();
             result.Fields.ShouldContain("Level");
             result.KeyFieldsChanged.ShouldBeTrue();
+        }
+
+        [Fact]
+        public void DetectChanges_ApprovedForDelFundedProgramme_FalseTreatedAsNull_NoChange()
+        {
+            // Arrange
+            var sut = CreateSut();
+            var (dto, version, org, qual) = CreateEmptyBaseline();
+
+            dto.ApprovedForDelfundedProgramme = "false"; // treated as null
+            version.ApprovedForDelFundedProgramme = null;
+
+            // Act
+            var result = sut.DetectChanges(dto, version, org, qual);
+
+            // Assert
+            result.ChangesPresent.ShouldBeFalse();
+            result.Fields.ShouldBeEmpty();
+            result.KeyFieldsChanged.ShouldBeFalse();
+        }
+
+        [Fact]
+        public void DetectChanges_ApprovedForDelFundedProgramme_True_IsChange()
+        {
+            // Arrange
+            var sut = CreateSut();
+            var (dto, version, org, qual) = CreateEmptyBaseline();
+
+            dto.ApprovedForDelfundedProgramme = "true";
+            version.ApprovedForDelFundedProgramme = null;
+
+            // Act
+            var result = sut.DetectChanges(dto, version, org, qual);
+
+            // Assert
+            result.ChangesPresent.ShouldBeTrue();
+            result.Fields.ShouldContain("ApprovedForDelfundedProgramme");
+            result.KeyFieldsChanged.ShouldBeFalse();
+        }
+
+        [Fact]
+        public void DetectChanges_LastUpdatedDate_TimeOfDayDifferences_AreIgnored()
+        {
+            // Arrange
+            var sut = CreateSut();
+            var (dto, version, org, qual) = CreateEmptyBaseline();
+
+            dto.LastUpdatedDate = new DateTime(2024, 1, 1, 13, 30, 0);
+            version.LastUpdatedDate = new DateTime(2024, 1, 1, 0, 0, 0);
+
+            // Act
+            var result = sut.DetectChanges(dto, version, org, qual);
+
+            // Assert
+            result.ChangesPresent.ShouldBeFalse();
+            result.Fields.ShouldNotContain("LastUpdatedDate");
+        }
+
+        [Fact]
+        public void DetectChanges_OrganisationName_WithUnicodeAndZeroWidth_AreNormalised_NoChange()
+        {
+            // Arrange
+            var sut = CreateSut();
+            var (dto, version, org, qual) = CreateEmptyBaseline();
+
+            dto.OrganisationName = "O'Connor";
+            org.NameOfqual = "O\u2019Connor\u200B"; // curly apostrophe + zero-width space
+
+            // Act
+            var result = sut.DetectChanges(dto, version, org, qual);
+
+            // Assert
+            result.ChangesPresent.ShouldBeFalse();
+            result.Fields.ShouldBeEmpty();
+            result.KeyFieldsChanged.ShouldBeFalse();
         }
 
         public static IEnumerable<object[]> TitleWhitespaceCases =>

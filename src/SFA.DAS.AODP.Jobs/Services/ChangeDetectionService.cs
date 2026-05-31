@@ -27,33 +27,38 @@ namespace SFA.DAS.AODP.Jobs.Services
         public ChangeDetectionService()
         {
             _keyFields = new List<string>()
-                {
-                    "OrganisationName",
-                    "Title",
-                    "Level",
-                    "Type",
-                    "TotalCredits",
-                    "Ssa",
-                    "GradingType",
-                    "OfferedInEngland",
-                    "PreSixteen",
-                    "SixteenToEighteen",
-                    "EighteenPlus",
-                    "NineteenPlus",
-                    "IntentionToSeekFundingInEngland", 
-                    "GLH",
-                    "MinimumGLH",
-                    "Tqt",
-                    "OperationalEndDate",
-                    "OfferedInternationally"
-                };
+            {
+                "OrganisationName",
+                "Title",
+                "Level",
+                "Type",
+                "TotalCredits",
+                "Ssa",
+                "GradingType",
+                "OfferedInEngland",
+                "PreSixteen",
+                "SixteenToEighteen",
+                "EighteenPlus",
+                "NineteenPlus",
+                "IntentionToSeekFundingInEngland",
+                "GLH",
+                "MinimumGLH",
+                "Tqt",
+                "OperationalEndDate",
+                "OfferedInternationally"
+            };
         }
 
-        public DetectionResults DetectChanges(QualificationDTO newRecord, QualificationVersions qualificationVersion, AwardingOrganisation awardingOrganisation, Qualification qualification)
+        public DetectionResults DetectChanges(
+            QualificationDTO newRecord,
+            QualificationVersions qualificationVersion,
+            AwardingOrganisation awardingOrganisation,
+            Qualification qualification)
         {
             // Could use Reflection here, but records being compared have mismatched names, different field types, or information located in other structures
 
-            var fields = new List<string>();       
+            var fields = new List<string>();
+
             fields = fields.AppendIf(newRecord.Ssa != qualificationVersion.Ssa, "Ssa");
             fields = fields.AppendIf(newRecord.Pathways != qualificationVersion.Pathways, "Pathways");
             fields = fields.AppendIf(newRecord.Status != qualificationVersion.Status, "Status");
@@ -87,7 +92,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             fields = fields.AppendIf(NormaliseDate(newRecord.OperationalStartDate) != NormaliseDate(qualificationVersion.OperationalStartDate), "OperationalStartDate");
 
             fields = fields.AppendIf(newRecord.OrganisationAcronym != awardingOrganisation.Acronym, "OrganisationAcronym");
-            fields = fields.AppendIf(Normalise(newRecord.OrganisationName) != Normalise(awardingOrganisation.NameOfqual), "OrganisationName");
+            fields = fields.AppendIf(!string.Equals(Normalise(newRecord.OrganisationName), Normalise(awardingOrganisation.NameOfqual), StringComparison.OrdinalIgnoreCase), "OrganisationName");
             fields = fields.AppendIf(newRecord.OrganisationId != awardingOrganisation.Ukprn, "OrganisationId");
             fields = fields.AppendIf(newRecord.OrganisationRecognitionNumber != awardingOrganisation.RecognitionNumber, "OrganisationRecognitionNumber");
 
@@ -99,9 +104,9 @@ namespace SFA.DAS.AODP.Jobs.Services
             fields = fields.AppendIf(NormaliseDate(newRecord.RegulationStartDate) != NormaliseDate(qualificationVersion.RegulationStartDate), "RegulationStartDate");
             fields = fields.AppendIf(NormaliseDate(newRecord.ReviewDate) != NormaliseDate(qualificationVersion.ReviewDate), "ReviewDate");
             fields = fields.AppendIf(newRecord.SixteenToEighteen != qualificationVersion.SixteenToEighteen, "SixteenToEighteen");
-            fields = fields.AppendIf(newRecord.Specialism != qualificationVersion.Specialism, "Specialism");            
+            fields = fields.AppendIf(newRecord.Specialism != qualificationVersion.Specialism, "Specialism");
             fields = fields.AppendIf(newRecord.SubLevel != qualificationVersion.SubLevel, "SubLevel");
-            fields = fields.AppendIf(newRecord.Title != qualification.QualificationName, "Title");
+            fields = fields.AppendIf(!string.Equals(Normalise(newRecord.Title), Normalise(qualification.QualificationName), StringComparison.OrdinalIgnoreCase), "Title");
             fields = fields.AppendIf(newRecord.TotalCredits != qualificationVersion.TotalCredits, "TotalCredits");
             fields = fields.AppendIf(newRecord.Tqt != qualificationVersion.Tqt, "Tqt");
             fields = fields.AppendIf(newRecord.Type != qualificationVersion.Type, "Type");
@@ -109,22 +114,17 @@ namespace SFA.DAS.AODP.Jobs.Services
             fields = fields.AppendIf(NormaliseDate(newRecord.UiLastUpdatedDate) != NormaliseDate(qualificationVersion.UiLastUpdatedDate), "UiLastUpdatedDate");
             fields = fields.AppendIf(newRecord.IntentionToSeekFundingInEngland != qualificationVersion.IntentionToSeekFundingInEngland, "IntentionToSeekFundingInEngland");
 
-            var results = new DetectionResults() { Fields = fields, ChangesPresent = fields.Any() };
+            var results = new DetectionResults
+            {
+                Fields = fields,
+                ChangesPresent = fields.Count > 0
+            };
 
             if (results.ChangesPresent)
             {
                 var keyFieldsChanged = results.Fields.Intersect(_keyFields).ToList();
 
-                if (keyFieldsChanged.Contains("Title") && IsWhitespaceChange(newRecord.Title, qualification.QualificationName))
-                {
-                    keyFieldsChanged.RemoveAll(f => string.Equals(f, "Title", StringComparison.InvariantCultureIgnoreCase));
-                    results.Fields.RemoveAll(f => string.Equals(f, "Title", StringComparison.InvariantCultureIgnoreCase));
-                }
-
-                results.KeyFieldsChanged = keyFieldsChanged.Any();
-
-                // Recalculate ChangesPresent because we may have removed fields (e.g. Title when only whitespace/case changed)
-                results.ChangesPresent = results.Fields.Any();
+                results.KeyFieldsChanged = keyFieldsChanged.Count > 0;
             }
 
             return results;
@@ -173,61 +173,55 @@ namespace SFA.DAS.AODP.Jobs.Services
                 return string.Empty;
             }
 
-            s = s
-                // Standard/control whitespace
-                .Replace('\u0009', ' ') // Tab
-                .Replace('\u000A', ' ') // Line feed
-                .Replace('\u000B', ' ') // Vertical tab
-                .Replace('\u000C', ' ') // Form feed
-                .Replace('\u000D', ' ') // Carriage return
+            var normalisedCharacters = s
+                .Select(c =>
+                {
+                    if (char.IsWhiteSpace(c))
+                    {
+                        return ' ';
+                    }
 
-                // Unicode space separators
-                .Replace('\u00A0', ' ') // No-break space
-                .Replace('\u1680', ' ') // Ogham space mark
-                .Replace('\u2000', ' ') // En quad
-                .Replace('\u2001', ' ') // Em quad
-                .Replace('\u2002', ' ') // En space
-                .Replace('\u2003', ' ') // Em space
-                .Replace('\u2004', ' ') // Three-per-em space
-                .Replace('\u2005', ' ') // Four-per-em space
-                .Replace('\u2006', ' ') // Six-per-em space
-                .Replace('\u2007', ' ') // Figure space
-                .Replace('\u2008', ' ') // Punctuation space
-                .Replace('\u2009', ' ') // Thin space
-                .Replace('\u200A', ' ') // Hair space
-                .Replace('\u2028', ' ') // Line separator
-                .Replace('\u2029', ' ') // Paragraph separator
-                .Replace('\u202F', ' ') // Narrow no-break space
-                .Replace('\u205F', ' ') // Medium mathematical space
-                .Replace('\u3000', ' ') // Ideographic space
+                    return c switch
+                    {
+                        // Zero-width/invisible formatting characters
+                        '\u200B' => '\0', // Zero-width space / ZWSP
+                        '\u200C' => '\0', // Zero-width non-joiner
+                        '\u200D' => '\0', // Zero-width joiner
+                        '\u2060' => '\0', // Word joiner
+                        '\uFEFF' => '\0', // Zero-width no-break space / byte order mark
 
-                // Zero-width/invisible formatting characters
-                .Replace("\u200B", "") // Zero-width space / ZWSP
-                .Replace("\u200C", "") // Zero-width non-joiner
-                .Replace("\u200D", "") // Zero-width joiner
-                .Replace("\u2060", "") // Word joiner
-                .Replace("\uFEFF", "") // Zero-width no-break space / byte order mark
+                        // Apostrophe/single quote variants
+                        '\u2018' => '\'', // Left single quotation mark
+                        '\u2019' => '\'', // Right single quotation mark / curly apostrophe
+                        '\u201A' => '\'', // Single low-9 quotation mark
+                        '\u201B' => '\'', // Single high-reversed-9 quotation mark
+                        '\u2032' => '\'', // Prime
+                        '\uFF07' => '\'', // Fullwidth apostrophe
 
-                // Apostrophe/single quote variants
-                .Replace('\u2018', '\'') // Left single quotation mark
-                .Replace('\u2019', '\'') // Right single quotation mark / curly apostrophe
-                .Replace('\u201A', '\'') // Single low-9 quotation mark
-                .Replace('\u201B', '\'') // Single high-reversed-9 quotation mark
-                .Replace('\u2032', '\'') // Prime
-                .Replace('\uFF07', '\''); // Fullwidth apostrophe
+                        // Hyphen/dash variants
+                        '\u2010' => '-', // Hyphen
+                        '\u2011' => '-', // Non-breaking hyphen
+                        '\u2012' => '-', // Figure dash
+                        '\u2013' => '-', // En dash
+                        '\u2014' => '-', // Em dash
+                        '\u2015' => '-', // Horizontal bar
+                        '\u2212' => '-', // Minus sign
+                        '\uFE58' => '-', // Small em dash
+                        '\uFE63' => '-', // Small hyphen-minus
+                        '\uFF0D' => '-', // Fullwidth hyphen-minus
+
+                        _ => c
+                    };
+                })
+                .Where(c => c != '\0')
+                .ToArray();
 
             return Regex.Replace(
-                s.Trim(),
-                @"\s+",
+                new string(normalisedCharacters).Trim(),
+                @" +",
                 " ",
                 RegexOptions.None,
                 TimeSpan.FromMilliseconds(50));
-        }
-
-        private static bool IsWhitespaceChange(string? newValue, string? oldValue)
-        {
-            return string.Equals(Normalise(newValue), Normalise(oldValue), StringComparison.OrdinalIgnoreCase)
-                   && !string.Equals(newValue ?? "", oldValue ?? "", StringComparison.Ordinal);
         }
     }
 }

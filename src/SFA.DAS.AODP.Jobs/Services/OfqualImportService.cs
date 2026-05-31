@@ -204,7 +204,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                         }
                         else
                         { 
-                            organisationId = organisationCache[importRecord.OrganisationId ?? 0]; 
+                            organisationId = organisationCache[importRecord.OrganisationId ?? 0];
                         }
 
                         // Check Qualification
@@ -239,6 +239,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                             var actionTypeId = Guid.Empty;
 
                             var eligibleForFunding = _fundingEligibilityService.EligibleForFunding(importRecord);
+                            var lifecycleStage = LifeCycleStage.New;
 
                             if (eligibleForFunding)
                             {
@@ -246,15 +247,17 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                                 processStatusName = Common.Enum.ProcessStatus.DecisionRequired;
                                 actionTypeId = _actionTypeService.GetActionTypeId(ActionTypeEnum.ActionRequired);
-                                notes = ImportReason.DecisionRequired;                                
+                                notes = ImportReason.DecisionRequired;
+                                lifecycleStage = LifeCycleStage.New;
                             }
                             else
                             {
-                                // Ineligible for funding - No Action Required                                
+                                // Ineligible for funding - mark as Completed (no action)
 
                                 processStatusName = Common.Enum.ProcessStatus.NoActionRequired;
                                 actionTypeId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired);
-                                notes = _fundingEligibilityService.DetermineFailureReason(importRecord);                                
+                                notes = _fundingEligibilityService.DetermineFailureReason(importRecord);
+                                lifecycleStage = LifeCycleStage.Completed;
                             }
 
                             var versionFieldChange = new VersionFieldChanges
@@ -263,8 +266,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 QualificationVersionNumber = 1,
                                 ChangedFieldNames = null
                             };
-                            
-                            var lifecycleStage = LifeCycleStage.New;
+
 
                             var discussionHistory = new QualificationDiscussionHistory
                             {
@@ -300,6 +302,8 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                             // check for changed fields
                             var currentQualificationDto = new QualificationDTO();
+
+                            // TODO[HS]: do we really need to load it up again? We already load the existing versions in memmory so we dont need to go back to the db again.
                             var currentQualificationVersion = _applicationDbContext.QualificationVersions
                                                                 .Include(i => i.Qualification)
                                                                 .Include(i => i.Organisation)
@@ -326,12 +330,12 @@ namespace SFA.DAS.AODP.Jobs.Services
                             var eligibleForFunding = _fundingEligibilityService.EligibleForFunding(importRecord);
                             if (!eligibleForFunding)
                             {
-                                // Not eligible for funding 
+                                // Not eligible for funding - mark as Completed (no action)
 
                                 processStatusName = Common.Enum.ProcessStatus.NoActionRequired;
-                                lifecycleStageName = LifeCycleStage.Changed;
+                                lifecycleStageName = LifeCycleStage.Completed;
                                 actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired);
-                                notes = "No Action required - Changed Qualification (Funding Criteria)";
+                                notes = "Completed - No Action required - Changed Qualification (Funding Criteria)";
                             }
                             else
                             {
@@ -345,16 +349,17 @@ namespace SFA.DAS.AODP.Jobs.Services
                                         // Decision required as major changes
                                         processStatusName = Common.Enum.ProcessStatus.DecisionRequired;
                                         notes = "Decision Required - Changed Qualification (Key Fields)";
+                                        lifecycleStageName = LifeCycleStage.Changed;
+                                        actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.ActionRequired);
                                     }
                                     else
                                     {
-                                        // Keep the current status as only minor changes
+                                        // Minor changes: keep current status but mark as Completed with no action required
                                         processStatusName = currentQualificationVersion.ProcessStatus.Name;
                                         notes = "Decision Required - Changed Qualification (Minor Fields)";
+                                        lifecycleStageName = LifeCycleStage.Completed;
+                                        actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired);
                                     }
-
-                                    lifecycleStageName = LifeCycleStage.Changed;
-                                    actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.ActionRequired);                                    
                                 }
                                 else if ((currentQualificationVersion.ProcessStatus.Name == Common.Enum.ProcessStatus.OnHold) ||
                                         (currentQualificationVersion.ProcessStatus.Name == Common.Enum.ProcessStatus.DecisionRequired))
@@ -378,9 +383,11 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 }
                                 else
                                 {
-                                    processStatusName = Common.Enum.ProcessStatus.DecisionRequired;
-                                    lifecycleStageName = LifeCycleStage.Changed;
-                                    actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.ActionRequired);                                   
+                                    // For other statuses, treat as completed with no action required
+                                    processStatusName = Common.Enum.ProcessStatus.NoActionRequired;
+                                    lifecycleStageName = LifeCycleStage.Completed;
+                                    actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired);
+                                    notes = "Completed - No Action required - Changed Qualification (Funding Criteria)";
                                 }
                             }
 
