@@ -49,7 +49,7 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         
         public virtual DbSet<RegulatedQaaQualification> RegulatedQaaQualification { get; set; }
 
-        public virtual DbSet<RegulatedQaaQualificationVersion> RegulatedQaaQualificationVersion { get; set; }
+        public virtual DbSet<RegulatedQaaQualificationHistory> RegulatedQaaQualificationHistory { get; set; }
 
         public virtual void StartingBulkInsert() => ChangeTracker.AutoDetectChangesEnabled = false;
 
@@ -62,16 +62,14 @@ namespace SFA.DAS.AODP.Infrastructure.Context
             modelBuilder.Entity<RegulatedQaaQualification>(entity =>
             {
                 entity.HasIndex(q => q.AimCode).IsUnique();
-                entity.HasIndex(q => q.ChangeVersion);
                 entity.HasIndex(q => q.DateOfDataSnapshot);
+                entity.HasIndex(q => q.FirstSeenAt);
                 entity.HasIndex(q => q.LastDateForRegistration);
                 entity.HasIndex(q => q.IsDiscontinued);
                 entity.HasIndex(q => q.LatestImportComparisonOutcome);
-                entity.HasIndex(q => q.PublicationStatus);
                 entity.HasIndex(q => q.LastDateForRegistrationChangeType);
-                entity.HasIndex(q => q.IsRegistrationDateExtended);
-                entity.HasIndex(q => q.IsRegistrationDateBroughtForward);
                 entity.HasIndex(q => q.DiscontinuedDate);
+                entity.HasIndex(q => q.LatestQaaQualificationHistoryId);
 
                 entity.Property(q => q.SectorSubjectArea)
                     .HasConversion(
@@ -79,11 +77,10 @@ namespace SFA.DAS.AODP.Infrastructure.Context
                         ssaName => SectorSubjectArea.FromName(ssaName));
             });
 
-            modelBuilder.Entity<RegulatedQaaQualificationVersion>(entity =>
+            modelBuilder.Entity<RegulatedQaaQualificationHistory>(entity =>
             {
                 entity.HasIndex(q => q.QaaQualificationId);
                 entity.HasIndex(q => q.AimCode);
-                entity.HasIndex(q => q.ChangeVersion);
                 entity.HasIndex(q => q.ChangedAt);
                 entity.HasIndex(q => q.LastDateForRegistrationChangeType);
 

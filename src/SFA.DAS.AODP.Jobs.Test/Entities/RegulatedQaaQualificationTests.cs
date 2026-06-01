@@ -22,19 +22,18 @@ public class RegulatedQaaQualificationTests : UnitTest
         Assert.Equal(_testStartDate, qualification.StartDate);
         Assert.Equal(_testLastRegistrationDate, qualification.LastDateForRegistration);
         Assert.True(qualification.IsDiscontinued);
+        Assert.Equal(new DateOnly(2024, 01, 31), qualification.DiscontinuedDate);
         Assert.Same(_testSectorSubjectArea, qualification.SectorSubjectArea);
         Assert.Equal("Level 3", qualification.Level);
         Assert.Equal("Access to HE", qualification.Type);
         Assert.Equal("Approved", qualification.Status);
-        Assert.Equal(1, qualification.ChangeVersion);
         Assert.Equal(_testSnapshot, qualification.LastChangedAt);
         Assert.NotNull(qualification.ContentHash);
         Assert.Null(qualification.LastFundingApprovalEndDate);
+        Assert.Null(qualification.LatestQaaQualificationHistoryId);
         Assert.Equal(QaaImportComparisonOutcome.New, qualification.LatestImportComparisonOutcome);
-        Assert.Equal(QaaPublicationStatus.PendingNew, qualification.PublicationStatus);
         Assert.Equal(QaaLastDateForRegistrationChangeType.NotChanged, qualification.LastDateForRegistrationChangeType);
-        Assert.False(qualification.IsRegistrationDateExtended);
-        Assert.False(qualification.IsRegistrationDateBroughtForward);
+        Assert.Equal(_testSnapshot, qualification.FirstSeenAt);
         Assert.NotEqual(Guid.Empty, qualification.Id);
     }
 
@@ -59,30 +58,11 @@ public class RegulatedQaaQualificationTests : UnitTest
     }
 
     [Fact]
-    public void HasMaterialQaaChange_WhenQualificationTitleChangesOnly_ReturnsFalse()
+    public void ApplyImportedQaaData_WhenOnlyDescriptiveFieldsChange_DoesNotChangeMaterialState()
     {
         var qualification = CreateQualification();
-
-        qualification.ApplyImportedQaaData(
-            new DateTime(2024, 03, 15),
-            "Updated title",
-            TestAwardingBody,
-            _testStartDate,
-            _testLastRegistrationDate,
-            null,
-            _testSectorSubjectArea,
-            null,
-            new DateTime(2024, 03, 15));
-
-        var result = qualification.HasMaterialQaaChange(_testLastRegistrationDate, false);
-
-        Assert.False(result);
-    }
-
-    [Fact]
-    public void ApplyImportedQaaData_WhenOnlyDescriptiveFieldsChange_DoesNotChangeChangeVersion()
-    {
-        var qualification = CreateQualification(changeVersion: 7);
+        var historyId = Guid.NewGuid();
+        qualification.RecordLatestQaaHistory(historyId);
         var originalContentHash = qualification.ContentHash;
         var originalLastChangedAt = qualification.LastChangedAt;
         var newSnapshot = new DateTime(2024, 03, 15);
@@ -95,7 +75,6 @@ public class RegulatedQaaQualificationTests : UnitTest
             _testLastRegistrationDate,
             null,
             SectorSubjectArea.FromTiers("4", "1"),
-            null,
             newSnapshot);
 
         Assert.Equal("Updated title", qualification.QualificationTitle);
@@ -103,17 +82,17 @@ public class RegulatedQaaQualificationTests : UnitTest
         Assert.Equal(new DateOnly(2024, 09, 01), qualification.StartDate);
         Assert.Equal(SectorSubjectArea.Engineering, qualification.SectorSubjectArea);
         Assert.Equal(newSnapshot, qualification.DateOfDataSnapshot);
-        Assert.Equal(7, qualification.ChangeVersion);
         Assert.Equal(originalLastChangedAt, qualification.LastChangedAt);
         Assert.Equal(originalContentHash, qualification.ContentHash);
+        Assert.Equal(historyId, qualification.LatestQaaQualificationHistoryId);
         Assert.Equal(QaaImportComparisonOutcome.Unchanged, qualification.LatestImportComparisonOutcome);
-        Assert.Equal(QaaPublicationStatus.PendingNew, qualification.PublicationStatus);
+        Assert.Equal(QaaLastDateForRegistrationChangeType.NotChanged, qualification.LastDateForRegistrationChangeType);
     }
 
     [Fact]
-    public void ApplyImportedQaaData_WhenLastDateForRegistrationChanges_UpdatesChangeVersion()
+    public void ApplyImportedQaaData_WhenLastDateForRegistrationIsExtended_RecordsMaterialChange()
     {
-        var qualification = CreateQualification(changeVersion: 7);
+        var qualification = CreateQualification();
         var originalContentHash = qualification.ContentHash;
         var changedAt = new DateTime(2024, 03, 15);
 
@@ -125,23 +104,18 @@ public class RegulatedQaaQualificationTests : UnitTest
             new DateOnly(2026, 08, 31),
             null,
             _testSectorSubjectArea,
-            8,
             changedAt);
 
-        Assert.Equal(8, qualification.ChangeVersion);
         Assert.Equal(changedAt, qualification.LastChangedAt);
         Assert.NotEqual(originalContentHash, qualification.ContentHash);
         Assert.Equal(QaaImportComparisonOutcome.MaterialChanged, qualification.LatestImportComparisonOutcome);
-        Assert.Equal(QaaPublicationStatus.PendingNew, qualification.PublicationStatus);
         Assert.Equal(QaaLastDateForRegistrationChangeType.Extended, qualification.LastDateForRegistrationChangeType);
-        Assert.True(qualification.IsRegistrationDateExtended);
-        Assert.False(qualification.IsRegistrationDateBroughtForward);
     }
 
     [Fact]
-    public void ApplyImportedQaaData_WhenIsDiscontinuedChanges_UpdatesChangeVersion()
+    public void ApplyImportedQaaData_WhenIsDiscontinuedChanges_RecordsMaterialChange()
     {
-        var qualification = CreateQualification(changeVersion: 7);
+        var qualification = CreateQualification();
         var originalContentHash = qualification.ContentHash;
         var changedAt = new DateTime(2024, 03, 15);
 
@@ -153,56 +127,20 @@ public class RegulatedQaaQualificationTests : UnitTest
             _testLastRegistrationDate,
             new DateOnly(2024, 01, 31),
             _testSectorSubjectArea,
-            8,
             changedAt);
 
         Assert.True(qualification.IsDiscontinued);
         Assert.Equal(new DateOnly(2024, 01, 31), qualification.DiscontinuedDate);
-        Assert.Equal(8, qualification.ChangeVersion);
         Assert.Equal(changedAt, qualification.LastChangedAt);
         Assert.NotEqual(originalContentHash, qualification.ContentHash);
-    }
-
-    [Fact]
-    public void ApplyImportedQaaData_WhenMaterialChangeExistsWithoutChangeVersion_Throws()
-    {
-        var qualification = CreateQualification(changeVersion: 7);
-
-        var exception = Assert.Throws<InvalidOperationException>(() => qualification.ApplyImportedQaaData(
-            new DateTime(2024, 03, 15),
-            TestQualificationTitle,
-            TestAwardingBody,
-            _testStartDate,
-            new DateOnly(2026, 08, 31),
-            null,
-            _testSectorSubjectArea,
-            null,
-            new DateTime(2024, 03, 15)));
-
-        Assert.Equal("A material QAA change requires a change version.", exception.Message);
-    }
-
-    [Fact]
-    public void MarkSnapshotSeen_UpdatesDateOfDataSnapshotOnly()
-    {
-        var qualification = CreateQualification(changeVersion: 7);
-        var originalContentHash = qualification.ContentHash;
-        var originalLastChangedAt = qualification.LastChangedAt;
-        var newSnapshotDate = new DateTime(2024, 03, 15);
-
-        qualification.MarkSnapshotSeen(newSnapshotDate);
-
-        Assert.Equal(newSnapshotDate, qualification.DateOfDataSnapshot);
-        Assert.Equal(7, qualification.ChangeVersion);
-        Assert.Equal(originalLastChangedAt, qualification.LastChangedAt);
-        Assert.Equal(originalContentHash, qualification.ContentHash);
+        Assert.Equal(QaaImportComparisonOutcome.MaterialChanged, qualification.LatestImportComparisonOutcome);
+        Assert.Equal(QaaLastDateForRegistrationChangeType.NotChanged, qualification.LastDateForRegistrationChangeType);
     }
 
     [Fact]
     public void ApplyImportedQaaData_WhenLastDateForRegistrationIsBroughtForward_RecordsMovement()
     {
-        var qualification = CreateQualification(changeVersion: 7);
-        qualification.MarkAsPublished(new DateTime(2024, 02, 20));
+        var qualification = CreateQualification();
         var changedAt = new DateTime(2024, 03, 15);
 
         qualification.ApplyImportedQaaData(
@@ -213,46 +151,27 @@ public class RegulatedQaaQualificationTests : UnitTest
             new DateOnly(2024, 08, 31),
             null,
             _testSectorSubjectArea,
-            8,
             changedAt);
 
         Assert.Equal(QaaImportComparisonOutcome.MaterialChanged, qualification.LatestImportComparisonOutcome);
-        Assert.Equal(QaaPublicationStatus.PendingChange, qualification.PublicationStatus);
         Assert.Equal(QaaLastDateForRegistrationChangeType.BroughtForward, qualification.LastDateForRegistrationChangeType);
-        Assert.False(qualification.IsRegistrationDateExtended);
-        Assert.True(qualification.IsRegistrationDateBroughtForward);
     }
 
     [Fact]
-    public void MarkAsPublished_RecordsPublishedVersionWithoutChangingImportComparisonOutcome()
+    public void SetLastFundingApprovalEndDate_DoesNotChangeMaterialState()
     {
-        var qualification = CreateQualification(changeVersion: 7);
-        var publishedAt = new DateTime(2024, 03, 15);
-
-        qualification.MarkAsPublished(publishedAt);
-
-        Assert.Equal(QaaPublicationStatus.Published, qualification.PublicationStatus);
-        Assert.Equal(publishedAt, qualification.LastPublishedAt);
-        Assert.Equal(7, qualification.LastPublishedChangeVersion);
-        Assert.Equal(QaaImportComparisonOutcome.New, qualification.LatestImportComparisonOutcome);
-    }
-
-    [Fact]
-    public void SetLastFundingApprovalEndDate_DoesNotChangeChangeVersionOrContentHash()
-    {
-        var qualification = CreateQualification(changeVersion: 7);
+        var qualification = CreateQualification();
         var originalContentHash = qualification.ContentHash;
         var originalLastChangedAt = qualification.LastChangedAt;
 
         qualification.SetLastFundingApprovalEndDate(new DateTime(2025, 07, 31));
 
         Assert.Equal(new DateTime(2025, 07, 31), qualification.LastFundingApprovalEndDate);
-        Assert.Equal(7, qualification.ChangeVersion);
         Assert.Equal(originalLastChangedAt, qualification.LastChangedAt);
         Assert.Equal(originalContentHash, qualification.ContentHash);
     }
 
-    private RegulatedQaaQualification CreateQualification(bool isDiscontinued = false, long changeVersion = 1)
+    private RegulatedQaaQualification CreateQualification(bool isDiscontinued = false)
     {
         return RegulatedQaaQualification.Create(
             _testSnapshot,
@@ -263,7 +182,6 @@ public class RegulatedQaaQualificationTests : UnitTest
             _testLastRegistrationDate,
             _testSectorSubjectArea,
             isDiscontinued ? new DateOnly(2024, 01, 31) : null,
-            changeVersion,
             _testSnapshot);
     }
 }
