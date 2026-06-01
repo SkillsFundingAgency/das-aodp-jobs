@@ -40,6 +40,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         private Fixture _fixture;
         private Guid LifeCycleStageNew = new Guid("00000000-0000-0000-0000-000000000001");
         private Guid LifeCycleStageChanged = new Guid("00000000-0000-0000-0000-000000000002");
+        private Guid LifeCycleStageCompleted = new Guid("00000000-0000-0000-0000-000000000003");
         private Guid ProcessStageNoAction = new Guid("00000000-0000-0000-0000-000000000001");
         private Guid ProcessStageDecision = new Guid("00000000-0000-0000-0000-000000000002");
         private Guid ProcessStageApproved = new Guid("00000000-0000-0000-0000-000000000003");
@@ -231,7 +232,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .Where(w => w.QualificationId == insertedQualification.Id).Single();
             Assert.NotNull(insertedVersion);
             Assert.Equal(Common.Enum.ProcessStatus.NoActionRequired, insertedVersion.ProcessStatus.Name);
-            Assert.Equal(Common.Enum.LifeCycleStage.New, insertedVersion.LifecycleStage.Name);
+            Assert.Equal(Common.Enum.LifeCycleStage.Completed, insertedVersion.LifecycleStage.Name);
 
             // new qualification discussion
             var insertedDiscussion = _dbContext.QualificationDiscussionHistory
@@ -336,7 +337,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .Where(w => w.QualificationId == insertedQualification.Id).First();
             Assert.NotNull(insertedVersion);
             Assert.Equal(Common.Enum.ProcessStatus.NoActionRequired, insertedVersion.ProcessStatus.Name);
-            Assert.Equal(Common.Enum.LifeCycleStage.New, insertedVersion.LifecycleStage.Name);
+            Assert.Equal(Common.Enum.LifeCycleStage.Completed, insertedVersion.LifecycleStage.Name);
 
             // new qualification discussion
             var insertedDiscussion = _dbContext.QualificationDiscussionHistory
@@ -385,7 +386,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             Assert.NotNull(insertedVersion);
             Assert.Equal(2, insertedVersion.Version);
             Assert.Equal(Common.Enum.ProcessStatus.NoActionRequired, insertedVersion.ProcessStatus.Name);
-            Assert.Equal(Common.Enum.LifeCycleStage.Changed, insertedVersion.LifecycleStage.Name);
+            Assert.Equal(Common.Enum.LifeCycleStage.Completed, insertedVersion.LifecycleStage.Name);
 
             // new qualification discussion
             var insertedDiscussion = await _dbContext.QualificationDiscussionHistory
@@ -395,7 +396,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .FirstAsync();
             Assert.NotNull(insertedDiscussion);
             Assert.Equal("No Action Required", insertedDiscussion.ActionType.Description);
-            Assert.Equal("No Action required - Changed Qualification (Funding Criteria)", insertedDiscussion.Notes);
+            Assert.Equal("No Action required - Completed Qualification (Funding Criteria)", insertedDiscussion.Notes);
         }
 
         private void ApplyMockBehaviour(QualificationDTO importRecord, List<QualificationDTO> importRecords, bool eligibleForFunding, bool changesPresent, bool keyFieldsChanged, string failureReason = ImportReason.NoAction)
@@ -448,8 +449,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .FirstAsync();
             Assert.NotNull(insertedVersion);
             Assert.Equal(2, insertedVersion.Version);
-            Assert.Equal(Common.Enum.ProcessStatus.DecisionRequired, insertedVersion.ProcessStatus.Name);
-            Assert.Equal(Common.Enum.LifeCycleStage.Changed, insertedVersion.LifecycleStage.Name);
+            Assert.Equal(Common.Enum.ProcessStatus.NoActionRequired, insertedVersion.ProcessStatus.Name);
+            Assert.Equal(Common.Enum.LifeCycleStage.Completed, insertedVersion.LifecycleStage.Name);
 
             // new qualification discussion
             var insertedDiscussion = await _dbContext.QualificationDiscussionHistory
@@ -458,10 +459,10 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .Where(w => w.QualificationId == insertedQualification.Id)
                                     .FirstAsync();
             Assert.NotNull(insertedDiscussion);
-            Assert.Equal("Action Required", insertedDiscussion.ActionType.Description);
-            Assert.Equal("Decision Required - Changed Qualification", insertedDiscussion.Notes);
+            Assert.Equal("No Action Required", insertedDiscussion.ActionType.Description);
+            Assert.Equal("No Action Required - Completed Qualification (Funding Criteria)", insertedDiscussion.Notes);
         }
-
+            
         [Fact]
         public async Task ProcessQualificationsDataAsync_ExistingRecord_EligibleForFunding_Approved_KeyFieldsChanged()
         {
@@ -560,7 +561,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .Where(w => w.QualificationId == insertedQualification.Id && w.Version == 1)
                                     .FirstAsync();
             Assert.Equal(insertedVersion.ProcessStatus.Name, oldVersion.ProcessStatus.Name);
-            Assert.Equal(Common.Enum.LifeCycleStage.Changed, insertedVersion.LifecycleStage.Name);
+            Assert.Equal(Common.Enum.ProcessStatus.Approved, insertedVersion.ProcessStatus.Name);
+            Assert.Equal(Common.Enum.LifeCycleStage.Completed, insertedVersion.LifecycleStage.Name);
 
             // new qualification discussion
             var insertedDiscussion = await _dbContext.QualificationDiscussionHistory
@@ -569,8 +571,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                                     .Where(w => w.QualificationId == insertedQualification.Id)
                                     .FirstAsync();
             Assert.NotNull(insertedDiscussion);
-            Assert.Equal("Action Required", insertedDiscussion.ActionType.Description);
-            Assert.Equal("Decision Required - Changed Qualification (Minor Fields)", insertedDiscussion.Notes);
+            Assert.Equal("No Action Required", insertedDiscussion.ActionType.Description);
+            Assert.Equal("Approved - Completed Qualification (Minor Fields)", insertedDiscussion.Notes);
         }
 
         [Fact]
@@ -1085,7 +1087,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
             var lifecycle1 = new Data.Entities.LifecycleStage() { Name = Common.Enum.LifeCycleStage.New, Id = LifeCycleStageNew };
             var lifecycle2 = new Data.Entities.LifecycleStage() { Name = Common.Enum.LifeCycleStage.Changed, Id = LifeCycleStageChanged };
-            await _dbContext.AddRangeAsync(new List<Data.Entities.LifecycleStage>() { lifecycle1, lifecycle2 });
+            var lifecycle3 = new Data.Entities.LifecycleStage() { Name = Common.Enum.LifeCycleStage.Completed, Id = LifeCycleStageCompleted };
+            await _dbContext.AddRangeAsync(new List<Data.Entities.LifecycleStage>() { lifecycle1, lifecycle2, lifecycle3 });
             await _dbContext.SaveChangesAsync();
 
             var fundingOffer1 = new Data.Entities.FundingOffer() { Id = FundingOfferId1, Name = FundingOffer1 };

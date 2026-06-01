@@ -1,18 +1,8 @@
 ﻿using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using RestEase;
-using SFA.DAS.AODP.Common.Enum;
 using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Infrastructure.Context;
-using SFA.DAS.AODP.Infrastructure.Interfaces;
-using SFA.DAS.AODP.Jobs.Client;
-using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Jobs.Models;
 using SFA.DAS.AODP.Models.Qualification;
-using System.Diagnostics;
 using System.Text.Json;
 using static SFA.DAS.AODP.Jobs.Services.ChangeDetectionService;
 
@@ -335,7 +325,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 processStatusName = Common.Enum.ProcessStatus.NoActionRequired;
                                 lifecycleStageName = LifeCycleStage.Completed;
                                 actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired);
-                                notes = "Completed - No Action required - Changed Qualification (Funding Criteria)";
+                                notes = "No Action required - Completed Qualification (Funding Criteria)";
                             }
                             else
                             {
@@ -356,7 +346,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                     {
                                         // Minor changes: keep current status but mark as Completed with no action required
                                         processStatusName = currentQualificationVersion.ProcessStatus.Name;
-                                        notes = "Decision Required - Changed Qualification (Minor Fields)";
+                                        notes = $"{processStatusName} - Completed Qualification (Minor Fields)";
                                         lifecycleStageName = LifeCycleStage.Completed;
                                         actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired);
                                     }
@@ -387,7 +377,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                                     processStatusName = Common.Enum.ProcessStatus.NoActionRequired;
                                     lifecycleStageName = LifeCycleStage.Completed;
                                     actionId = _actionTypeService.GetActionTypeId(ActionTypeEnum.NoActionRequired);
-                                    notes = "Completed - No Action required - Changed Qualification (Funding Criteria)";
+                                    notes = "No Action Required - Completed Qualification (Funding Criteria)";
                                 }
                             }
 

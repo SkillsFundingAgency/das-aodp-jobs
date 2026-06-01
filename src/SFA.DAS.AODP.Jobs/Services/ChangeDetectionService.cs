@@ -59,31 +59,31 @@ namespace SFA.DAS.AODP.Jobs.Services
 
             var fields = new List<string>();
 
-            fields = fields.AppendIf(newRecord.Ssa != qualificationVersion.Ssa, "Ssa");
-            fields = fields.AppendIf(newRecord.Pathways != qualificationVersion.Pathways, "Pathways");
-            fields = fields.AppendIf(newRecord.Status != qualificationVersion.Status, "Status");
+            fields = fields.AppendIf(Normalise(newRecord.Ssa) != Normalise(qualificationVersion.Ssa), "Ssa");
+            fields = fields.AppendIf(Normalise(newRecord.Pathways) != Normalise(qualificationVersion.Pathways), "Pathways");
+            fields = fields.AppendIf(Normalise(newRecord.Status) != Normalise(qualificationVersion.Status), "Status");
             fields = fields.AppendIf(newRecord.SsaId != qualificationVersion.SsaId, "SsaId");
             fields = fields.AppendIf(newRecord.AppearsOnPublicRegister != qualificationVersion.AppearsOnPublicRegister, "AppearsOnPublicRegister");
-            fields = fields.AppendIf(newRecord.ApprenticeshipStandardReferenceNumber != qualificationVersion.ApprenticeshipStandardReferenceNumber, "ApprenticeshipStandardReferenceNumber");
-            fields = fields.AppendIf(newRecord.ApprenticeshipStandardTitle != qualificationVersion.ApprenticeshipStandardTitle, "ApprenticeshipStandardTitle");
+            fields = fields.AppendIf(Normalise(newRecord.ApprenticeshipStandardReferenceNumber) != Normalise(qualificationVersion.ApprenticeshipStandardReferenceNumber), "ApprenticeshipStandardReferenceNumber");
+            fields = fields.AppendIf(Normalise(newRecord.ApprenticeshipStandardTitle) != Normalise(qualificationVersion.ApprenticeshipStandardTitle), "ApprenticeshipStandardTitle");
             fields = fields.AppendIf(NormaliseBoolean(newRecord.ApprovedForDelfundedProgramme, treatFalseAsNull: true) != NormaliseBoolean(qualificationVersion.ApprovedForDelFundedProgramme, treatFalseAsNull: true), "ApprovedForDelfundedProgramme");
             fields = fields.AppendIf(NormaliseDate(newRecord.CertificationEndDate) != NormaliseDate(qualificationVersion.CertificationEndDate), "CertificationEndDate");
             fields = fields.AppendIf(newRecord.EighteenPlus != qualificationVersion.EighteenPlus, "EighteenPlus");
-            fields = fields.AppendIf(newRecord.EntitlementFrameworkDesignation != qualificationVersion.EntitlementFrameworkDesign, "EntitlementFrameworkDesignation");
-            fields = fields.AppendIf(newRecord.EqfLevel != qualificationVersion.EqfLevel, "EqfLevel");
-            fields = fields.AppendIf(newRecord.GceSizeEquivalence != qualificationVersion.GceSizeEquivelence, "GceSizeEquivalence");
-            fields = fields.AppendIf(newRecord.GcseSizeEquivalence != qualificationVersion.GcseSizeEquivelence, "GcseSizeEquivelence");
+            fields = fields.AppendIf(Normalise(newRecord.EntitlementFrameworkDesignation) != Normalise(qualificationVersion.EntitlementFrameworkDesign), "EntitlementFrameworkDesignation");
+            fields = fields.AppendIf(Normalise(newRecord.EqfLevel) != Normalise(qualificationVersion.EqfLevel), "EqfLevel");
+            fields = fields.AppendIf(Normalise(newRecord.GceSizeEquivalence) != Normalise(qualificationVersion.GceSizeEquivelence), "GceSizeEquivalence");
+            fields = fields.AppendIf(Normalise(newRecord.GcseSizeEquivalence) != Normalise(qualificationVersion.GcseSizeEquivelence), "GcseSizeEquivelence");
             fields = fields.AppendIf(newRecord.Glh != qualificationVersion.Glh, "Glh");
-            fields = fields.AppendIf(newRecord.GradingScale != qualificationVersion.GradingScale, "GradingScale");
-            fields = fields.AppendIf(newRecord.GradingType != qualificationVersion.GradingType, "GradingType");
-            fields = fields.AppendIf(newRecord.ImportStatus != qualificationVersion.ImportStatus, "ImportStatus");
+            fields = fields.AppendIf(Normalise(newRecord.GradingScale) != Normalise(qualificationVersion.GradingScale), "GradingScale");
+            fields = fields.AppendIf(Normalise(newRecord.GradingType) != Normalise(qualificationVersion.GradingType), "GradingType");
+            fields = fields.AppendIf(Normalise(newRecord.ImportStatus) != Normalise(qualificationVersion.ImportStatus), "ImportStatus");
             fields = fields.AppendIf(NormaliseDate(newRecord.InsertedDate) != NormaliseDate(qualificationVersion.InsertedDate), "InsertedDate");
             fields = fields.AppendIf(NormaliseDate(newRecord.LastUpdatedDate) != NormaliseDate(qualificationVersion.LastUpdatedDate), "LastUpdatedDate");
-            fields = fields.AppendIf(newRecord.Level != qualificationVersion.Level, "Level");
-            fields = fields.AppendIf(newRecord.LinkToSpecification != qualificationVersion.LinkToSpecification, "LinkToSpecification");
+            fields = fields.AppendIf(Normalise(newRecord.Level) != Normalise(qualificationVersion.Level), "Level");
+            fields = fields.AppendIf(Normalise(newRecord.LinkToSpecification) != Normalise(qualificationVersion.LinkToSpecification), "LinkToSpecification");
             fields = fields.AppendIf(newRecord.MaximumGlh != qualificationVersion.MaximumGlh, "MaximumGlh");
             fields = fields.AppendIf(newRecord.MinimumGlh != qualificationVersion.MinimumGlh, "MinimumGlh");
-            fields = fields.AppendIf(newRecord.NiDiscountCode != qualificationVersion.NiDiscountCode, "NiDiscountCode");
+            fields = fields.AppendIf(Normalise(newRecord.NiDiscountCode) != Normalise(qualificationVersion.NiDiscountCode), "NiDiscountCode");
             fields = fields.AppendIf(newRecord.NineteenPlus != qualificationVersion.NineteenPlus, "NineteenPlus");
             fields = fields.AppendIf(newRecord.OfferedInEngland != qualificationVersion.OfferedInEngland, "OfferedInEngland");
             fields = fields.AppendIf(newRecord.OfferedInNorthernIreland != qualificationVersion.OfferedInNi, "OfferedInNorthernIreland");
@@ -91,25 +91,24 @@ namespace SFA.DAS.AODP.Jobs.Services
             fields = fields.AppendIf(NormaliseDate(newRecord.OperationalEndDate) != NormaliseDate(qualificationVersion.OperationalEndDate), "OperationalEndDate");
             fields = fields.AppendIf(NormaliseDate(newRecord.OperationalStartDate) != NormaliseDate(qualificationVersion.OperationalStartDate), "OperationalStartDate");
 
-            fields = fields.AppendIf(newRecord.OrganisationAcronym != awardingOrganisation.Acronym, "OrganisationAcronym");
+            fields = fields.AppendIf(!string.Equals(Normalise(newRecord.OrganisationAcronym), Normalise(awardingOrganisation.Acronym), StringComparison.OrdinalIgnoreCase), "OrganisationAcronym");
             fields = fields.AppendIf(!string.Equals(Normalise(newRecord.OrganisationName), Normalise(awardingOrganisation.NameOfqual), StringComparison.OrdinalIgnoreCase), "OrganisationName");
             fields = fields.AppendIf(newRecord.OrganisationId != awardingOrganisation.Ukprn, "OrganisationId");
-            fields = fields.AppendIf(newRecord.OrganisationRecognitionNumber != awardingOrganisation.RecognitionNumber, "OrganisationRecognitionNumber");
+            fields = fields.AppendIf(Normalise(newRecord.OrganisationRecognitionNumber) != Normalise(awardingOrganisation.RecognitionNumber), "OrganisationRecognitionNumber");
 
-            fields = fields.AppendIf(newRecord.Pathways != qualificationVersion.Pathways, "Pathways");
             fields = fields.AppendIf(newRecord.PreSixteen != qualificationVersion.PreSixteen, "PreSixteen");
 
-            fields = fields.AppendIf(newRecord.QualificationNumberNoObliques != qualification.Qan, "QualificationNumberNoObliques");
+            fields = fields.AppendIf(Normalise(newRecord.QualificationNumberNoObliques) != Normalise(qualification.Qan), "QualificationNumberNoObliques");
             fields = fields.AppendIf(newRecord.RegulatedByNorthernIreland != qualificationVersion.RegulatedByNorthernIreland, "RegulatedByNorthernIreland");
             fields = fields.AppendIf(NormaliseDate(newRecord.RegulationStartDate) != NormaliseDate(qualificationVersion.RegulationStartDate), "RegulationStartDate");
             fields = fields.AppendIf(NormaliseDate(newRecord.ReviewDate) != NormaliseDate(qualificationVersion.ReviewDate), "ReviewDate");
             fields = fields.AppendIf(newRecord.SixteenToEighteen != qualificationVersion.SixteenToEighteen, "SixteenToEighteen");
-            fields = fields.AppendIf(newRecord.Specialism != qualificationVersion.Specialism, "Specialism");
-            fields = fields.AppendIf(newRecord.SubLevel != qualificationVersion.SubLevel, "SubLevel");
+            fields = fields.AppendIf(Normalise(newRecord.Specialism) != Normalise(qualificationVersion.Specialism), "Specialism");
+            fields = fields.AppendIf(Normalise(newRecord.SubLevel) != Normalise(qualificationVersion.SubLevel), "SubLevel");
             fields = fields.AppendIf(!string.Equals(Normalise(newRecord.Title), Normalise(qualification.QualificationName), StringComparison.OrdinalIgnoreCase), "Title");
             fields = fields.AppendIf(newRecord.TotalCredits != qualificationVersion.TotalCredits, "TotalCredits");
             fields = fields.AppendIf(newRecord.Tqt != qualificationVersion.Tqt, "Tqt");
-            fields = fields.AppendIf(newRecord.Type != qualificationVersion.Type, "Type");
+            fields = fields.AppendIf(Normalise(newRecord.Type) != Normalise(qualificationVersion.Type), "Type");
             fields = fields.AppendIf(newRecord.TypeId != qualificationVersion.TypeId, "Type");
             fields = fields.AppendIf(NormaliseDate(newRecord.UiLastUpdatedDate) != NormaliseDate(qualificationVersion.UiLastUpdatedDate), "UiLastUpdatedDate");
             fields = fields.AppendIf(newRecord.IntentionToSeekFundingInEngland != qualificationVersion.IntentionToSeekFundingInEngland, "IntentionToSeekFundingInEngland");
