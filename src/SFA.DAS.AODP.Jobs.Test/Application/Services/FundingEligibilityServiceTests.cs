@@ -1,18 +1,115 @@
-﻿using Microsoft.Extensions.Logging;
-using Moq;
-using SFA.DAS.AODP.Jobs.Services;
+﻿using AutoFixture;
 using SFA.DAS.AODP.Models.Qualification;
-using Xunit;
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 {
     public class FundingEligibilityServiceTests
     {
-        private readonly FundingEligibilityService _service;
+        private readonly FundingEligibilityService _fundingEligibilityService;
+        private Fixture _fixture;
 
         public FundingEligibilityServiceTests()
         {
-            _service = new FundingEligibilityService();
+            _fundingEligibilityService = new FundingEligibilityService();
+            _fixture = new Fixture();
+        }
+
+        [Fact]
+        public void FundingEligibilityService_Eligible()
+        {
+            // Arrange
+            var qualification = _fixture.Build<QualificationDTO>()
+                .With(w => w.OfferedInEngland, true)
+                .With(w => w.Glh, 5)
+                .With(w => w.Tqt, 10)
+                .Create();
+
+            // Act
+            var eligible = _fundingEligibilityService.EligibleForFunding(qualification);
+
+            // Assert
+            Assert.True(eligible);
+        }
+
+        [Fact]
+        public void FundingEligibilityService_Eligible_OperationalStartDateIgnored()
+        {
+            // Arrange
+            var qualification = _fixture.Build<QualificationDTO>()
+                .With(w => w.OfferedInEngland, true)
+                .With(w => w.IntentionToSeekFundingInEngland, true)
+                .With(w => w.Glh, 5)
+                .With(w => w.Tqt, 10)
+                .With(w => w.OperationalStartDate, DateTime.MinValue)
+                .Create();
+
+            // Act
+            var eligible = _fundingEligibilityService.EligibleForFunding(qualification);
+
+            // Assert
+            Assert.True(eligible);
+        }
+
+        [Fact]
+        public void FundingEligibilityService_Ineligible_IntentionToSeekFundingInEngland()
+        {
+            // Arrange
+            var qualification = _fixture.Build<QualificationDTO>()
+                .With(w => w.OfferedInEngland, true)
+                .With(w => w.IntentionToSeekFundingInEngland, false)
+                .With(w => w.Glh, 5)
+                .With(w => w.Tqt, 10)
+                .With(w => w.OperationalStartDate, DateTime.MinValue)
+                .Create();
+
+            // Act
+            var eligible = _fundingEligibilityService.EligibleForFunding(qualification);
+
+            // Assert
+            Assert.False(eligible);
+        }
+
+        [Theory]
+        [InlineData(null, null)]
+        [InlineData(0, 0)]
+        [InlineData(0, null)]
+        [InlineData(null, 0)]
+        [InlineData(null, 10)]
+        [InlineData(10, null)]
+        [InlineData(10, 10)]
+        [InlineData(10, 20)]
+        [InlineData(20, 10)]
+        public void FundingEligibilityService_GlhTqt_AnyValueEligible(int? glh, int? tqt)
+        {
+            // Note: There used to be a criteria whereby the GLH and TQT values had to be greater than 0, and GLH had to be less than the TQT,
+            // but this was removed as part of the changes to the funding eligibility rules. This test ensures that any value for GLH and TQT (including 0) is now considered eligible, as long as the other criteria are met.
+
+            // Arrange
+            var qualification = _fixture.Build<QualificationDTO>()
+                .With(w => w.OfferedInEngland, true)
+                .With(w => w.Glh, glh)
+                .With(w => w.Tqt, tqt)
+                .With(w => w.OperationalStartDate, DateTime.MinValue)
+                .Create();
+
+            // Act
+            var eligible = _fundingEligibilityService.EligibleForFunding(qualification);
+
+            // Assert
+            Assert.True(eligible);
+        }
+
+        private static QualificationDTO CreateEligibleBaseline()
+        {
+            return new QualificationDTO
+            {
+                OfferedInEngland = true,
+                IntentionToSeekFundingInEngland = true,
+                Type = "GeneralQualification",
+                Title = "Valid Qualification Title",
+                Glh = 10,
+                Tqt = 20
+            };
         }
 
         [Fact]
@@ -22,7 +119,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var qualification = CreateEligibleBaseline();
 
             // Act
-            var evaluation = _service.EvaluateFundingEligibilityRules(qualification);
+            var evaluation = _fundingEligibilityService.EvaluateFundingEligibilityRules(qualification);
 
             // Assert
             Assert.True(evaluation.IsEligible);
@@ -37,7 +134,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             qualification.IntentionToSeekFundingInEngland = false;
 
             // Act
-            var evaluation = _service.EvaluateFundingEligibilityRules(qualification);
+            var evaluation = _fundingEligibilityService.EvaluateFundingEligibilityRules(qualification);
 
             // Assert
             Assert.False(evaluation.IsEligible);
@@ -50,62 +147,12 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             var qualification = CreateEligibleBaseline();
             qualification.OfferedInEngland = false;
 
-            var evaluation = _service.EvaluateFundingEligibilityRules(qualification);
+            var evaluation = _fundingEligibilityService.EvaluateFundingEligibilityRules(qualification);
 
             Assert.False(evaluation.IsEligible);
             Assert.Contains("OfferedInEngland", evaluation.GetFailedFields());
         }
 
-        [Fact]
-        public void EvaluateFundingEligibilityRules_Ineligible_TqtZero()
-        {
-            var qualification = CreateEligibleBaseline();
-            qualification.Tqt = 0;
-
-            var evaluation = _service.EvaluateFundingEligibilityRules(qualification);
-
-            Assert.False(evaluation.IsEligible);
-            Assert.Contains("Tqt", evaluation.GetFailedFields());
-        }
-
-        [Theory]
-        [InlineData("Certificate in Education")]
-        [InlineData("Professional Graduate Certificate in Education")]
-        [InlineData("Postgraduate Diploma in Education")]
-        [InlineData("ESOL International")]
-        [InlineData("degree")]
-        [InlineData("foundation degree")]
-        [InlineData("Higher National Certificate")]
-        [InlineData("Certificate of Higher Education")]
-        [InlineData("Higher National Diploma")]
-        [InlineData("Diploma of Higher Education")]
-        [InlineData("Diploma in Teaching")]
-        public void EvaluateFundingEligibilityRules_Ineligible_MatchingTitles(string title)
-        {
-            // Arrange
-            var qualification = CreateEligibleBaseline();
-            qualification.Title = $"Some {title} here";
-
-            // Act
-            var evaluation = _service.EvaluateFundingEligibilityRules(qualification);
-
-            // Assert
-            Assert.False(evaluation.IsEligible);
-            Assert.Contains("Title", evaluation.GetFailedFields());
-        }
-
         
-        private static QualificationDTO CreateEligibleBaseline()
-        {
-            return new QualificationDTO
-            {
-                OfferedInEngland = true,
-                IntentionToSeekFundingInEngland = true,
-                Type = "GeneralQualification",
-                Title = "Valid Qualification Title",
-                Glh = 10,
-                Tqt = 20
-            };
-        }
     }
 }

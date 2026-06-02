@@ -112,7 +112,7 @@ namespace SFA.DAS.AODP.Jobs.Services
         {
             _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ProcessQualificationsDataAsync)}] -> Processing Ofqual Qualifications Staging Data...");
 
-            const int batchSize = 500;
+            const int batchSize = 1000;
             int processedCount = 0;
             _processStopWatch.Restart();
 

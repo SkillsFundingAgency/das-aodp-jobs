@@ -69,6 +69,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                 _logger.LogInformation($"[{nameof(QualificationsService)}] -> [{nameof(GetStagedQualificationsBatchAsync)}] -> Retrieving next batch of {batchSize} staged qualifications from record {processedCount}...");
 
                 var stagedQualifications = await _applicationDbContext.QualificationImportStaging
+                    .AsNoTracking()
                     .OrderBy(q => q.Id)
                     .Skip(processedCount)
                     .Take(batchSize)

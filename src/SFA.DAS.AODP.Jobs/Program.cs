@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace SFA.DAS.AODP.Jobs;
 
 [ExcludeFromCodeCoverage]
@@ -5,6 +7,10 @@ public class Program
 {
     public static void Main(string[] args)
     {
+        var targetCulture = new CultureInfo("en-GB");
+        CultureInfo.DefaultThreadCurrentCulture = targetCulture;
+        CultureInfo.DefaultThreadCurrentUICulture = targetCulture;
+
         var builder = FunctionsApplication.CreateBuilder(args);
 
         var configuration = builder.Configuration
@@ -16,12 +22,10 @@ public class Program
             builder.AddFilter<ApplicationInsightsLoggerProvider>("Microsoft", LogLevel.Information);
             builder.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Warning);
             builder.AddFilter(typeof(Program).Namespace, LogLevel.Information);
+            builder.SetMinimumLevel(LogLevel.Information);
 
 #if DEBUG
-            builder.SetMinimumLevel(LogLevel.Trace);
             builder.AddConsole();
-#else
-    builder.SetMinimumLevel(LogLevel.Information);
 #endif
         });
 
