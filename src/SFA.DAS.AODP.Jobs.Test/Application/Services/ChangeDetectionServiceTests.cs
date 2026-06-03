@@ -195,6 +195,63 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 new object[] { "My Qualification Title", " My\u200B Qualification\u00A0 Title\u200D " }
             };
 
+        public static IEnumerable<object[]> HyphenVariantsCases =>
+            new List<object[]>
+            {
+                new object[] { "A-B Qualification", "A\u2010B Qualification" }, // hyphen
+                new object[] { "A-B Qualification", "A\u2011B Qualification" }, // non-breaking hyphen
+                new object[] { "A-B Qualification", "A\u2012B Qualification" }, // figure dash
+                new object[] { "A-B Qualification", "A\u2013B Qualification" }, // en dash
+                new object[] { "A-B Qualification", "A\u2014B Qualification" }, // em dash
+                new object[] { "A-B Qualification", "A\u2015B Qualification" }, // horizontal bar
+                new object[] { "A-B Qualification", "A\u2212B Qualification" }, // minus sign
+                new object[] { "A-B Qualification", "A\uFE58B Qualification" }, // small em dash
+                new object[] { "A-B Qualification", "A\uFE63B Qualification" }, // small hyphen-minus
+                new object[] { "A-B Qualification", "A\uFF0DB Qualification" }  // fullwidth hyphen-minus
+            };
+
+        [Theory]
+        [MemberData(nameof(HyphenVariantsCases))]
+        public void DetectChanges_HyphenVariants_AreNormalised_NoChange(
+            string oldTitle,
+            string newTitle)
+        {
+            // Arrange
+            var sut = CreateSut();
+            var (dto, version, org, qual) = CreateEmptyBaseline();
+
+            qual.QualificationName = oldTitle;
+            dto.Title = newTitle;
+
+            // Act
+            var result = sut.DetectChanges(dto, version, org, qual);
+
+            // Assert
+            // Various unicode hyphen/dash characters should normalise to a simple hyphen and not be treated as changes
+            result.ChangesPresent.ShouldBeFalse();
+            result.Fields.ShouldBeEmpty();
+            result.KeyFieldsChanged.ShouldBeFalse();
+        }
+
+        [Fact]
+        public void DetectChanges_HyphenRemoved_IsKeyChange()
+        {
+            // Arrange
+            var sut = CreateSut();
+            var (dto, version, org, qual) = CreateEmptyBaseline();
+
+            qual.QualificationName = "A-B Qualification";
+            dto.Title = "A B Qualification"; // hyphen removed -> treated as meaningful change
+
+            // Act
+            var result = sut.DetectChanges(dto, version, org, qual);
+
+            // Assert
+            result.ChangesPresent.ShouldBeTrue();
+            result.Fields.ShouldContain("Title");
+            result.KeyFieldsChanged.ShouldBeTrue();
+        }
+
         [Theory]
         [MemberData(nameof(TitleWhitespaceCases))]
         public void DetectChanges_TitleWhitespaceOnly_IsChangeButNotKey(
