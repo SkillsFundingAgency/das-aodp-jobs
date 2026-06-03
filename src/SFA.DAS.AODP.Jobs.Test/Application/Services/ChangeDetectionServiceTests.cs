@@ -11,15 +11,17 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         private static ChangeDetectionService CreateSut()
             => new ChangeDetectionService();
 
-        private static (QualificationDTO dto,
-                        QualificationVersions version,
-                        AwardingOrganisation org,
-                        Qualification qual) CreateEmptyBaseline()
+        private static (QualificationDTO dto, QualificationVersions version) CreateEmptyBaseline()
         {
-            return (new QualificationDTO(),
-                    new QualificationVersions(),
-                    new AwardingOrganisation(),
-                    new Qualification());
+            var version = new QualificationVersions
+            {
+                Qualification = new Qualification(),
+                Organisation = new AwardingOrganisation(),
+            };
+
+            var dto = new QualificationDTO();
+
+            return (dto, version);
         }
 
         [Fact]
@@ -27,14 +29,14 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         {
             // Arrange
             var sut = CreateSut();
-            var (dto, version, org, qual) = CreateEmptyBaseline();
+            var (qualificationDTO, qualificationVersion) = CreateEmptyBaseline();
 
             // Act
-            var result = sut.DetectChanges(dto, version, org, qual);
+            var result = sut.DetectChanges(qualificationDTO, qualificationVersion);
 
             // Assert
             Assert.False(result.ChangesPresent);
-            Assert.Empty(result.Fields);
+            Assert.Empty(result.ChangedFields);
             Assert.False(result.KeyFieldsChanged);
         }
 
@@ -43,17 +45,17 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         {
             // Arrange
             var sut = CreateSut();
-            var (dto, version, org, qual) = CreateEmptyBaseline();
+            var (qualificationDTO, qualificationVersion) = CreateEmptyBaseline();
 
-            dto.Status = "Active";
-            version.Status = "Inactive";
+            qualificationDTO.Status = "Active";
+            qualificationVersion.Status = "Inactive";
 
             // Act
-            var result = sut.DetectChanges(dto, version, org, qual);
+            var result = sut.DetectChanges(qualificationDTO, qualificationVersion);
 
             // Assert
             Assert.True(result.ChangesPresent);
-            Assert.Contains("Status", result.Fields);
+            Assert.Contains("Status", result.ChangedFields);
             Assert.False(result.KeyFieldsChanged);
         }
 
@@ -62,17 +64,40 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         {
             // Arrange
             var sut = CreateSut();
-            var (dto, version, org, qual) = CreateEmptyBaseline();
+            var (qualificationDTO, qualificationVersion) = CreateEmptyBaseline();
 
-            dto.Level = "3";
-            version.Level = "2";
+            qualificationDTO.Level = "3";
+            qualificationVersion.Level = "2";
 
             // Act
-            var result = sut.DetectChanges(dto, version, org, qual);
+            var result = sut.DetectChanges(qualificationDTO,qualificationVersion);
 
             // Assert
             Assert.True(result.ChangesPresent);
-            Assert.Contains("Level", result.Fields);
+            Assert.Contains("Level", result.ChangedFields);
+            Assert.True(result.KeyFieldsChanged);
+        }
+
+        [Fact]
+        public void DetectChanges_MultipleKeyFieldsChanged_IsKeyChange()
+        {
+            // Arrange
+            var sut = CreateSut();
+            var (dto, version) = CreateEmptyBaseline();
+
+            version.Level = "2";
+            dto.Level = "3";
+
+            version.Tqt = 10;
+            dto.Tqt = 20;
+
+            // Act
+            var result = sut.DetectChanges(dto, version);
+
+            // Assert
+            Assert.True(result.ChangesPresent);
+            Assert.Contains("Level", result.ChangedFields);
+            Assert.Contains("Tqt", result.ChangedFields);
             Assert.True(result.KeyFieldsChanged);
         }
 
@@ -87,23 +112,23 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
         [Theory]
         [MemberData(nameof(TitleWhitespaceCases))]
-        public void DetectChanges_TitleWhitespaceOnly_IsChangeButNotKey(
+        public void DetectChanges_TitleWhitespaceOnly_NoChange(
             string oldTitle,
             string newTitle)
         {
             // Arrange
             var sut = CreateSut();
-            var (dto, version, org, qual) = CreateEmptyBaseline();
+            var (qualificationDTO, qualificationVersion) = CreateEmptyBaseline();
 
-            qual.QualificationName = oldTitle;
-            dto.Title = newTitle;
+            qualificationVersion.Qualification.QualificationName = oldTitle;
+            qualificationDTO.Title = newTitle;
 
             // Act
-            var result = sut.DetectChanges(dto, version, org, qual);
+            var result = sut.DetectChanges(qualificationDTO, qualificationVersion);
 
             // Assert
-            Assert.True(result.ChangesPresent);
-            Assert.Contains("Title", result.Fields);
+            Assert.False(result.ChangesPresent);
+            Assert.Empty(result.ChangedFields);
             Assert.False(result.KeyFieldsChanged);
         }
 
@@ -112,17 +137,17 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         {
             // Arrange
             var sut = CreateSut();
-            var (dto, version, org, qual) = CreateEmptyBaseline();
+            var (qualificationDTO, qualificationVersion) = CreateEmptyBaseline();
 
-            qual.QualificationName = "My Qualification Title";
-            dto.Title = "My Qualification Title v2";
+            qualificationVersion.Qualification.QualificationName = "My Qualification Title";
+            qualificationDTO.Title = "My Qualification Title v2";
 
             // Act
-            var result = sut.DetectChanges(dto, version, org, qual);
+            var result = sut.DetectChanges(qualificationDTO, qualificationVersion);
 
             // Assert
             Assert.True(result.ChangesPresent);
-            Assert.Contains("Title", result.Fields);
+            Assert.Contains("Title", result.ChangedFields);
             Assert.True(result.KeyFieldsChanged);
         }
 
@@ -131,22 +156,42 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         {
             // Arrange
             var sut = CreateSut();
-            var (dto, version, org, qual) = CreateEmptyBaseline();
+            var (dto, version) = CreateEmptyBaseline();
 
-            qual.QualificationName = "My Qualification Title";
-            dto.Title = "My  Qualification   Title"; // whitespace only
+            version.Qualification.QualificationName = "My Qualification Title";
+            dto.Title = "My  Qualification   Title"; 
 
             dto.Level = "3";
-            version.Level = "2"; // real key-field change
+            version.Level = "2";
 
             // Act
-            var result = sut.DetectChanges(dto, version, org, qual);
+            var result = sut.DetectChanges(dto, version);
 
             // Assert
             Assert.True(result.ChangesPresent);
-            Assert.Contains("Title", result.Fields);
-            Assert.Contains("Level", result.Fields);
+            Assert.DoesNotContain("Title", result.ChangedFields);   
+            Assert.Contains("Level", result.ChangedFields);
             Assert.True(result.KeyFieldsChanged);
         }
+
+        [Fact]
+        public void DetectChanges_TitleNullAndWhitespace_NoChange()
+        {
+            // Arrange
+            var sut = CreateSut();
+            var (dto, version) = CreateEmptyBaseline();
+
+            version.Qualification.QualificationName = null;
+            dto.Title = "   ";
+
+            // Act
+            var result = sut.DetectChanges(dto, version);
+
+            // Assert
+            Assert.False(result.ChangesPresent);
+            Assert.Empty(result.ChangedFields);
+            Assert.False(result.KeyFieldsChanged);
+        }
+
     }
 }

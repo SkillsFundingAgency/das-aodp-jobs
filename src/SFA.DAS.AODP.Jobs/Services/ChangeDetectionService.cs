@@ -1,6 +1,5 @@
 ﻿using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Jobs.Extensions;
-using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Models.Qualification;
 using System.Text.RegularExpressions;
 
@@ -13,13 +12,16 @@ namespace SFA.DAS.AODP.Jobs.Services
             public DetectionResults()
             {
                 ChangesPresent = false;
-                Fields = new List<string>();
+                ChangedFields = new List<string>();
                 KeyFieldsChanged = false;
             }
 
             public bool ChangesPresent { get; set; }
-            public List<string> Fields { get; set; }
+            public List<string> ChangedFields { get; set; }
             public bool KeyFieldsChanged { get; set; }
+            public string ChangedFieldsCsv => ChangedFields != null && ChangedFields.Count > 0
+                ? string.Join(", ", ChangedFields.Distinct(StringComparer.OrdinalIgnoreCase))
+                : string.Empty;
         }
 
         private readonly List<string> _keyFields;
@@ -51,8 +53,11 @@ namespace SFA.DAS.AODP.Jobs.Services
                 };
         }
 
-        public DetectionResults DetectChanges(QualificationDTO newRecord, QualificationVersions qualificationVersion, AwardingOrganisation awardingOrganisation, Qualification qualification)
+        public DetectionResults DetectChanges(QualificationDTO newRecord, QualificationVersions qualificationVersion)
         {
+            var qualification = qualificationVersion.Qualification;
+            var awardingOrganisation = qualificationVersion.Organisation;
+
             // Could use Reflection here, but records being compared have mismatched names, different field types, or information located in other structures
 
             var fields = new List<string>();       
@@ -93,7 +98,6 @@ namespace SFA.DAS.AODP.Jobs.Services
             fields = fields.AppendIf(newRecord.OrganisationId != awardingOrganisation.Ukprn, "OrganisationId");
             fields = fields.AppendIf(newRecord.OrganisationRecognitionNumber != awardingOrganisation.RecognitionNumber, "OrganisationRecognitionNumber");
 
-            fields = fields.AppendIf(newRecord.Pathways != qualificationVersion.Pathways, "Pathways");
             fields = fields.AppendIf(newRecord.PreSixteen != qualificationVersion.PreSixteen, "PreSixteen");
 
             fields = fields.AppendIf(newRecord.QualificationNumberNoObliques != qualification.Qan, "QualificationNumberNoObliques");
@@ -103,7 +107,10 @@ namespace SFA.DAS.AODP.Jobs.Services
             fields = fields.AppendIf(newRecord.SixteenToEighteen != qualificationVersion.SixteenToEighteen, "SixteenToEighteen");
             fields = fields.AppendIf(newRecord.Specialism != qualificationVersion.Specialism, "Specialism");            
             fields = fields.AppendIf(newRecord.SubLevel != qualificationVersion.SubLevel, "SubLevel");
-            fields = fields.AppendIf(newRecord.Title != qualification.QualificationName, "Title");
+            fields = fields.AppendIf(
+                !IsWhitespaceChange(newRecord.Title, qualification.QualificationName)
+                && newRecord.Title != qualification.QualificationName,
+                "Title");
             fields = fields.AppendIf(newRecord.TotalCredits != qualificationVersion.TotalCredits, "TotalCredits");
             fields = fields.AppendIf(newRecord.Tqt != qualificationVersion.Tqt, "Tqt");
             fields = fields.AppendIf(newRecord.Type != qualificationVersion.Type, "Type");
@@ -111,18 +118,12 @@ namespace SFA.DAS.AODP.Jobs.Services
             fields = fields.AppendIf(newRecord.UiLastUpdatedDate != qualificationVersion.UiLastUpdatedDate, "UiLastUpdatedDate");
             fields = fields.AppendIf(newRecord.IntentionToSeekFundingInEngland != qualificationVersion.IntentionToSeekFundingInEngland, "IntentionToSeekFundingInEngland");
 
-            var results = new DetectionResults() { Fields = fields, ChangesPresent = fields.Any() };
+            var results = new DetectionResults() { ChangedFields = fields, ChangesPresent = fields.Count > 0 };
 
             if (results.ChangesPresent)
             {
-                var keyFieldsChanged = results.Fields.Intersect(_keyFields).ToList();
-
-                if (keyFieldsChanged.Contains("Title") && IsWhitespaceChange(newRecord.Title, qualification.QualificationName))
-                {
-                    keyFieldsChanged.RemoveAll(f => f == "Title");
-                }
-
-                results.KeyFieldsChanged = keyFieldsChanged.Any();
+                var keyFieldsChanged = results.ChangedFields.Intersect(_keyFields).ToList();
+                results.KeyFieldsChanged = keyFieldsChanged.Count > 0;
             }
 
             return results;

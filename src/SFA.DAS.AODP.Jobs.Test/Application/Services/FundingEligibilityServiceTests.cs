@@ -5,26 +5,13 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 {
     public class FundingEligibilityServiceTests
     {
-        private readonly Mock<ILogger<FundingEligibilityService>> _mockLogger;
-        private FundingEligibilityService fundingEligibilityService;
+        private readonly FundingEligibilityService _fundingEligibilityService;
         private Fixture _fixture;
 
         public FundingEligibilityServiceTests()
         {
-            _mockLogger = new Mock<ILogger<FundingEligibilityService>>();
+            _fundingEligibilityService = new FundingEligibilityService();
             _fixture = new Fixture();
-            fundingEligibilityService = new FundingEligibilityService(_mockLogger.Object);
-        }
-
-        [Fact]
-        public void Constructor_ShouldInitializeActionTypeMap()
-        {
-            // Act
-            fundingEligibilityService = new FundingEligibilityService(_mockLogger.Object);
-
-            // Assert
-            Assert.NotNull(fundingEligibilityService);
-
         }
 
         [Fact]
@@ -38,7 +25,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 .Create();
 
             // Act
-            var eligible = fundingEligibilityService.EligibleForFunding(qualification);
+            var eligible = _fundingEligibilityService.EligibleForFunding(qualification);
 
             // Assert
             Assert.True(eligible);
@@ -57,7 +44,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 .Create();
 
             // Act
-            var eligible = fundingEligibilityService.EligibleForFunding(qualification);
+            var eligible = _fundingEligibilityService.EligibleForFunding(qualification);
 
             // Assert
             Assert.True(eligible);
@@ -76,7 +63,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 .Create();
 
             // Act
-            var eligible = fundingEligibilityService.EligibleForFunding(qualification);
+            var eligible = _fundingEligibilityService.EligibleForFunding(qualification);
 
             // Assert
             Assert.False(eligible);
@@ -106,10 +93,66 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 .Create();
 
             // Act
-            var eligible = fundingEligibilityService.EligibleForFunding(qualification);
+            var eligible = _fundingEligibilityService.EligibleForFunding(qualification);
 
             // Assert
             Assert.True(eligible);
         }
+
+        private static QualificationDTO CreateEligibleBaseline()
+        {
+            return new QualificationDTO
+            {
+                OfferedInEngland = true,
+                IntentionToSeekFundingInEngland = true,
+                Type = "GeneralQualification",
+                Title = "Valid Qualification Title",
+                Glh = 10,
+                Tqt = 20
+            };
+        }
+
+        [Fact]
+        public void EvaluateFundingEligibilityRules_Eligible_ReturnsTrue()
+        {
+            // Arrange
+            var qualification = CreateEligibleBaseline();
+
+            // Act
+            var evaluation = _fundingEligibilityService.EvaluateFundingEligibilityRules(qualification);
+
+            // Assert
+            Assert.True(evaluation.IsEligible);
+            Assert.Empty(evaluation.GetFailedFields());
+        }
+
+        [Fact]
+        public void EvaluateFundingEligibilityRules_Ineligible_IntentionToSeekFundingInEngland()
+        {
+            // Arrange
+            var qualification = CreateEligibleBaseline();
+            qualification.IntentionToSeekFundingInEngland = false;
+
+            // Act
+            var evaluation = _fundingEligibilityService.EvaluateFundingEligibilityRules(qualification);
+
+            // Assert
+            Assert.False(evaluation.IsEligible);
+            Assert.Contains("IntentionToSeekFundingInEngland", evaluation.GetFailedFields());
+        }
+
+        [Fact]
+        public void EvaluateFundingEligibilityRules_Ineligible_OfferedInEngland()
+        {
+            var qualification = CreateEligibleBaseline();
+            qualification.OfferedInEngland = false;
+
+            var evaluation = _fundingEligibilityService.EvaluateFundingEligibilityRules(qualification);
+
+            Assert.False(evaluation.IsEligible);
+            Assert.Contains("OfferedInEngland", evaluation.GetFailedFields());
+        }
+
+        
     }
 }
