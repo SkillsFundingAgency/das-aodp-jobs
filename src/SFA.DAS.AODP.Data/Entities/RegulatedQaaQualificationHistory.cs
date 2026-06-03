@@ -2,10 +2,10 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SFA.DAS.AODP.Data.Entities;
 
-[Table("QaaQualificationVersion", Schema = "regulated")]
-public class RegulatedQaaQualificationVersion
+[Table("QaaQualificationHistory", Schema = "regulated")]
+public class RegulatedQaaQualificationHistory
 {
-    private RegulatedQaaQualificationVersion()
+    private RegulatedQaaQualificationHistory()
     {
     }
 
@@ -15,9 +15,7 @@ public class RegulatedQaaQualificationVersion
 
     public string AimCode { get; private set; } = null!;
 
-    public long ChangeVersion { get; private set; }
-
-    public DateOnly DateOfDataSnapshot { get; private set; }
+    public DateTime DateOfDataSnapshot { get; private set; }
 
     public DateTime ChangedAt { get; private set; }
 
@@ -37,18 +35,17 @@ public class RegulatedQaaQualificationVersion
 
     public SectorSubjectArea SectorSubjectArea { get; private set; } = null!;
 
-    public string LastDateForRegistrationChangeType { get; private set; } = null!;
+    public QaaLastDateForRegistrationChangeType LastDateForRegistrationChangeType { get; private set; }
 
-    public static RegulatedQaaQualificationVersion Create(
+    public static RegulatedQaaQualificationHistory Create(
         RegulatedQaaQualification qualification,
-        string lastDateForRegistrationChangeType)
+        QaaLastDateForRegistrationChangeType lastDateForRegistrationChangeType)
     {
-        return new RegulatedQaaQualificationVersion
+        return new RegulatedQaaQualificationHistory
         {
             Id = Guid.NewGuid(),
             QaaQualificationId = qualification.Id,
             AimCode = qualification.AimCode,
-            ChangeVersion = qualification.ChangeVersion,
             DateOfDataSnapshot = qualification.DateOfDataSnapshot,
             ChangedAt = qualification.LastChangedAt,
             ContentHash = qualification.ContentHash,
