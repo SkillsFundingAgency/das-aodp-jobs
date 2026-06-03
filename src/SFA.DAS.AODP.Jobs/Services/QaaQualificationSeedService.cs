@@ -36,7 +36,7 @@ public class QaaQualificationSeedService(
 
         return await qaaRepository.ImportQaaQualificationsAsync(
             qualifications,
-            DateOnly.FromDateTime(clockService.UtcNow),
+            clockService.UtcNow,
             cancellationToken);
     }
 

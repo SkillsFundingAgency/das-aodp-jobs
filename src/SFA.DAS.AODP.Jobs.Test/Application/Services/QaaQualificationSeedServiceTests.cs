@@ -14,7 +14,7 @@ public class QaaQualificationSeedServiceTests
     public async Task SeedAsync_ReadsConfiguredBlob_AndImportsMappedQaaQualifications()
     {
         var cancellationToken = CancellationToken.None;
-        var snapshotDate = new DateOnly(2026, 05, 14);
+        var snapshotDate = new DateTime(2026, 05, 14);
         var configuration = CreateConfiguration();
         using var csvStream = CreateCsvStream(
             "40001234,Test AVA,Access to HE Diploma,Science,Medicine,09/01,01/09/2024,08/31,31/08/2026,08/31,31/08/2027,Active,15/05/2026");
@@ -22,7 +22,7 @@ public class QaaQualificationSeedServiceTests
         _blobReaderMock
             .Setup(reader => reader.OpenReadAsync("qaa-seed-data", "qaa-qualifications.csv", cancellationToken))
             .ReturnsAsync(csvStream);
-        _clockServiceMock.Setup(service => service.Today).Returns(snapshotDate);
+        _clockServiceMock.Setup(service => service.UtcNow).Returns(snapshotDate);
         _qaaRepositoryMock
             .Setup(repository => repository.ImportQaaQualificationsAsync(
                 It.IsAny<IReadOnlyCollection<QaaQualificationResponse>>(),
@@ -71,7 +71,7 @@ public class QaaQualificationSeedServiceTests
         Assert.Equal(0, result);
         _qaaRepositoryMock.Verify(repository => repository.ImportQaaQualificationsAsync(
             It.IsAny<IReadOnlyCollection<QaaQualificationResponse>>(),
-            It.IsAny<DateOnly>(),
+            It.IsAny<DateTime>(),
             It.IsAny<CancellationToken>()),
             Times.Never);
     }
