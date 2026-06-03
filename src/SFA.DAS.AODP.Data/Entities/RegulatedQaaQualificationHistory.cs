@@ -35,11 +35,11 @@ public class RegulatedQaaQualificationHistory
 
     public SectorSubjectArea SectorSubjectArea { get; private set; } = null!;
 
-    public string LastDateForRegistrationChangeType { get; private set; } = null!;
+    public QaaLastDateForRegistrationChangeType LastDateForRegistrationChangeType { get; private set; }
 
     public static RegulatedQaaQualificationHistory Create(
         RegulatedQaaQualification qualification,
-        string lastDateForRegistrationChangeType)
+        QaaLastDateForRegistrationChangeType lastDateForRegistrationChangeType)
     {
         return new RegulatedQaaQualificationHistory
         {

@@ -133,8 +133,28 @@ public class RegulatedQaaQualificationTests : UnitTest
         Assert.Equal(new DateOnly(2024, 01, 31), qualification.DiscontinuedDate);
         Assert.Equal(changedAt, qualification.LastChangedAt);
         Assert.NotEqual(originalContentHash, qualification.ContentHash);
-        Assert.Equal(QaaImportComparisonOutcome.MaterialChanged, qualification.LatestImportComparisonOutcome);
+        Assert.Equal(QaaImportComparisonOutcome.Discontinued, qualification.LatestImportComparisonOutcome);
         Assert.Equal(QaaLastDateForRegistrationChangeType.NotChanged, qualification.LastDateForRegistrationChangeType);
+    }
+
+    [Fact]
+    public void ApplyImportedQaaData_WhenAlreadyDiscontinuedAndMaterialFieldsAreUnchanged_RecordsUnchanged()
+    {
+        var qualification = CreateQualification(isDiscontinued: true);
+        var changedAt = new DateTime(2024, 03, 15);
+
+        qualification.ApplyImportedQaaData(
+            changedAt,
+            TestQualificationTitle,
+            TestAwardingBody,
+            _testStartDate,
+            _testLastRegistrationDate,
+            new DateOnly(2024, 01, 31),
+            _testSectorSubjectArea,
+            changedAt);
+
+        Assert.True(qualification.IsDiscontinued);
+        Assert.Equal(QaaImportComparisonOutcome.Unchanged, qualification.LatestImportComparisonOutcome);
     }
 
     [Fact]

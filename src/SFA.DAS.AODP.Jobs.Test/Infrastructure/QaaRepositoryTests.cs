@@ -113,9 +113,10 @@ public class QaaRepositoryTests
         var stored = await context.RegulatedQaaQualification.SingleAsync();
         Assert.True(stored.IsDiscontinued);
         Assert.Equal(new DateOnly(2024, 01, 31), stored.DiscontinuedDate);
-        Assert.Equal(QaaImportComparisonOutcome.MaterialChanged, stored.LatestImportComparisonOutcome);
+        Assert.Equal(QaaImportComparisonOutcome.Discontinued, stored.LatestImportComparisonOutcome);
         Assert.Equal(QaaLastDateForRegistrationChangeType.NotChanged, stored.LastDateForRegistrationChangeType);
-        Assert.Single(await context.RegulatedQaaQualificationHistory.ToListAsync());
+        var history = await context.RegulatedQaaQualificationHistory.SingleAsync();
+        Assert.True(history.IsDiscontinued);
     }
 
     [Fact]

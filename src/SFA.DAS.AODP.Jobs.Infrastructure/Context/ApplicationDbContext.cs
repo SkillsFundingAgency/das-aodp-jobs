@@ -75,6 +75,14 @@ namespace SFA.DAS.AODP.Infrastructure.Context
                     .HasConversion(
                         ssaTier => ssaTier.Name,
                         ssaName => SectorSubjectArea.FromName(ssaName));
+
+                entity.Property(q => q.LatestImportComparisonOutcome)
+                    .HasConversion<string>()
+                    .HasColumnType("nvarchar(50)");
+
+                entity.Property(q => q.LastDateForRegistrationChangeType)
+                    .HasConversion<string>()
+                    .HasColumnType("nvarchar(50)");
             });
 
             modelBuilder.Entity<RegulatedQaaQualificationHistory>(entity =>
@@ -88,6 +96,10 @@ namespace SFA.DAS.AODP.Infrastructure.Context
                     .HasConversion(
                         ssaTier => ssaTier.Name,
                         ssaName => SectorSubjectArea.FromName(ssaName));
+
+                entity.Property(q => q.LastDateForRegistrationChangeType)
+                    .HasConversion<string>()
+                    .HasColumnType("nvarchar(50)");
             });
 
         }

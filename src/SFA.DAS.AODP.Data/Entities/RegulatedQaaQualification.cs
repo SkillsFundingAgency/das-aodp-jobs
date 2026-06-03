@@ -43,12 +43,12 @@ public class RegulatedQaaQualification
     /// <summary>
     /// The latest import-to-import comparison result. This is overwritten on each QAA import.
     /// </summary>
-    public string LatestImportComparisonOutcome { get; private set; } = null!;
+    public QaaImportComparisonOutcome LatestImportComparisonOutcome { get; private set; }
 
     /// <summary>
     /// The movement direction for the last date for registration in the latest material change.
     /// </summary>
-    public string LastDateForRegistrationChangeType { get; private set; } = null!;
+    public QaaLastDateForRegistrationChangeType LastDateForRegistrationChangeType { get; private set; }
 
     /// <summary>
     /// The unique learning AIM code for the qualification.
@@ -182,12 +182,16 @@ public class RegulatedQaaQualification
         SectorSubjectArea sectorSubjectArea,
         DateTime changedAt)
     {
+        var wasDiscontinued = IsDiscontinued;
         var qaaHasDiscontinuedQualification = discontinuedDate.HasValue;
         var importedQaaState = MaterialQaaState.From(
             registrationClosesOn,
             qaaHasDiscontinuedQualification);
         var hasMaterialChange = MaterialQaaStateHasChanged(importedQaaState);
         var lastDateForRegistrationChangeType = WorkOutLastDateForRegistrationChangeType(registrationClosesOn);
+        var latestImportComparisonOutcome = !wasDiscontinued && qaaHasDiscontinuedQualification
+            ? QaaImportComparisonOutcome.Discontinued
+            : QaaImportComparisonOutcome.MaterialChanged;
 
         RememberLatestQaaDetails(
             snapshotTakenAt,
@@ -208,6 +212,7 @@ public class RegulatedQaaQualification
         RecordMaterialQaaChange(
             importedQaaState,
             changedAt,
+            latestImportComparisonOutcome,
             lastDateForRegistrationChangeType);
     }
 
@@ -275,15 +280,16 @@ public class RegulatedQaaQualification
     private void RecordMaterialQaaChange(
         MaterialQaaState importedQaaState,
         DateTime changedAt,
-        string lastDateForRegistrationChangeType)
+        QaaImportComparisonOutcome latestImportComparisonOutcome,
+        QaaLastDateForRegistrationChangeType lastDateForRegistrationChangeType)
     {
         LastChangedAt = changedAt;
         ContentHash = importedQaaState.ContentHash;
-        LatestImportComparisonOutcome = QaaImportComparisonOutcome.MaterialChanged;
+        LatestImportComparisonOutcome = latestImportComparisonOutcome;
         LastDateForRegistrationChangeType = lastDateForRegistrationChangeType;
     }
 
-    private string WorkOutLastDateForRegistrationChangeType(DateOnly proposedLastDateForRegistration)
+    private QaaLastDateForRegistrationChangeType WorkOutLastDateForRegistrationChangeType(DateOnly proposedLastDateForRegistration)
     {
         if (proposedLastDateForRegistration > LastDateForRegistration)
         {
