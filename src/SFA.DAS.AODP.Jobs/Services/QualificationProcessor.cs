@@ -266,6 +266,16 @@ namespace SFA.DAS.AODP.Jobs.Services
                 ChangedFieldNames = outcome.IncludeFieldChanges ? changes?.ChangedFieldsCsv : null
             };
 
+            var noteLines = new List<string> { outcome.BaseNote };
+            if (outcome.IncludeEligibilityReasons && !string.IsNullOrEmpty(eval.GetFailedFieldsCsv()))
+            {
+                noteLines.Add($"Ineligible: {eval.GetFailedFieldsCsv()}");
+            }
+            if (outcome.IncludeFieldChanges && !string.IsNullOrEmpty(changes?.ChangedFieldsCsv))
+            {
+                noteLines.Add($"Changes: {changes.Value.ChangedFieldsCsv}");
+            }
+
             var discussion = new QualificationDiscussionHistory
             {
                 Id = Guid.NewGuid(),

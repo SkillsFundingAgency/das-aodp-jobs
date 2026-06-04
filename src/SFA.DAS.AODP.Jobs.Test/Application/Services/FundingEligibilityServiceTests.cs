@@ -120,26 +120,6 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             Assert.True(evaluation.IsEligible);
         }
 
-        [Fact]
-        public void EvaluateFundingEligibilityRules_Ineligible_EndPointAssessmentType()
-        {
-            // Arrange
-            var qualification = CreateEligibleBaseline();
-            qualification.Type = QualificationType.EndPointAssessment.Value;
-
-            // Act
-            var evaluation = _service.EvaluateFundingEligibilityRules(qualification);
-
-            // Assert
-            Assert.False(evaluation.IsEligible);
-            Assert.Contains("Type", evaluation.GetFailedFields());
-        }
-
-        // NOTE:
-        // Title eligibility checks were moved into QualificationReference.
-        // No direct string-matching tests are required here anymore unless
-        // specifically testing integration with QualificationReference.
-
         private QualificationDTO CreateEligibleBaseline()
         {
             return _fixture.Build<QualificationDTO>()

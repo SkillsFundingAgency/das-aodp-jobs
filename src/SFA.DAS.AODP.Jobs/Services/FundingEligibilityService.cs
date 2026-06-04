@@ -5,40 +5,46 @@ namespace SFA.DAS.AODP.Jobs.Services
 {
     public class FundingEligibilityService : IFundingEligibilityService
     {
-        private readonly ILogger<FundingEligibilityService> _logger;
+        public bool EligibleForFunding(QualificationDTO qualification)
+        {
+            return qualification.OfferedInEngland
+                   && (qualification.IntentionToSeekFundingInEngland ?? false)
+                   && !QualificationReference.IsIneligibleType(qualification.Type)
+                   && !QualificationReference.HasIneligibleTitle(qualification.Level, qualification.Title);
+        }
 
         public FundingEligibilityEvaluation EvaluateFundingEligibilityRules(QualificationDTO qualification)
         {
             var rules = new List<FundingEligibilityRuleResult>
-            {
-                new FundingEligibilityRuleResult(
-                    "OfferedInEngland",
-                    qualification.OfferedInEngland,
-                    ["OfferedInEngland"]),
+        {
+            new FundingEligibilityRuleResult(
+                "OfferedInEngland",
+                qualification.OfferedInEngland,
+                ["OfferedInEngland"]),
 
-                new FundingEligibilityRuleResult(
-                    "IntentionToSeekFundingInEngland",
-                    qualification.IntentionToSeekFundingInEngland ?? false,
-                    ["IntentionToSeekFundingInEngland"]),
+            new FundingEligibilityRuleResult(
+                "IntentionToSeekFundingInEngland",
+                qualification.IntentionToSeekFundingInEngland ?? false,
+                ["IntentionToSeekFundingInEngland"]),
 
-                new FundingEligibilityRuleResult(
-                    "Type",
-                    !QualificationReference.IsIneligibleType(qualification.Type),
-                    ["Type"]),
+            new FundingEligibilityRuleResult(
+                "Type",
+                !QualificationReference.IsIneligibleType(qualification.Type),
+                ["Type"]),
 
-                new FundingEligibilityRuleResult(
-                    "Title",
-                    !QualificationReference.HasIneligibleTitle(qualification.Level, qualification.Title),
-                    ["Title"]),
-            };
+            new FundingEligibilityRuleResult(
+                "Title",
+                !QualificationReference.HasIneligibleTitle(qualification.Level, qualification.Title),
+                ["Title"]),
 
-
+        };
 
             return new FundingEligibilityEvaluation
             {
                 Rules = rules
             };
         }
+
 
         public FundingEligibilityComparison CompareEligibilityRules(
             QualificationDTO previousQualification,
@@ -75,6 +81,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                 });
             }
 
+
             return new FundingEligibilityComparison
             {
                 PreviousEvaluation = previousEvaluation,
@@ -82,5 +89,10 @@ namespace SFA.DAS.AODP.Jobs.Services
                 RuleComparisons = ruleComparisons
             };
         }
+
+
+
+
+        public string DetermineFailureReason(QualificationDTO qualification) => ImportReason.NoAction;
     }
 }
