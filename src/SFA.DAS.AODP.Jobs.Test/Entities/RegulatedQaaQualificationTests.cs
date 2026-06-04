@@ -1,6 +1,6 @@
 namespace SFA.DAS.AODP.Jobs.UnitTests.Entities;
 
-public class RegulatedQaaQualificationTests
+public class RegulatedQaaQualificationTests : UnitTest
 {
     private const string TestAimCode = "Z1234567";
     private const string TestQualificationTitle = "Access to Higher Education Diploma (Science)";
