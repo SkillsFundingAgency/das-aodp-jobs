@@ -158,10 +158,10 @@ public class QualificationProcessorTests
     }
 
     [Theory]
-    [InlineData(true, true, "Major")]
-    [InlineData(false, true, "Minor")]
-    [InlineData(true, false, "Major")]
-    [InlineData(false, false, "Minor")]
+    [InlineData(true, true, "major")]
+    [InlineData(false, true, "minor")]
+    [InlineData(true, false, "major")]
+    [InlineData(false, false, "minor")]
     public void Process_ExistingInReview_MaintainsStatus(
         bool hasKeyChanges,
         bool startsOnHold,
@@ -218,6 +218,6 @@ public class QualificationProcessorTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal(ProcessStatusLookup.DecisionRequired.Id, result.NewVersion.ProcessStatusId);
-        Assert.Contains("Changed Qualification (Eligible) - Decision required", result.Discussion.Notes);
+        Assert.Contains("decision required - changed qualification", result.Discussion.Notes);
     }
 }

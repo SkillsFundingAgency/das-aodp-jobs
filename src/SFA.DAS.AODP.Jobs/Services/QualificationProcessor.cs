@@ -13,6 +13,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             Guid? ExistingStageId,
             bool IsNew,
             bool IsEligible,
+            bool hasAnyChanges,
             bool HasKeyChanges,
             bool EligibilityChanged,
             bool HasApplicationsInProgress,
@@ -69,6 +70,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             bool eligibilityChanged = existingVersion?.EligibleForFunding != incomingEval.IsEligible;
 
             DetectionResults? changes = null;
+            bool hasChanges = false;
             bool hasKeyChanges = false;
 
             if (existingVersion != null)
@@ -85,6 +87,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                     changes.Value.ChangedFields.Add(nameof(QualificationVersions.EligibleForFunding));
                 }
 
+                hasChanges = changes.Value.ChangesPresent; 
                 hasKeyChanges = changes.Value.KeyFieldsChanged;
             }
 
@@ -93,6 +96,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                 existingVersion?.LifecycleStageId,
                 existingVersion == null,
                 incomingEval.IsEligible,
+                hasChanges,
                 hasKeyChanges,
                 eligibilityChanged,
                 hasApplicationsInProgress,
@@ -144,7 +148,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                     StatusId: statusId,
                     StageId: stageId,
                     ActionId: actionId,
-                    BaseNote: requiresRereview ? "Eligible - Major change" : "Eligible - Minor change",
+                    BaseNote: requiresRereview ? "decision required - changed qualification" : "no action required - changed qualification",
                     IncludeFieldChanges: requiresRereview,
                     IncludeEligibilityReasons: false,
                     ReviewRequired: requiresRereview,
@@ -157,7 +161,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                     StatusId: context.ExistingStatusId!.Value,
                     StageId: context.ExistingStageId ?? LifecycleStageLookup.Changed.Id,
                     ActionId: ActionTypeLookup.ActionRequired.Id,
-                    BaseNote: $"Changed Qualification (Eligible) - No status change - ({(context.HasKeyChanges ? "Major" : "Minor")} change)",
+                    BaseNote: $"no status change - changed qualification - ({(context.HasKeyChanges ? "major" : "minor")} change)",
                     IncludeFieldChanges: true,
                     IncludeEligibilityReasons: false,
                     ReviewRequired: requiresRereview,
@@ -168,7 +172,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                 StatusId: ProcessStatusLookup.DecisionRequired.Id,
                 StageId: LifecycleStageLookup.Changed.Id,
                 ActionId: ActionTypeLookup.ActionRequired.Id,
-                BaseNote: "Changed Qualification (Eligible) - Decision required",
+                BaseNote: "decision required - changed qualification",
                 IncludeFieldChanges: true,
                 IncludeEligibilityReasons: false,
                 ReviewRequired: true,
@@ -185,15 +189,15 @@ namespace SFA.DAS.AODP.Jobs.Services
             var actionId = needsDecision ? ActionTypeLookup.ActionRequired.Id : ActionTypeLookup.NoActionRequired.Id;
             var stageId = needsDecision ? LifecycleStageLookup.Changed.Id : LifecycleStageLookup.Completed.Id;
             var note = needsDecision
-                ? "Changed Qualification (Ineligible) - Decision required - Conflict or Eligibility Change"
-                : "Changed Qualification (Ineligible) - No action required.";
+                ? "decision required - changed qualification - conflict or eligibility change"
+                : "no action required - changed qualification";
 
             return new QualificationProcessorOutcome(
                 StatusId: statusId,
                 StageId: stageId,
                 ActionId: actionId,
                 BaseNote: note,
-                IncludeFieldChanges: needsDecision,
+                IncludeFieldChanges: context.hasAnyChanges,
                 IncludeEligibilityReasons: true,
                 ReviewRequired: needsDecision,
                 HasFundingWhichHasNotEnded: context.HasFundingWhichHasNotEnded);
@@ -207,7 +211,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                     StatusId: ProcessStatusLookup.DecisionRequired.Id,
                     StageId: LifecycleStageLookup.New.Id,
                     ActionId: ActionTypeLookup.ActionRequired.Id,
-                    BaseNote: "New Qualification (Eligible) - Decision Required",
+
+                    BaseNote: "decision required - new qualification",
                     IncludeFieldChanges: false,
                     IncludeEligibilityReasons: false,
                     ReviewRequired: true,
@@ -229,8 +234,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                 : LifecycleStageLookup.Completed.Id;
 
             var baseNote = hasConflict
-                ? "New Qualification (Ineligible) - Decision required - Qualification has Active Applications"
-                : "New Qualification (Ineligible) - No action required";
+                ? "decision required - new qualification - active applications"
+                : "no action required - new qualification";
 
             return new QualificationProcessorOutcome(
                 StatusId: statusId,
@@ -276,7 +281,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                 Id = Guid.NewGuid(),
                 QualificationId = qId,
                 ActionTypeId = outcome.ActionId,
-                Notes = string.Join(" | ", noteLines),
+                Notes = outcome.BaseNote,
                 Timestamp = DateTime.Now,
                 UserDisplayName = "OFQUAL Import"
             };

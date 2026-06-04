@@ -1,23 +1,21 @@
 ﻿using SFA.DAS.AODP.Jobs.Models.Jobs.FundingEligibility;
 using SFA.DAS.AODP.Models.Qualification;
 
-namespace SFA.DAS.AODP.Jobs.Services;
-
-public class FundingEligibilityService : IFundingEligibilityService
+namespace SFA.DAS.AODP.Jobs.Services
 {
-    private readonly ILogger<FundingEligibilityService> _logger;
-
-    public bool EligibleForFunding(QualificationDTO qualification)
+    public class FundingEligibilityService : IFundingEligibilityService
     {
-        return qualification.OfferedInEngland
-               && (qualification.IntentionToSeekFundingInEngland ?? false)
-               && !QualificationReference.IsIneligibleType(qualification.Type)
-               && !QualificationReference.HasIneligibleTitle(qualification.Level, qualification.Title);
-    }
+        public bool EligibleForFunding(QualificationDTO qualification)
+        {
+            return qualification.OfferedInEngland
+                   && (qualification.IntentionToSeekFundingInEngland ?? false)
+                   && !QualificationReference.IsIneligibleType(qualification.Type)
+                   && !QualificationReference.HasIneligibleTitle(qualification.Level, qualification.Title);
+        }
 
-    public FundingEligibilityEvaluation EvaluateFundingEligibilityRules(QualificationDTO qualification)
-    {
-        var rules = new List<FundingEligibilityRuleResult>
+        public FundingEligibilityEvaluation EvaluateFundingEligibilityRules(QualificationDTO qualification)
+        {
+            var rules = new List<FundingEligibilityRuleResult>
         {
             new FundingEligibilityRuleResult(
                 "OfferedInEngland",
@@ -41,11 +39,11 @@ public class FundingEligibilityService : IFundingEligibilityService
 
         };
 
-        return new FundingEligibilityEvaluation
-        {
-            Rules = rules
-        };
-    }
+            return new FundingEligibilityEvaluation
+            {
+                Rules = rules
+            };
+        }
 
 
         public FundingEligibilityComparison CompareEligibilityRules(
@@ -82,7 +80,7 @@ public class FundingEligibilityService : IFundingEligibilityService
                         .ToList()
                 });
             }
-    
+
 
             return new FundingEligibilityComparison
             {
@@ -92,8 +90,9 @@ public class FundingEligibilityService : IFundingEligibilityService
             };
         }
 
-        
-        
 
-    public string DetermineFailureReason(QualificationDTO qualification) => ImportReason.NoAction;
+
+
+        public string DetermineFailureReason(QualificationDTO qualification) => ImportReason.NoAction;
+    }
 }
