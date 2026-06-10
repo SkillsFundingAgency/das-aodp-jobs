@@ -1,9 +1,9 @@
-﻿using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Jobs.Models.Jobs.FundingEligibility;
+﻿using SFA.DAS.AODP.Jobs.Models.Jobs.FundingEligibility;
 using SFA.DAS.AODP.Models.Qualification;
+using Shouldly;
 using static SFA.DAS.AODP.Jobs.Services.ChangeDetectionService;
 
-namespace SFA.DAS.AODP.Jobs.Tests;
+namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Services;
 
 public class QualificationProcessorTests
 {
@@ -58,7 +58,7 @@ public class QualificationProcessorTests
             ? LifecycleStageLookup.New.Id
             : LifecycleStageLookup.Completed.Id;
 
-        Assert.Equal(expectedStage, result.NewVersion.LifecycleStageId);
+        result.NewVersion.LifecycleStageId.ShouldBe(expectedStage);
     }
 
     [Theory]
@@ -102,12 +102,12 @@ public class QualificationProcessorTests
         var result = _processor.Process(new QualificationDTO(), existingVersion, Guid.NewGuid(), Guid.NewGuid(), hasApps, hasFunding);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(expectedStatusId, result.NewVersion.ProcessStatusId);
+        result.ShouldNotBeNull();
+        result.NewVersion.ProcessStatusId.ShouldBe(expectedStatusId);
 
         if (expectDecisionRequired)
         {
-            Assert.NotNull(result.FieldChange.ChangedFieldNames);
+            result.FieldChange.ChangedFieldNames.ShouldNotBeNull();
         }
     }
 
@@ -153,8 +153,8 @@ public class QualificationProcessorTests
         var result = _processor.Process(new QualificationDTO(), existingVersion, Guid.NewGuid(), Guid.NewGuid(), false, false);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(expectedStatusId, result.NewVersion.ProcessStatusId);
+        result.ShouldNotBeNull();
+        result.NewVersion.ProcessStatusId.ShouldBe(expectedStatusId);
     }
 
     [Theory]
@@ -191,13 +191,13 @@ public class QualificationProcessorTests
         var result = _processor.Process(new QualificationDTO(), existingVersion, existingVersion.QualificationId, Guid.NewGuid(), false, false);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(statusId, result.NewVersion.ProcessStatusId);
-        Assert.Contains(expectedNoteWord, result.Discussion.Notes);
+        result.ShouldNotBeNull();
+        result.NewVersion.ProcessStatusId.ShouldBe(statusId);
+        result.Discussion.Notes!.ShouldContain(expectedNoteWord);
     }
 
     [Fact]
-    public void Process_UnknownStatus_DefaultsToDecisionRequired()
+    public void Process_UnknownStatus_DefaultsToNoActionRequired()
     {
         // Arrange
         var existingVersion = new QualificationVersions
@@ -216,8 +216,8 @@ public class QualificationProcessorTests
         var result = _processor.Process(new QualificationDTO(), existingVersion, Guid.NewGuid(), Guid.NewGuid(), false, false);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(ProcessStatusLookup.DecisionRequired.Id, result.NewVersion.ProcessStatusId);
-        Assert.Contains("decision required - changed qualification", result.Discussion.Notes);
+        result.ShouldNotBeNull();
+        result.NewVersion.ProcessStatusId.ShouldBe(ProcessStatusLookup.NoActionRequired.Id);
+        result.Discussion.Notes!.ShouldContain("no action required - changed qualification");
     }
 }
