@@ -169,13 +169,13 @@ namespace SFA.DAS.AODP.Jobs.Services
             }
 
             return new QualificationProcessorOutcome(
-                StatusId: ProcessStatusLookup.DecisionRequired.Id,
-                StageId: LifecycleStageLookup.Changed.Id,
-                ActionId: ActionTypeLookup.ActionRequired.Id,
-                BaseNote: "decision required - changed qualification",
+                StatusId: ProcessStatusLookup.NoActionRequired.Id,
+                StageId: LifecycleStageLookup.Completed.Id,
+                ActionId: ActionTypeLookup.NoActionRequired.Id,
+                BaseNote: "no action required - changed qualification",
                 IncludeFieldChanges: true,
                 IncludeEligibilityReasons: false,
-                ReviewRequired: true,
+                ReviewRequired: requiresRereview,
                 HasFundingWhichHasNotEnded: context.HasFundingWhichHasNotEnded);
         }
 
