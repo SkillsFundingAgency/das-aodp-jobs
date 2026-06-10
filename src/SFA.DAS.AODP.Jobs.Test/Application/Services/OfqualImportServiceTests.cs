@@ -915,6 +915,249 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             Assert.Empty(feedbacks);         
         }
 
+        [Fact]
+        public async Task OfqualImportService_Should_Update_AwardingOrganisation_When_Details_Change()
+        {
+            // Arrange
+            await PopulateDbWithReferenceData();
+
+            var organisationId = 10001;
+            var qan = "qan1";
+
+            await CreateQualificationRecordSet(
+                organisationId,
+                qan,
+                "Qual1",
+                ProcessStageNoAction);
+
+            var service = CreateImportServiceWithDb();
+
+            var importRecord = CreateImportRecord(organisationId, qan, "Qual1");
+
+            // simulate change in organisation fields
+            importRecord.OrganisationName = "Updated Name";
+            importRecord.OrganisationAcronym = "NEW";
+            importRecord.OrganisationRecognitionNumber = "RN-999";
+
+            var importRecords = new List<QualificationDTO> { importRecord };
+
+            ApplyMockBehaviour(
+                importRecord,
+                importRecords,
+                eligibleForFunding: false,
+                changesPresent: true,
+                keyFieldsChanged: true);
+
+            // Act
+            await service.ProcessQualificationsDataAsync();
+
+            // Assert
+            var org = await _dbContext.AwardingOrganisation
+                .SingleAsync(x => x.Ukprn == organisationId);
+
+            Assert.Equal("Updated Name", org.NameOfqual);
+            Assert.Equal("NEW", org.Acronym);
+            Assert.Equal("RN-999", org.RecognitionNumber);
+        }
+
+
+
+        [Fact]
+        public async Task OfqualImportService_Should_Not_Create_Duplicate_AwardingOrganisation_When_Updated()
+        {
+            // Arrange
+            await PopulateDbWithReferenceData();
+
+            var organisationId = 10001;
+
+            await CreateQualificationRecordSet(
+                organisationId,
+                "qan1",
+                "Qual1",
+                ProcessStageNoAction);
+
+            var service = CreateImportServiceWithDb();
+
+            var importRecord = CreateImportRecord(organisationId, "qan1", "Qual1");
+            importRecord.OrganisationName = "Updated Name";
+
+            ApplyMockBehaviour(
+                importRecord,
+                new List<QualificationDTO> { importRecord },
+                eligibleForFunding: false,
+                changesPresent: true,
+                keyFieldsChanged: false);
+
+            // Act
+            await service.ProcessQualificationsDataAsync();
+
+            // Assert
+            var count = await _dbContext.AwardingOrganisation
+                .CountAsync(x => x.Ukprn == organisationId);
+
+            Assert.Equal(1, count);
+        }
+
+        [Fact]
+        public async Task OfqualImportService_Should_Not_Update_AwardingOrganisation_When_No_Changes_Detected()
+        {
+            // Arrange
+            await PopulateDbWithReferenceData();
+
+            var organisationId = 10001;
+
+            await CreateQualificationRecordSet(
+                organisationId,
+                "qan1",
+                "Qual1",
+                ProcessStageNoAction);
+
+            var service = CreateImportServiceWithDb();
+
+            var importRecord = CreateImportRecord(organisationId, "qan1", "Qual1");
+
+            ApplyMockBehaviour(
+                importRecord,
+                new List<QualificationDTO> { importRecord },
+                eligibleForFunding: false,
+                changesPresent: false,
+                keyFieldsChanged: false);
+
+            var original = await _dbContext.AwardingOrganisation
+                .SingleAsync(x => x.Ukprn == organisationId);
+
+            // Act
+            await service.ProcessQualificationsDataAsync();
+
+            // Assert
+            var updated = await _dbContext.AwardingOrganisation
+                .SingleAsync(x => x.Ukprn == organisationId);
+
+            Assert.Equal(original.NameOfqual, updated.NameOfqual);
+            Assert.Equal(original.Acronym, updated.Acronym);
+            Assert.Equal(original.RecognitionNumber, updated.RecognitionNumber);
+        }
+
+        [Fact]
+        public async Task OfqualImportService_Should_Update_AwardingOrganisation_When_Only_Acronym_Changes()
+        {
+            // Arrange
+            await PopulateDbWithReferenceData();
+
+            var organisationId = 10001;
+
+            await CreateQualificationRecordSet(
+                organisationId,
+                "qan1",
+                "Qual1",
+                ProcessStageNoAction);
+
+            var service = CreateImportServiceWithDb();
+
+            var importRecord = CreateImportRecord(organisationId, "qan1", "Qual1");
+
+            importRecord.OrganisationAcronym = "NEW-ACR";
+
+            ApplyMockBehaviour(
+                importRecord,
+                new List<QualificationDTO> { importRecord },
+                eligibleForFunding: false,
+                changesPresent: true,
+                keyFieldsChanged: true);
+
+            // Act
+            await service.ProcessQualificationsDataAsync();
+
+            // Assert
+            var org = await _dbContext.AwardingOrganisation
+                .SingleAsync(x => x.Ukprn == organisationId);
+
+            Assert.Equal("NEW-ACR", org.Acronym);
+        }
+
+        [Fact]
+        public async Task OfqualImportService_Should_Update_AwardingOrganisation_When_Only_RecognitionNumber_Changes()
+        {
+            // Arrange
+            await PopulateDbWithReferenceData();
+
+            var organisationId = 10001;
+
+            await CreateQualificationRecordSet(
+                organisationId,
+                "qan1",
+                "Qual1",
+                ProcessStageNoAction);
+
+            var service = CreateImportServiceWithDb();
+
+            var importRecord = CreateImportRecord(organisationId, "qan1", "Qual1");
+
+            importRecord.OrganisationRecognitionNumber = "RN-UPDATED";
+
+            ApplyMockBehaviour(
+                importRecord,
+                new List<QualificationDTO> { importRecord },
+                eligibleForFunding: false,
+                changesPresent: true,
+                keyFieldsChanged: true);
+
+            // Act
+            await service.ProcessQualificationsDataAsync();
+
+            // Assert
+            var org = await _dbContext.AwardingOrganisation
+                .SingleAsync(x => x.Ukprn == organisationId);
+
+            Assert.Equal("RN-UPDATED", org.RecognitionNumber);
+        }
+
+        [Fact]
+        public async Task OfqualImportService_Should_Not_Update_Anything_When_No_Changes()
+        {
+            // Arrange
+            await PopulateDbWithReferenceData();
+
+            var organisationId = 10001;
+            var qan = "qan1";
+            var name = "Qual1";
+
+            await CreateQualificationRecordSet(
+                organisationId,
+                qan,
+                name,
+                processStatus: ProcessStageNoAction);
+
+            var service = CreateImportServiceWithDb();
+
+            var importRecord = CreateImportRecord(organisationId, qan, name);
+            var importRecords = new List<QualificationDTO> { importRecord };
+
+            ApplyMockBehaviour(
+                importRecord,
+                importRecords,
+                eligibleForFunding: false,
+                changesPresent: false,
+                keyFieldsChanged: false,
+                failureReason: ImportReason.NoAction);
+
+            var versionCountBefore = await _dbContext.QualificationVersions.CountAsync();
+            var discussionCountBefore = await _dbContext.QualificationDiscussionHistory.CountAsync();
+
+            // Act
+            await service.ProcessQualificationsDataAsync();
+
+            // Assert (only observable behaviour)
+            var versionCountAfter = await _dbContext.QualificationVersions.CountAsync();
+            var discussionCountAfter = await _dbContext.QualificationDiscussionHistory.CountAsync();
+
+            Assert.Equal(versionCountBefore, versionCountAfter);
+            Assert.Equal(discussionCountBefore, discussionCountAfter);
+
+            var qualification = await _dbContext.Qualification.SingleAsync(x => x.Qan == qan);
+            Assert.Equal(name, qualification.QualificationName);
+        }
+
         private async Task CreateFundingOffers(List<QualificationVersions> qualificationVersions)
         {
             var qualificationVersion = qualificationVersions.OrderByDescending(o => o.Version).First();
