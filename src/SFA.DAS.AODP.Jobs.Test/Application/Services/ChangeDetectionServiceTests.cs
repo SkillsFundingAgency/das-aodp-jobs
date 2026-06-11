@@ -3,7 +3,7 @@ using Shouldly;
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 {
-    public class ChangeDetectionServiceTests
+    public class ChangeDetectionServiceTests : UnitTest
     {
         private static ChangeDetectionService CreateSut()
             => new ChangeDetectionService();
@@ -95,6 +95,29 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
             result.ChangesPresent.ShouldBe(true);
             result.ChangedFields.ShouldContain("Level");
             result.ChangedFields.ShouldContain("Tqt");
+            result.KeyFieldsChanged.ShouldBe(true);
+        }
+
+        [Fact]
+        public void DetectChanges_GlhKeyFieldsChanged_CaseInsensitivityCheck()
+        {
+            // Arrange
+            var sut = CreateSut();
+            var (dto, version) = CreateEmptyBaseline();
+         
+            version.Glh = 10;
+            dto.Glh = 20;
+
+            version.MinimumGlh = 10;
+            dto.MinimumGlh = 20;
+
+            // Act
+            var result = sut.DetectChanges(dto, version);
+
+            // Assert
+            result.ChangesPresent.ShouldBe(true);
+            result.ChangedFields.ShouldBe(["Glh", "MinimumGlh"], Case.Insensitive);
+
             result.KeyFieldsChanged.ShouldBe(true);
         }
 

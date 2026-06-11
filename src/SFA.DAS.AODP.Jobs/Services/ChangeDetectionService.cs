@@ -12,43 +12,22 @@ namespace SFA.DAS.AODP.Jobs.Services
             public DetectionResults()
             {
                 ChangesPresent = false;
-                ChangedFields = new List<string>();
-                KeyFieldsChanged = false;
+                ChangedFields = [];
             }
 
             public bool ChangesPresent { get; set; }
             public List<string> ChangedFields { get; set; }
-            public bool KeyFieldsChanged { get; set; }
+            public bool KeyFieldsChanged => KeyField.HaveKeyFieldsChanged(ChangedFields);
             public string ChangedFieldsCsv => ChangedFields != null && ChangedFields.Count > 0
                 ? string.Join(", ", ChangedFields.Distinct(StringComparer.OrdinalIgnoreCase))
                 : string.Empty;
         }
 
-        private readonly List<string> _keyFields;
+        private readonly IReadOnlyList<string> _keyFields;
 
         public ChangeDetectionService()
         {
-            _keyFields = new List<string>()
-                {
-                    "OrganisationName",
-                    "Title",
-                    "Level",
-                    "Type",
-                    "TotalCredits",
-                    "Ssa",
-                    "GradingType",
-                    "OfferedInEngland",
-                    "PreSixteen",
-                    "SixteenToEighteen",
-                    "EighteenPlus",
-                    "NineteenPlus",
-                    "IntentionToSeekFundingInEngland", 
-                    "GLH",
-                    "MinimumGLH",
-                    "Tqt",
-                    "OperationalEndDate",
-                    "OfferedInternationally"
-                };
+            _keyFields = KeyField.All.Select(kf => kf.ToString()).ToList();
         }
 
         public DetectionResults DetectChanges(QualificationDTO newRecord, QualificationVersions qualificationVersion)
@@ -119,12 +98,6 @@ namespace SFA.DAS.AODP.Jobs.Services
                 ChangedFields = fields, 
                 ChangesPresent = fields.Count > 0
             };
-
-            if (results.ChangesPresent)
-            {
-                var keyFieldsChanged = results.ChangedFields.Intersect(_keyFields).ToList();
-                results.KeyFieldsChanged = keyFieldsChanged.Count > 0;
-            }
 
             return results;
         }

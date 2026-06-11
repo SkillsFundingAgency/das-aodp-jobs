@@ -130,6 +130,13 @@ public class QualificationProcessorTests
             Qualification = new Qualification { Qan = "123" }
         };
 
+        var changedFields = new List<string>();
+
+        if (hasKeyChanges)
+        {
+            changedFields.Add(KeyField.Level.ToString());
+        }
+        
         var currEval = new FundingEligibilityEvaluation
         {
             Rules = currPassed
@@ -141,7 +148,7 @@ public class QualificationProcessorTests
             .Returns(currEval);
 
         _changeMock.Setup(s => s.DetectChanges(It.IsAny<QualificationDTO>(), existingVersion))
-            .Returns(new DetectionResults { ChangesPresent = true, KeyFieldsChanged = hasKeyChanges });
+            .Returns(new DetectionResults { ChangesPresent = true, ChangedFields = changedFields});
 
         var expectedStatusId = expectDecisionRequired
             ? ProcessStatusLookup.DecisionRequired.Id
@@ -172,20 +179,28 @@ public class QualificationProcessorTests
             ? ProcessStatusLookup.OnHold.Id
             : ProcessStatusLookup.DecisionRequired.Id;
 
+        var changedFields = new List<string>();
+
+        if (hasKeyChanges)
+        {
+            changedFields.Add(KeyField.Level.ToString());
+        }
+
         var existingVersion = new QualificationVersions
         {
             ProcessStatusId = statusId,
             LifecycleStageId = LifecycleStageLookup.Changed.Id,
             Version = 1,
             QualificationId = Guid.NewGuid(),
-            Qualification = new Qualification { Qan = "123" }
+            Qualification = new Qualification { Qan = "123" },
+            EligibleForFunding = true
         };
 
         _eligibilityMock.Setup(s => s.EvaluateFundingEligibilityRules(It.IsAny<QualificationDTO>()))
             .Returns(new FundingEligibilityEvaluation { Rules = [] });
 
         _changeMock.Setup(s => s.DetectChanges(It.IsAny<QualificationDTO>(), existingVersion))
-            .Returns(new DetectionResults { ChangesPresent = true, KeyFieldsChanged = hasKeyChanges });
+            .Returns(new DetectionResults { ChangesPresent = true, ChangedFields = changedFields});
 
         // Act
         var result = _processor.Process(new QualificationDTO(), existingVersion, existingVersion.QualificationId, Guid.NewGuid(), false, false);
