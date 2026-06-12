@@ -39,6 +39,7 @@ public static class AddServiceRegistrationsExtension
         services.AddScoped<ISchedulerClientService, SchedulerClientService>();
         services.AddScoped<IFundedQualificationWriter, FundedQualificationWriter>();
         services.AddScoped<IQualificationsRepository, QualificationsRepository>();
+        services.AddScoped<IQualificationVersionRepository, QualificationVersionRepository>();
         services.AddScoped<IImportRepository, ImportRepository>();
         services.AddScoped<IQaaSeedCsvBlobReader, QaaSeedCsvBlobReader>();
         services.AddScoped<IQaaQualificationSeedService, QaaQualificationSeedService>();
