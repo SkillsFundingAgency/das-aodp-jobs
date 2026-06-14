@@ -143,7 +143,7 @@ public class RegulatedQaaQualification
             QualificationTitle = qualificationTitle,
             AwardingBody = awardingBody,
             Level = "Level 3",
-            Type = "Access to HE",
+            Type = "Access to Higher Education",
             Status = "Approved",
             StartDate = registrationOpenedOn,
             LastDateForRegistration = registrationClosesOn,
