@@ -3,7 +3,7 @@ namespace SFA.DAS.AODP.Data.Entities;
 public enum QaaImportComparisonOutcome
 {
     New,
-    MaterialChanged,
+    LastDateForRegistrationChanged,
     Discontinued,
     Unchanged
 }

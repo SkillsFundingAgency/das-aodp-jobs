@@ -58,8 +58,7 @@ public class QaaRepositoryTests
         var existing = CreateExistingQualification("Z1234567", latestHistoryId: existingHistoryId);
         context.RegulatedQaaQualification.Add(existing);
         await context.SaveChangesAsync();
-        var originalContentHash = existing.ContentHash;
-
+        
         await repository.ImportQaaQualificationsAsync(
             [CreateResponse("Z1234567", title: "Updated title")],
             _snapshotDate,
@@ -67,7 +66,6 @@ public class QaaRepositoryTests
 
         context.ChangeTracker.Clear();
         var stored = await context.RegulatedQaaQualification.SingleAsync();
-        Assert.Equal(originalContentHash, stored.ContentHash);
         Assert.Equal(existingHistoryId, stored.LatestQaaQualificationHistoryId);
         Assert.Equal(QaaImportComparisonOutcome.Unchanged, stored.LatestImportComparisonOutcome);
         Assert.Empty(await context.RegulatedQaaQualificationHistory.ToListAsync());
@@ -91,32 +89,10 @@ public class QaaRepositoryTests
         var history = await context.RegulatedQaaQualificationHistory.SingleAsync();
 
         Assert.Equal(new DateOnly(2026, 08, 31), stored.LastDateForRegistration);
-        Assert.Equal(QaaImportComparisonOutcome.MaterialChanged, stored.LatestImportComparisonOutcome);
+        Assert.Equal(QaaImportComparisonOutcome.LastDateForRegistrationChanged, stored.LatestImportComparisonOutcome);
         Assert.Equal(QaaLastDateForRegistrationChangeType.Extended, stored.LastDateForRegistrationChangeType);
         Assert.Equal(history.Id, stored.LatestQaaQualificationHistoryId);
         Assert.NotEqual(existingHistoryId, stored.LatestQaaQualificationHistoryId);
-    }
-
-    [Fact]
-    public async Task ImportQaaQualificationsAsync_WhenDiscontinuedStateChanges_CreatesHistory()
-    {
-        var (context, repository) = CreateRepository();
-        context.RegulatedQaaQualification.Add(CreateExistingQualification("Z1234567", latestHistoryId: Guid.NewGuid()));
-        await context.SaveChangesAsync();
-
-        await repository.ImportQaaQualificationsAsync(
-            [CreateResponse("Z1234567", discontinuedDate: new DateOnly(2024, 01, 31))],
-            _snapshotDate,
-            CancellationToken.None);
-
-        context.ChangeTracker.Clear();
-        var stored = await context.RegulatedQaaQualification.SingleAsync();
-        Assert.True(stored.IsDiscontinued);
-        Assert.Equal(new DateOnly(2024, 01, 31), stored.DiscontinuedDate);
-        Assert.Equal(QaaImportComparisonOutcome.Discontinued, stored.LatestImportComparisonOutcome);
-        Assert.Equal(QaaLastDateForRegistrationChangeType.NotChanged, stored.LastDateForRegistrationChangeType);
-        var history = await context.RegulatedQaaQualificationHistory.SingleAsync();
-        Assert.True(history.IsDiscontinued);
     }
 
     [Fact]
@@ -154,7 +130,7 @@ public class QaaRepositoryTests
         context.ChangeTracker.Clear();
         var stored = await context.RegulatedQaaQualification.SingleAsync();
         var history = await context.RegulatedQaaQualificationHistory.SingleAsync();
-        Assert.Equal(QaaImportComparisonOutcome.MaterialChanged, stored.LatestImportComparisonOutcome);
+        Assert.Equal(QaaImportComparisonOutcome.LastDateForRegistrationChanged, stored.LatestImportComparisonOutcome);
         Assert.Equal(QaaLastDateForRegistrationChangeType.BroughtForward, stored.LastDateForRegistrationChangeType);
         Assert.Equal(history.Id, stored.LatestQaaQualificationHistoryId);
         Assert.NotEqual(existingHistoryId, stored.LatestQaaQualificationHistoryId);
@@ -166,7 +142,7 @@ public class QaaRepositoryTests
         var (context, repository) = CreateRepository();
         var latestHistoryId = Guid.NewGuid();
         var existing = CreateExistingQualification("Z1234567", latestHistoryId: latestHistoryId);
-        existing.ApplyImportedQaaData(
+        existing.Update(
             new DateTime(2024, 01, 21),
             "Access to Higher Education Diploma (Science)",
             "Test Awarding Body",
@@ -175,7 +151,7 @@ public class QaaRepositoryTests
             null,
             SectorSubjectArea.Science,
             new DateTime(2024, 01, 21));
-        existing.RecordLatestQaaHistory(latestHistoryId);
+        existing.RecordHistory(latestHistoryId);
         context.RegulatedQaaQualification.Add(existing);
         await context.SaveChangesAsync();
 
@@ -244,7 +220,7 @@ public class QaaRepositoryTests
 
         if (latestHistoryId.HasValue)
         {
-            qualification.RecordLatestQaaHistory(latestHistoryId.Value);
+            qualification.RecordHistory(latestHistoryId.Value);
         }
 
         return qualification;

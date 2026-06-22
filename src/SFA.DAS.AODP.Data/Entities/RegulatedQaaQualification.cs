@@ -1,7 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
-using System.Globalization;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace SFA.DAS.AODP.Data.Entities;
 
@@ -26,7 +23,7 @@ public class RegulatedQaaQualification
     public DateTime DateOfDataSnapshot { get; private set; }
 
     /// <summary>
-    /// The date and time when this QAA qualification was first known to AODP.
+    /// The date and time when this QAA qualification was first known to QFAST.
     /// </summary>
     public DateTime FirstSeenAt { get; private set; }
 
@@ -34,11 +31,6 @@ public class RegulatedQaaQualification
     /// The date and time when material QAA data last changed.
     /// </summary>
     public DateTime LastChangedAt { get; private set; }
-
-    /// <summary>
-    /// The hash of the material QAA data.
-    /// </summary>
-    public string ContentHash { get; private set; } = null!;
 
     /// <summary>
     /// The latest import-to-import comparison result. This is overwritten on each QAA import.
@@ -101,9 +93,19 @@ public class RegulatedQaaQualification
     public DateOnly? DiscontinuedDate { get; private set; }
 
     /// <summary>
-    /// What date is the last date that funding can be approved for, this is set as part of the output file generation.
+    /// The last date that this qualification will be funded to for the Age 16-19 funding stream.
     /// </summary>
-    public DateTime? LastFundingApprovalEndDate { get; private set; }
+    public DateOnly? Age1619FundingApprovalEndDate { get; set; }
+
+    /// <summary>
+    /// The last date that this qualification will be funded to for the Advanced Learner Loans funding stream.
+    /// </summary>
+    public DateOnly? AdvancedLearnerLoansFundingApprovalEndDate { get; set; }
+
+    /// <summary>
+    /// The last date that this qualification will be funded to for the Legal entitlement L2-L3 funding stream.
+    /// </summary>
+    public DateOnly? LegalEntitlementL2L3FundingApprovalEndDate { get; set; }
 
     /// <summary>
     /// The latest material QAA history row for the current imported state.
@@ -131,7 +133,6 @@ public class RegulatedQaaQualification
         DateTime? changedAt = null)
     {
         var isDiscontinued = discontinuedDate.HasValue;
-        var materialQaaState = MaterialQaaState.From(registrationClosesOn, isDiscontinued);
 
         return new RegulatedQaaQualification
         {
@@ -150,9 +151,53 @@ public class RegulatedQaaQualification
             IsDiscontinued = isDiscontinued,
             DiscontinuedDate = discontinuedDate,
             SectorSubjectArea = sectorSubjectArea,
-            ContentHash = materialQaaState.ContentHash,
             LatestImportComparisonOutcome = QaaImportComparisonOutcome.New,
             LastDateForRegistrationChangeType = QaaLastDateForRegistrationChangeType.NotChanged
+        };
+    }
+
+    /// <summary>
+    /// Creates a new entry from existing funded data.
+    /// </summary>
+    /// <returns>The newly created entry.</returns>
+    public static RegulatedQaaQualification CreateFromExisting(
+        DateTime snapshotTakenAt,
+        string aimCode,
+        string qualificationTitle,
+        string awardingBody,
+        DateOnly registrationOpenedOn,
+        DateOnly registrationClosesOn,
+        SectorSubjectArea sectorSubjectArea,
+        DateOnly? discontinuedDate,
+        DateOnly age1619FundingApprovalEndDate,
+        DateOnly advancedLearnerLoansFundingApprovalEndDate,
+        DateOnly legalEntitlementL2L3FundingApprovalEndDate,
+        DateTime? changedAt = null)
+    {
+        var isDiscontinued = discontinuedDate.HasValue;
+
+        return new RegulatedQaaQualification
+        {
+            Id = Guid.NewGuid(),
+            DateOfDataSnapshot = snapshotTakenAt,
+            FirstSeenAt = changedAt ?? snapshotTakenAt,
+            LastChangedAt = changedAt ?? snapshotTakenAt,
+            AimCode = aimCode,
+            QualificationTitle = qualificationTitle,
+            AwardingBody = awardingBody,
+            Level = "Level 3",
+            Type = "Access to Higher Education",
+            Status = "Approved",
+            StartDate = registrationOpenedOn,
+            LastDateForRegistration = registrationClosesOn,
+            IsDiscontinued = isDiscontinued,
+            DiscontinuedDate = discontinuedDate,
+            SectorSubjectArea = sectorSubjectArea,
+            LatestImportComparisonOutcome = QaaImportComparisonOutcome.Unchanged,
+            LastDateForRegistrationChangeType = QaaLastDateForRegistrationChangeType.NotChanged,
+            Age1619FundingApprovalEndDate = age1619FundingApprovalEndDate,
+            AdvancedLearnerLoansFundingApprovalEndDate = advancedLearnerLoansFundingApprovalEndDate,
+            LegalEntitlementL2L3FundingApprovalEndDate = legalEntitlementL2L3FundingApprovalEndDate
         };
     }
 
@@ -160,19 +205,17 @@ public class RegulatedQaaQualification
     /// Determines whether the proposed import contains a material QAA change.
     /// </summary>
     /// <param name="lastDateForRegistration">The proposed last date for registration.</param>
-    /// <param name="isDiscontinued">Whether the proposed qualification is discontinued.</param>
     /// <returns>True if the proposed material data differs from the current material data.</returns>
-    public bool HasMaterialQaaChange(DateOnly lastDateForRegistration, bool isDiscontinued)
+    public bool AnyChanges(DateOnly lastDateForRegistration)
     {
-        var proposedQaaState = MaterialQaaState.From(lastDateForRegistration, isDiscontinued);
-
-        return MaterialQaaStateHasChanged(proposedQaaState);
+        _ = HasLastDateForRegistrationChanged(lastDateForRegistration, out var changed) is QaaLastDateForRegistrationChangeType.BroughtForward or QaaLastDateForRegistrationChangeType.Extended;
+        return changed;
     }
 
     /// <summary>
-    /// Applies the latest imported QAA data.
+    /// Updates the qualification with the latest Qaa data.
     /// </summary>
-    public void ApplyImportedQaaData(
+    public bool Update(
         DateTime snapshotTakenAt,
         string latestQualificationTitle,
         string latestAwardingBody,
@@ -184,14 +227,10 @@ public class RegulatedQaaQualification
     {
         var wasDiscontinued = IsDiscontinued;
         var qaaHasDiscontinuedQualification = discontinuedDate.HasValue;
-        var importedQaaState = MaterialQaaState.From(
-            registrationClosesOn,
-            qaaHasDiscontinuedQualification);
-        var hasMaterialChange = MaterialQaaStateHasChanged(importedQaaState);
-        var lastDateForRegistrationChangeType = WorkOutLastDateForRegistrationChangeType(registrationClosesOn);
+        var lastDateForRegistrationChangeType = HasLastDateForRegistrationChanged(registrationClosesOn, out var changed);
         var latestImportComparisonOutcome = !wasDiscontinued && qaaHasDiscontinuedQualification
             ? QaaImportComparisonOutcome.Discontinued
-            : QaaImportComparisonOutcome.MaterialChanged;
+            : QaaImportComparisonOutcome.LastDateForRegistrationChanged;
 
         RememberLatestQaaDetails(
             snapshotTakenAt,
@@ -202,18 +241,19 @@ public class RegulatedQaaQualification
             discontinuedDate,
             sectorSubjectArea);
 
-        if (!hasMaterialChange)
+        if (!changed)
         {
             LatestImportComparisonOutcome = QaaImportComparisonOutcome.Unchanged;
             LastDateForRegistrationChangeType = QaaLastDateForRegistrationChangeType.NotChanged;
-            return;
+            return changed;
         }
 
         RecordMaterialQaaChange(
-            importedQaaState,
             changedAt,
             latestImportComparisonOutcome,
             lastDateForRegistrationChangeType);
+
+        return changed;
     }
 
     /// <summary>
@@ -226,36 +266,11 @@ public class RegulatedQaaQualification
     }
 
     /// <summary>
-    /// Sets the last date that funding can be approved for.
-    /// </summary>
-    /// <param name="lastFundingApprovalEndDate">The last funding approval end date.</param>
-    public void SetLastFundingApprovalEndDate(DateTime? lastFundingApprovalEndDate)
-    {
-        LastFundingApprovalEndDate = lastFundingApprovalEndDate;
-    }
-
-    /// <summary>
     /// Links the current material state to its history row.
     /// </summary>
-    public void RecordLatestQaaHistory(Guid historyId)
+    public void RecordHistory(Guid historyId)
     {
         LatestQaaQualificationHistoryId = historyId;
-    }
-
-    private static string GenerateContentHash(DateOnly lastDateForRegistration, bool isDiscontinued)
-    {
-        var content = string.Join(
-            "|",
-            lastDateForRegistration.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-            isDiscontinued);
-
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(content));
-        return Convert.ToHexString(bytes);
-    }
-
-    private bool MaterialQaaStateHasChanged(MaterialQaaState proposedQaaState)
-    {
-        return ContentHash != proposedQaaState.ContentHash;
     }
 
     private void RememberLatestQaaDetails(
@@ -278,36 +293,30 @@ public class RegulatedQaaQualification
     }
 
     private void RecordMaterialQaaChange(
-        MaterialQaaState importedQaaState,
         DateTime changedAt,
         QaaImportComparisonOutcome latestImportComparisonOutcome,
         QaaLastDateForRegistrationChangeType lastDateForRegistrationChangeType)
     {
         LastChangedAt = changedAt;
-        ContentHash = importedQaaState.ContentHash;
         LatestImportComparisonOutcome = latestImportComparisonOutcome;
         LastDateForRegistrationChangeType = lastDateForRegistrationChangeType;
     }
 
-    private QaaLastDateForRegistrationChangeType WorkOutLastDateForRegistrationChangeType(DateOnly proposedLastDateForRegistration)
+    private QaaLastDateForRegistrationChangeType HasLastDateForRegistrationChanged(DateOnly proposedLastDateForRegistration, out bool changed)
     {
+        changed = false;
         if (proposedLastDateForRegistration > LastDateForRegistration)
         {
+            changed = true;
             return QaaLastDateForRegistrationChangeType.Extended;
         }
 
-        return proposedLastDateForRegistration < LastDateForRegistration
-            ? QaaLastDateForRegistrationChangeType.BroughtForward
-            : QaaLastDateForRegistrationChangeType.NotChanged;
-    }
-
-    private sealed record MaterialQaaState(DateOnly RegistrationClosesOn, bool IsDiscontinued)
-    {
-        public string ContentHash => GenerateContentHash(RegistrationClosesOn, IsDiscontinued);
-
-        public static MaterialQaaState From(DateOnly registrationClosesOn, bool isDiscontinued)
+        if (proposedLastDateForRegistration < LastDateForRegistration)
         {
-            return new MaterialQaaState(registrationClosesOn, isDiscontinued);
+            changed = true;
+            return QaaLastDateForRegistrationChangeType.BroughtForward;
         }
+
+        return QaaLastDateForRegistrationChangeType.NotChanged;
     }
 }

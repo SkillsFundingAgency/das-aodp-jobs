@@ -21,11 +21,11 @@ public class QaaRepository(IDbContextFactory<ApplicationDbContext> dbContextFact
     {
         await using var context = await _applicationDbContext.CreateDbContextAsync(cancellationToken);
 
-        var currentQualifications = await ReadCurrentQualificationsByAimCodeAsync(context, cancellationToken);
+        var currentQualifications = await context.RegulatedQaaQualification.ToDictionaryAsync(qualification => qualification.AimCode, cancellationToken);
 
         foreach (var proposedQaaQualification in proposedQualifications.Select(ReadQaaQualification))
         {
-            await AddOrRefreshCurrentQaaQualificationAsync(
+            await CreateOrUpdateQaaQualificationAsync(
                 context,
                 currentQualifications,
                 proposedQaaQualification,
@@ -36,14 +36,6 @@ public class QaaRepository(IDbContextFactory<ApplicationDbContext> dbContextFact
         await context.SaveChangesAsync(cancellationToken);
 
         return proposedQualifications.Count;
-    }
-
-    private static async Task<Dictionary<string, RegulatedQaaQualification>> ReadCurrentQualificationsByAimCodeAsync(
-        ApplicationDbContext context,
-        CancellationToken cancellationToken)
-    {
-        return await context.RegulatedQaaQualification
-            .ToDictionaryAsync(qualification => qualification.AimCode, cancellationToken);
     }
 
     private static ProposedQaaQualification ReadQaaQualification(QaaQualificationResponse qualification)
@@ -58,7 +50,7 @@ public class QaaRepository(IDbContextFactory<ApplicationDbContext> dbContextFact
             SectorSubjectArea.FromTiers(qualification.SsaTier1, qualification.SsaTier2));
     }
 
-    private static async Task AddOrRefreshCurrentQaaQualificationAsync(
+    private static async Task CreateOrUpdateQaaQualificationAsync(
         ApplicationDbContext context,
         IDictionary<string, RegulatedQaaQualification> currentQualifications,
         ProposedQaaQualification proposedQaaQualification,
@@ -67,29 +59,32 @@ public class QaaRepository(IDbContextFactory<ApplicationDbContext> dbContextFact
     {
         if (!currentQualifications.TryGetValue(proposedQaaQualification.AimCode, out var currentQualification))
         {
-            var newQualification = CreateCurrentQaaQualification(
+            var newQualification = CreateQaaQualification(
                 proposedQaaQualification,
                 snapshotTakenAt);
+
             var history = RegulatedQaaQualificationHistory.Create(
                 newQualification,
                 QaaLastDateForRegistrationChangeType.NotChanged);
-            newQualification.RecordLatestQaaHistory(history.Id);
+
+            newQualification.RecordHistory(history.Id);
 
             await context.RegulatedQaaQualification.AddAsync(newQualification, cancellationToken);
             await context.RegulatedQaaQualificationHistory.AddAsync(history, cancellationToken);
+
             currentQualifications.Add(proposedQaaQualification.AimCode, newQualification);
 
             return;
         }
 
-        RefreshCurrentQaaQualification(
+        UpdateQaaQualification(
             context,
             currentQualification,
             proposedQaaQualification,
             snapshotTakenAt);
     }
 
-    private static RegulatedQaaQualification CreateCurrentQaaQualification(
+    private static RegulatedQaaQualification CreateQaaQualification(
         ProposedQaaQualification proposedQaaQualification,
         DateTime snapshotTakenAt)
     {
@@ -105,7 +100,7 @@ public class QaaRepository(IDbContextFactory<ApplicationDbContext> dbContextFact
             snapshotTakenAt);
     }
 
-    private static void RefreshCurrentQaaQualification(
+    private static void UpdateQaaQualification(
         ApplicationDbContext context,
         RegulatedQaaQualification currentQualification,
         ProposedQaaQualification proposedQaaQualification,
@@ -113,11 +108,7 @@ public class QaaRepository(IDbContextFactory<ApplicationDbContext> dbContextFact
     {
         EnsureCurrentQualificationHasHistory(context, currentQualification);
 
-        var hasMaterialChange = currentQualification.HasMaterialQaaChange(
-            proposedQaaQualification.RegistrationClosesOn,
-            proposedQaaQualification.HasBeenDiscontinuedByQaa);
-
-        currentQualification.ApplyImportedQaaData(
+        var changed = currentQualification.Update(
             snapshotTakenAt,
             proposedQaaQualification.Title,
             proposedQaaQualification.AwardingBodyName,
@@ -127,12 +118,13 @@ public class QaaRepository(IDbContextFactory<ApplicationDbContext> dbContextFact
             proposedQaaQualification.SectorSubjectArea,
             snapshotTakenAt);
 
-        if (hasMaterialChange)
+        if (changed)
         {
             var history = RegulatedQaaQualificationHistory.Create(
                 currentQualification,
                 currentQualification.LastDateForRegistrationChangeType);
-            currentQualification.RecordLatestQaaHistory(history.Id);
+
+            currentQualification.RecordHistory(history.Id);
             context.RegulatedQaaQualificationHistory.Add(history);
         }
     }
@@ -149,7 +141,9 @@ public class QaaRepository(IDbContextFactory<ApplicationDbContext> dbContextFact
         var history = RegulatedQaaQualificationHistory.Create(
             currentQualification,
             currentQualification.LastDateForRegistrationChangeType);
-        currentQualification.RecordLatestQaaHistory(history.Id);
+        
+        currentQualification.RecordHistory(history.Id);
+
         context.RegulatedQaaQualificationHistory.Add(history);
     }
 
