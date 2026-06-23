@@ -2,30 +2,25 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
-using SFA.DAS.AODP.Common.Enum;
-using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Functions;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Infrastructure.Interfaces;
-using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Jobs.Services;
 using SFA.DAS.AODP.Jobs.Services.CSV;
 using SFA.DAS.AODP.Jobs.Test.Mocks;
 using SFA.DAS.AODP.Models.Config;
 using SFA.DAS.AODP.Models.Qualification;
+using static SFA.DAS.AODP.Infrastructure.Repositories.QualificationVersionRepository;
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
 {
     public class FundedQualificationsDataFunctionTests
     {
         private readonly Mock<ILogger<FundedQualificationsDataFunction>> _loggerMock;
-        private readonly Mock<IApplicationDbContext> _applicationDbContextMock;
         private readonly Mock<ICsvReaderService> _csvReaderServiceMock;
         private readonly Mock<IJobConfigurationService> _jobConfigurationService;
         private readonly Mock<IFundedQualificationWriter> _fundedQualificationWriter;
         private readonly Mock<IQualificationsRepository> _qualificationsRepository;
+        private readonly Mock<IQualificationVersionRepository> _qualificationVersionRepository;
         private readonly FunctionContext _functionContext;
         private readonly FundedQualificationsDataFunction _function;
         private readonly AodpJobsConfiguration _config;
@@ -66,6 +61,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
             _jobConfigurationService.Setup(s => s.GetLastJobRunAsync(JobNames.FundedQualifications.ToString())).ReturnsAsync(_jobRunControl);
             _fundedQualificationWriter = new Mock<IFundedQualificationWriter>();
             _qualificationsRepository = new Mock<IQualificationsRepository>();
+            _qualificationVersionRepository = new Mock<IQualificationVersionRepository>();
 
             _function = new FundedQualificationsDataFunction(
                 _loggerMock.Object,               
@@ -73,18 +69,15 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
                 _config,
                 _jobConfigurationService.Object,
                 _fundedQualificationWriter.Object,
-                _qualificationsRepository.Object);
+                _qualificationsRepository.Object,
+                _qualificationVersionRepository.Object);
         }
 
         [Fact]
         public async Task Run_ShouldReturnOk()
         {
             // Arrange
-            var organisations = _fixture.Build<AwardingOrganisation>()
-                .CreateMany(5)
-                .ToList();
-
-            var qualifications = _fixture.Build<Qualification>()
+            var qualificationLookups = _fixture.Build<QualificationLookupItem>()
                 .CreateMany(20)
                 .ToList();
 
@@ -97,14 +90,13 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
                 .ToList();
 
             _csvReaderServiceMock                                                                                             
-                .Setup(service => service.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(_config.FundedQualificationsImportUrl, qualifications, organisations, It.IsAny<ILogger>()))
+                .Setup(service => service.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(_config.FundedQualificationsImportUrl, qualificationLookups, It.IsAny<ILogger>()))
                 .ReturnsAsync(fundedImport);
             _csvReaderServiceMock
-                .Setup(service => service.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(_config.ArchivedFundedQualificationsImportUrl, qualifications, organisations, It.IsAny<ILogger>()))
+                .Setup(service => service.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(_config.ArchivedFundedQualificationsImportUrl, qualificationLookups, It.IsAny<ILogger>()))
                 .ReturnsAsync(archivedImport);
 
-            _qualificationsRepository.Setup(s => s.GetAwardingOrganisationsAsync()).ReturnsAsync(organisations).Verifiable();
-            _qualificationsRepository.Setup(s => s.GetQualificationsAsync()).ReturnsAsync(qualifications).Verifiable();
+            _qualificationVersionRepository.Setup(s => s.GetLatestQualificationVersionSnapshotsAsync()).ReturnsAsync(qualificationLookups).Verifiable();
             _qualificationsRepository.Setup(s => s.TruncateFundingTables()).Verifiable(Times.Once);
             _fundedQualificationWriter.Setup(s => s.WriteQualifications(fundedImport)).ReturnsAsync(true).Verifiable();
             _fundedQualificationWriter.Setup(s => s.WriteQualifications(archivedImport)).ReturnsAsync(true).Verifiable();
@@ -124,15 +116,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
         [Fact]
         public async Task Run_ShouldReturnNotFound_WhenCsvFileIsNotFound()
         {
-            var organisations = _fixture.Build<AwardingOrganisation>()
-                .CreateMany(5)
-                .ToList();
-
-            var qualifications = _fixture.Build<Qualification>()
-                .CreateMany(20)
-                .ToList();
-
-            var fundedImport = _fixture.Build<FundedQualificationDTO>()
+            var qualificationLookups = _fixture.Build<QualificationLookupItem>()
                 .CreateMany(20)
                 .ToList();
 
@@ -140,8 +124,12 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
                 .CreateMany(10)
                 .ToList();
 
-            _qualificationsRepository.Setup(s => s.GetAwardingOrganisationsAsync()).ReturnsAsync(organisations).Verifiable();
-            _qualificationsRepository.Setup(s => s.GetQualificationsAsync()).ReturnsAsync(qualifications).Verifiable();
+            var fundedImport = _fixture.Build<FundedQualificationDTO>()
+                .CreateMany(20)
+                .ToList();
+
+
+            _qualificationVersionRepository.Setup(s => s.GetLatestQualificationVersionSnapshotsAsync()).ReturnsAsync(qualificationLookups).Verifiable();
             _qualificationsRepository.Setup(s => s.TruncateFundingTables()).Verifiable(Times.Once);
             _fundedQualificationWriter.Setup(s => s.WriteQualifications(fundedImport)).ReturnsAsync(true).Verifiable();
             _fundedQualificationWriter.Setup(s => s.WriteQualifications(archivedImport)).ReturnsAsync(true).Verifiable();
@@ -149,7 +137,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
 
             // Arrange
             _csvReaderServiceMock
-                .Setup(service => service.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(_config.FundedQualificationsImportUrl, qualifications, organisations, It.IsAny<ILogger>()))
+                .Setup(service => service.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(_config.FundedQualificationsImportUrl, qualificationLookups, It.IsAny<ILogger>()))
                 .ReturnsAsync(new List<FundedQualificationDTO>());
 
             var httpRequestData = new MockHttpRequestData(_functionContext);          
@@ -164,11 +152,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
         [Fact]
         public async Task Run_ShouldStatusCode_WhenException()
         {
-            var organisations = _fixture.Build<AwardingOrganisation>()
-                .CreateMany(5)
-                .ToList();
-
-            var qualifications = _fixture.Build<Qualification>()
+            var qualificationLookups = _fixture.Build<QualificationLookupItem>()
                 .CreateMany(20)
                 .ToList();
 
@@ -180,8 +164,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
                 .CreateMany(10)
                 .ToList();
 
-            _qualificationsRepository.Setup(s => s.GetAwardingOrganisationsAsync()).ReturnsAsync(organisations).Verifiable();
-            _qualificationsRepository.Setup(s => s.GetQualificationsAsync()).ReturnsAsync(qualifications).Verifiable();
+            _qualificationVersionRepository.Setup(s => s.GetLatestQualificationVersionSnapshotsAsync()).ReturnsAsync(qualificationLookups).Verifiable();
             _qualificationsRepository.Setup(s => s.TruncateFundingTables()).Verifiable(Times.Once);
             _fundedQualificationWriter.Setup(s => s.WriteQualifications(fundedImport)).ReturnsAsync(true).Verifiable();
             _fundedQualificationWriter.Setup(s => s.WriteQualifications(archivedImport)).ReturnsAsync(true).Verifiable();
@@ -189,7 +172,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
 
             // Arrange
             _csvReaderServiceMock
-                .Setup(service => service.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(_config.FundedQualificationsImportUrl, qualifications, organisations, It.IsAny<ILogger>()));
+                .Setup(service => service.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(_config.FundedQualificationsImportUrl, qualificationLookups, It.IsAny<ILogger>()));
 
             var httpRequestData = new MockHttpRequestData(_functionContext);
 
