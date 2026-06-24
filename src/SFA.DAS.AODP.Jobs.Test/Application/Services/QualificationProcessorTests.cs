@@ -139,9 +139,7 @@ public class QualificationProcessorTests
             AdditionalKeyChangesReceivedFlag = 0,
             AwardingOrganisationId = orgId,
 
-            AssessmentMethods = dto.AssessmentMethods == null
-                ? null
-                : string.Join(",", dto.AssessmentMethods),
+            AssessmentMethods = "Exam, Coursework",
 
             Status = dto.Status,
             Type = dto.Type,
