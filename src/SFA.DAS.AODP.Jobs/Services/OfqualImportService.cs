@@ -150,6 +150,14 @@ namespace SFA.DAS.AODP.Jobs.Services
                     .ToListAsync())
                     .ToDictionary(a => a.Qan, a => new { Id = a.Id, Title = a.Title });
 
+                var latestQualificationVersion = await _applicationDbContext.QualificationVersions
+                    .AsNoTracking()
+                    .Include(qv => qv.Qualification)
+                    .Include(qv => qv.Organisation)
+                    .Include(qv => qv.VersionFieldChanges)
+                    .OrderByDescending(qv => qv.Version)
+                    .ToListAsync();
+
                 var activeApplicationsList = _applicationDbContext.Applications
                     .Where(a => ActiveApplicationStatuses.Contains(a.Status))
                     .Select(a => a.QualificationNumber);
@@ -284,20 +292,11 @@ namespace SFA.DAS.AODP.Jobs.Services
                         bool hasApplicationsInProgress = await activeApplicationsList.ContainsAsync(importRecord.QualificationNumberNoObliques) ||
                             await activeApplicationsList.ContainsAsync(importRecord.QualificationNumber);
                         bool hasFundingWhichHasNotEnded = await notEndedQualificationIds.ContainsAsync(qualificationId);
-
-                        var latestQualificationVersion = await _applicationDbContext.QualificationVersions
-                            .Include(qv => qv.Qualification)
-                            .Include(qv => qv.Organisation)
-                            .Include(qv => qv.ProcessStatus)
-                            .Include(qv => qv.LifecycleStage)
-                            .Include(qv => qv.VersionFieldChanges)
-                            .AsNoTracking()
-                            .OrderByDescending(qv => qv.Version)
-                            .FirstOrDefaultAsync(qv => qv.QualificationId == qualificationId);
+                        var currentQualificationVersion = latestQualificationVersion.FirstOrDefault(o => o.QualificationId == qualificationId);
 
                         var result = _qualificationProcessor.Process(
                             importRecord,
-                            latestQualificationVersion,
+                            currentQualificationVersion,
                             qualificationId,
                             organisationId,
                             hasApplicationsInProgress, 
