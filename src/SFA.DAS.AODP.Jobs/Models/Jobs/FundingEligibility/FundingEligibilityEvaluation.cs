@@ -15,7 +15,7 @@
                 .SelectMany(r => r.Fields)
                 .Distinct(StringComparer.OrdinalIgnoreCase);
 
-        public string GetFailedFieldsCsv() =>
-            string.Join(", ", GetFailedFields());
+        public string? GetFailedFieldsCsv() 
+            => GetFailedFields().Any() ? string.Join(", ", GetFailedFields()) : null;
     }
 }

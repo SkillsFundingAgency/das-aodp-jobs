@@ -24,12 +24,90 @@ public class QualificationProcessorTests
 
     [Theory]
     [InlineData(true, false, true)]   // Eligible -> Decision Required
-    [InlineData(false, true, true)]   // Ineligible + Conflict (Active Apps) -> Decision Required
+    [InlineData(false, true, true)]   // Ineligible + Conflict -> Decision Required
     [InlineData(false, false, false)] // Ineligible + No Conflict -> No Action Required
     public void Process_NewRecord_Paths(bool isEligible, bool hasActiveApps, bool expectDecisionRequired)
     {
         // Arrange
-        var dto = new QualificationDTO { QualificationNumberNoObliques = "12345", Title = "New Qual" };
+        var qualVersionId = Guid.NewGuid();
+        var dto = new QualificationDTO
+        {
+            Id = qualVersionId,
+            QualificationNumber = "QUAL/1234",
+            QualificationNumberNoObliques = "12345",
+            Title = "New Qual",
+            Status = "Active",
+            OrganisationName = "Test Org",
+            OrganisationAcronym = "TO",
+            OrganisationRecognitionNumber = "ORG123",
+            Type = "TypeA",
+            Ssa = "SSA1",
+            Level = "3",
+            SubLevel = "A",
+            EqfLevel = "4",
+
+            GradingType = "Pass/Fail",
+            GradingScale = "A-F",
+
+            TotalCredits = 120,
+            Tqt = 600,
+            Glh = 300,
+            MinimumGlh = 200,
+            MaximumGlh = 400,
+
+            RegulationStartDate = new DateTime(2020, 1, 1),
+            OperationalStartDate = new DateTime(2020, 6, 1),
+            OperationalEndDate = new DateTime(2025, 6, 1),
+            CertificationEndDate = new DateTime(2026, 6, 1),
+            ReviewDate = new DateTime(2024, 1, 1),
+
+            OfferedInEngland = true,
+            OfferedInNorthernIreland = true,
+            OfferedInternationally = true,
+
+            Specialism = "Engineering",
+            Pathways = "Pathway1",
+
+            AssessmentMethods = new[] { "Exam", "Coursework" },
+
+            ApprovedForDelfundedProgramme = "Yes",
+            LinkToSpecification = "http://spec-link",
+
+            ApprenticeshipStandardReferenceNumber = "AST123",
+            ApprenticeshipStandardTitle = "Apprenticeship Title",
+
+            RegulatedByNorthernIreland = true,
+            NiDiscountCode = "NIDC123",
+
+            GceSizeEquivalence = "1 A-Level",
+            GcseSizeEquivalence = "3 GCSEs",
+            EntitlementFrameworkDesignation = "Designation1",
+
+            LastUpdatedDate = new DateTime(2024, 5, 1),
+            UiLastUpdatedDate = new DateTime(2024, 5, 2),
+            InsertedDate = new DateTime(2024, 1, 1),
+
+            Version = 1,
+            AppearsOnPublicRegister = true,
+
+            OrganisationId = 999,
+            LevelId = 3,
+            TypeId = 10,
+            SsaId = 5,
+            GradingTypeId = 2,
+            GradingScaleId = 3,
+
+            PreSixteen = false,
+            SixteenToEighteen = true,
+            EighteenPlus = true,
+            NineteenPlus = true,
+
+            ImportStatus = "Imported",
+            ChangedFields = "All",
+
+            IntentionToSeekFundingInEngland = true
+        };
+
         var qualId = Guid.NewGuid();
         var orgId = Guid.NewGuid();
 
@@ -42,11 +120,98 @@ public class QualificationProcessorTests
             {
                 Rules = isEligible
                     ? []
-                    : [new FundingEligibilityRuleResult("none", false, [])]
+                    : [new FundingEligibilityRuleResult("rule", false, [])]
             });
 
         // Act
         var result = _processor.Process(dto, null, qualId, orgId, hasActiveApps, false);
+
+        // Build expected AFTER Act so we can use result values where needed
+        var expected = new QualificationVersions
+        {
+            Id = qualVersionId,
+            QualificationId = qualId,
+            ProcessStatusId = expectedStatusId,
+            LifecycleStageId = expectDecisionRequired
+                ? LifecycleStageLookup.New.Id
+                : LifecycleStageLookup.Completed.Id,
+
+            AdditionalKeyChangesReceivedFlag = 0,
+            AwardingOrganisationId = orgId,
+
+            AssessmentMethods = dto.AssessmentMethods == null
+                ? null
+                : string.Join(",", dto.AssessmentMethods),
+
+            Status = dto.Status,
+            Type = dto.Type,
+            Ssa = dto.Ssa,
+            Level = dto.Level,
+            SubLevel = dto.SubLevel,
+            EqfLevel = dto.EqfLevel,
+
+            GradingType = dto.GradingType,
+            GradingScale = dto.GradingScale,
+
+            TotalCredits = dto.TotalCredits,
+            Tqt = dto.Tqt,
+            Glh = dto.Glh,
+            MinimumGlh = dto.MinimumGlh,
+            MaximumGlh = dto.MaximumGlh,
+
+            RegulationStartDate = dto.RegulationStartDate,
+            OperationalStartDate = dto.OperationalStartDate,
+            OperationalEndDate = dto.OperationalEndDate,
+            CertificationEndDate = dto.CertificationEndDate,
+            ReviewDate = dto.ReviewDate,
+
+            OfferedInEngland = dto.OfferedInEngland,
+            OfferedInNi = dto.OfferedInNorthernIreland,
+            OfferedInternationally = dto.OfferedInternationally,
+
+            Specialism = dto.Specialism,
+            Pathways = dto.Pathways,
+
+            ApprovedForDelFundedProgramme = dto.ApprovedForDelfundedProgramme,
+            LinkToSpecification = dto.LinkToSpecification,
+
+            ApprenticeshipStandardReferenceNumber = dto.ApprenticeshipStandardReferenceNumber,
+            ApprenticeshipStandardTitle = dto.ApprenticeshipStandardTitle,
+
+            RegulatedByNorthernIreland = dto.RegulatedByNorthernIreland,
+            NiDiscountCode = dto.NiDiscountCode,
+
+            GceSizeEquivelence = dto.GceSizeEquivalence,
+            GcseSizeEquivelence = dto.GcseSizeEquivalence,
+            EntitlementFrameworkDesign = dto.EntitlementFrameworkDesignation,
+
+            LastUpdatedDate = dto.LastUpdatedDate,
+            UiLastUpdatedDate = dto.UiLastUpdatedDate,
+            InsertedDate = dto.InsertedDate,
+
+            Version = 1,
+            AppearsOnPublicRegister = dto.AppearsOnPublicRegister,
+
+            LevelId = dto.LevelId,
+            TypeId = dto.TypeId,
+            SsaId = dto.SsaId,
+            GradingTypeId = dto.GradingTypeId,
+            GradingScaleId = dto.GradingScaleId,
+
+            PreSixteen = dto.PreSixteen,
+            SixteenToEighteen = dto.SixteenToEighteen,
+            EighteenPlus = dto.EighteenPlus,
+            NineteenPlus = dto.NineteenPlus,
+
+            ImportStatus = dto.ImportStatus,
+
+            InsertedTimestamp = result.NewVersion.InsertedTimestamp,
+
+            EligibleForFunding = isEligible,
+            Name = dto.Title,
+            IntentionToSeekFundingInEngland = dto.IntentionToSeekFundingInEngland,
+            VersionFieldChanges = result.NewVersion.VersionFieldChanges
+        };
 
         // Assert
         Assert.NotNull(result);
@@ -54,11 +219,9 @@ public class QualificationProcessorTests
         Assert.Equal(qualId, result.NewVersion.QualificationId);
         Assert.Equal(expectedStatusId, result.NewVersion.ProcessStatusId);
 
-        var expectedStage = expectDecisionRequired
-            ? LifecycleStageLookup.New.Id
-            : LifecycleStageLookup.Completed.Id;
-
-        result.NewVersion.LifecycleStageId.ShouldBe(expectedStage);
+        result.NewVersion.Id = expected.Id;
+        result.NewVersion.VersionFieldChangesId = expected.VersionFieldChangesId;
+        result.NewVersion.ShouldBeEquivalentTo(expected);
     }
 
     [Theory]

@@ -1200,9 +1200,6 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
 
         private QualificationDTO CreateImportRecord(int organisationId, string qan, string qualificationName)
         {
-            var doc = JsonDocument.Parse("null");
-            var root = doc.RootElement;
-
             var qualificationDTO = _fixture.Build<QualificationDTO>()      
                 .With(w => w.OrganisationId, organisationId)
                 .With(w => w.Title, qualificationName)
@@ -1210,7 +1207,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
                 .With(w => w.OfferedInEngland, true)
                 .With(w => w.Glh, 5)
                 .With(w => w.Tqt, 10)
-                .With(w => w.AssessmentMethods, root)
+                .With(w => w.AssessmentMethods, [])
                 .Create();
 
             return qualificationDTO;

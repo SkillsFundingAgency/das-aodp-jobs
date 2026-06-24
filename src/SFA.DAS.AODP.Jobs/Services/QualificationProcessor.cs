@@ -27,7 +27,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             VersionFieldChanges VersionFieldChange,
             bool EligibleForFunding,
             int? Version,
-            string IneligibleForFundingFieldNames);
+            string? IneligibleForFundingFieldNames);
         public record QualificationProcessorResult(
             QualificationVersions NewVersion,
             QualificationDiscussionHistory Discussion,
@@ -149,7 +149,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                     StageId: stageId,
                     ActionId: actionId,
                     BaseNote: requiresRereview ? "decision required - changed qualification" : "no action required - changed qualification",
-                    IncludeFieldChanges: requiresRereview,
+                    IncludeFieldChanges: true,
                     IncludeEligibilityReasons: false,
                     ReviewRequired: requiresRereview,
                     HasFundingWhichHasNotEnded: context.HasFundingWhichHasNotEnded);
@@ -320,6 +320,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                 AdditionalKeyChangesReceivedFlag = 0,
                 LifecycleStageId = request.LifecycleStageId,
                 AwardingOrganisationId = request.OrganisationId,
+                AssessmentMethods = qualificationData.AssessmentMethods == null ? null : string.Join(", ", qualificationData.AssessmentMethods),
                 Status = qualificationData.Status,
                 Type = qualificationData.Type,
                 Ssa = qualificationData.Ssa,
