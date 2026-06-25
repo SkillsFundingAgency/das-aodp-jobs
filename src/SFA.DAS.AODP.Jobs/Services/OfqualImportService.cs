@@ -155,7 +155,6 @@ namespace SFA.DAS.AODP.Jobs.Services
                     .Include(qv => qv.Qualification)
                     .Include(qv => qv.Organisation)
                     .Include(qv => qv.VersionFieldChanges)
-                    .OrderByDescending(qv => qv.Version)
                     .ToListAsync();
 
                 var activeApplicationsList = _applicationDbContext.Applications
@@ -292,7 +291,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                         bool hasApplicationsInProgress = await activeApplicationsList.ContainsAsync(importRecord.QualificationNumberNoObliques) ||
                             await activeApplicationsList.ContainsAsync(importRecord.QualificationNumber);
                         bool hasFundingWhichHasNotEnded = await notEndedQualificationIds.ContainsAsync(qualificationId);
-                        var currentQualificationVersion = latestQualificationVersion.FirstOrDefault(o => o.QualificationId == qualificationId);
+                        var currentQualificationVersion = latestQualificationVersion.Where(o => o.QualificationId == qualificationId).OrderByDescending(x => x.Version).FirstOrDefault();
 
                         var result = _qualificationProcessor.Process(
                             importRecord,
