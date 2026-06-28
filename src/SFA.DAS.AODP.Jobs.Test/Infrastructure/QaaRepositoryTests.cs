@@ -24,7 +24,7 @@ public class QaaRepositoryTests
         var stored = await context.RegulatedQaaQualification.SingleAsync();
         Assert.Equal(existing.Id, stored.Id);
         Assert.Equal("Updated title", stored.QualificationTitle);
-        Assert.Equal(QaaImportComparisonOutcome.Unchanged, stored.LatestImportComparisonOutcome);
+        Assert.Equal(QaaImportComparisonOutcome.NotChanged, stored.LatestImportComparisonOutcome);
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public class QaaRepositoryTests
         context.ChangeTracker.Clear();
         var stored = await context.RegulatedQaaQualification.SingleAsync();
         Assert.Equal(existingHistoryId, stored.LatestQaaQualificationHistoryId);
-        Assert.Equal(QaaImportComparisonOutcome.Unchanged, stored.LatestImportComparisonOutcome);
+        Assert.Equal(QaaImportComparisonOutcome.NotChanged, stored.LatestImportComparisonOutcome);
         Assert.Empty(await context.RegulatedQaaQualificationHistory.ToListAsync());
     }
 
@@ -162,7 +162,7 @@ public class QaaRepositoryTests
 
         context.ChangeTracker.Clear();
         var stored = await context.RegulatedQaaQualification.SingleAsync();
-        Assert.Equal(QaaImportComparisonOutcome.Unchanged, stored.LatestImportComparisonOutcome);
+        Assert.Equal(QaaImportComparisonOutcome.NotChanged, stored.LatestImportComparisonOutcome);
         Assert.Equal(latestHistoryId, stored.LatestQaaQualificationHistoryId);
         Assert.Empty(await context.RegulatedQaaQualificationHistory.ToListAsync());
     }
@@ -184,7 +184,7 @@ public class QaaRepositoryTests
         var stored = await context.RegulatedQaaQualification.SingleAsync();
         var history = await context.RegulatedQaaQualificationHistory.SingleAsync();
 
-        Assert.Equal(QaaImportComparisonOutcome.Unchanged, stored.LatestImportComparisonOutcome);
+        Assert.Equal(QaaImportComparisonOutcome.NotChanged, stored.LatestImportComparisonOutcome);
         Assert.Equal(history.Id, stored.LatestQaaQualificationHistoryId);
         Assert.Equal(stored.Id, history.QaaQualificationId);
         Assert.Equal(QaaLastDateForRegistrationChangeType.NotChanged, history.LastDateForRegistrationChangeType);

@@ -21,15 +21,20 @@ public class QaaQualificationSeedService(
 
         var qualificationCache = await qualificationVersionRepository.GetLatestQualificationVersionSnapshotsAsync();
 
-        var seedRecords = await csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, QaaFundedQualificationsImportClassMap>("http://127.0.0.1:10000/devstoreaccount1/funded-qualifications-import/Output%20file.csv?sv=2018-03-28&spr=https%2Chttp&st=2026-06-21T11%3A25%3A02Z&se=2026-06-30T11%3A25%3A00Z&sr=b&sp=r&sig=LrAx1nr05r532xvQMlMqh%2Bw%2FYQQaxl9d6s4urip1JgU%3D", qualificationCache, logger);
+        await using var outputFileStream = await blobReader.OpenReadAsync(
+            "funded-qualifications-import",
+            "Output file.csv",
+            cancellationToken);
 
-        await using var stream2 = await blobReader.OpenReadAsync(
-            configuration.ContainerName!,
-            configuration.BlobName!,
+        var seedRecords = await csvReaderService.ReadCsvFileFromStreamAsync<FundedQualificationDTO, QaaFundedQualificationsImportClassMap>(outputFileStream, qualificationCache, logger);
+
+        await using var qaaRawDataStream = await blobReader.OpenReadAsync(
+            "funded-qualifications-import",
+            "QAA Annual Report with correct date formatting.csv",
             cancellationToken);
 
         var qaaRecords = new List<QaaSeedCsvRecord>();
-        using (var reader = new StreamReader(stream2))
+        using (var reader = new StreamReader(qaaRawDataStream))
         using (var csvReader2 = new CsvReader(reader, CultureInfo.InvariantCulture))
         {
             csvReader2.Context.RegisterClassMap<QaaSeedCsvRecordClassMap>();

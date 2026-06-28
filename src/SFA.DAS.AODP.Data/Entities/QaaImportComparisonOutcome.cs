@@ -5,5 +5,5 @@ public enum QaaImportComparisonOutcome
     New,
     LastDateForRegistrationChanged,
     Discontinued,
-    Unchanged
+    NotChanged
 }

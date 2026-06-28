@@ -193,7 +193,7 @@ public class RegulatedQaaQualification
             IsDiscontinued = isDiscontinued,
             DiscontinuedDate = discontinuedDate,
             SectorSubjectArea = sectorSubjectArea,
-            LatestImportComparisonOutcome = QaaImportComparisonOutcome.Unchanged,
+            LatestImportComparisonOutcome = QaaImportComparisonOutcome.NotChanged,
             LastDateForRegistrationChangeType = QaaLastDateForRegistrationChangeType.NotChanged,
             Age1619FundingApprovalEndDate = age1619FundingApprovalEndDate,
             AdvancedLearnerLoansFundingApprovalEndDate = advancedLearnerLoansFundingApprovalEndDate,
@@ -243,7 +243,7 @@ public class RegulatedQaaQualification
 
         if (!changed)
         {
-            LatestImportComparisonOutcome = QaaImportComparisonOutcome.Unchanged;
+            LatestImportComparisonOutcome = QaaImportComparisonOutcome.NotChanged;
             LastDateForRegistrationChangeType = QaaLastDateForRegistrationChangeType.NotChanged;
             return changed;
         }

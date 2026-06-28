@@ -86,7 +86,7 @@ public class RegulatedQaaQualificationTests : UnitTest
         qualification.LastChangedAt.ShouldBe(originalLastChangedAt);
 
         qualification.LatestQaaQualificationHistoryId.ShouldBe(historyId);
-        qualification.LatestImportComparisonOutcome.ShouldBe(QaaImportComparisonOutcome.Unchanged);
+        qualification.LatestImportComparisonOutcome.ShouldBe(QaaImportComparisonOutcome.NotChanged);
         qualification.LastDateForRegistrationChangeType.ShouldBe(QaaLastDateForRegistrationChangeType.NotChanged);
     }
 
@@ -128,7 +128,7 @@ public class RegulatedQaaQualificationTests : UnitTest
             changedAt);
 
         qualification.IsDiscontinued.ShouldBeTrue();
-        qualification.LatestImportComparisonOutcome.ShouldBe(QaaImportComparisonOutcome.Unchanged);
+        qualification.LatestImportComparisonOutcome.ShouldBe(QaaImportComparisonOutcome.NotChanged);
     }
 
     [Fact]
