@@ -6,6 +6,7 @@
         FundedQualifications,
         Pldns,
         DefundingList,
-        QaaQualifications
+        QaaQualifications,
+        RolloverCandidates
     }
 }
