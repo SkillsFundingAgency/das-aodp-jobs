@@ -1,4 +1,4 @@
-using SFA.DAS.AODP.Jobs.Models.Rollover;
+using SFA.DAS.AODP.Infrastructure.Models;
 
 namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Services.Rollover;
 

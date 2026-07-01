@@ -1,18 +1,24 @@
 using Microsoft.EntityFrameworkCore;
 using SFA.DAS.AODP.Data.Entities.Rollover;
 using SFA.DAS.AODP.Infrastructure.Context;
+using SFA.DAS.AODP.Infrastructure.Models;
 using SFA.DAS.AODP.Infrastructure.Repositories.Rollover;
 
 namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Services.Rollover;
 
 public class RolloverCandidateRepositoryTests
 {
+    private class FakeSystemClockService : ISystemClockService
+    {
+        public DateTime UtcNow => new(2026, 07, 01);
+    }
+
     [Fact]
     public async Task CreateInitialRolloverCandidatesAsync_CreatesCandidatesForLatestEligibleVersionsWithActiveFunding()
     {
         // Arrange
         await using var context = CreateContext();
-        var repository = new RolloverCandidateRepository(context);
+        var repository = new RolloverCandidateRepository(context, new FakeSystemClockService());
         var qualificationId = Guid.NewGuid();
         var olderVersionId = Guid.NewGuid();
         var latestVersionId = Guid.NewGuid();
@@ -20,7 +26,7 @@ public class RolloverCandidateRepositoryTests
         var activeOfferId = Guid.NewGuid();
         var openEndedOfferId = Guid.NewGuid();
         var expiredOfferId = Guid.NewGuid();
-        var createdAt = new DateTime(2026, 6, 28, 9, 30, 0, DateTimeKind.Utc);
+        var academicYear = new AcademicYear("2025/26", new DateOnly(2025, 8, 1), new DateOnly(2026, 7, 31));
 
         context.QualificationVersions.AddRange(
             CreateQualificationVersion(olderVersionId, qualificationId, 1, true),
@@ -31,15 +37,13 @@ public class RolloverCandidateRepositoryTests
             QualificationFunding.Create(olderVersionId, activeOfferId, null, new DateOnly(2026, 7, 31), null),
             QualificationFunding.Create(latestVersionId, activeOfferId, null, new DateOnly(2026, 7, 31), null),
             QualificationFunding.Create(latestVersionId, openEndedOfferId, null, null, null),
-            QualificationFunding.Create(latestVersionId, expiredOfferId, null, new DateOnly(2026, 7, 30), null),
+            QualificationFunding.Create(latestVersionId, expiredOfferId, null, new DateOnly(2025, 7, 30), null),
             QualificationFunding.Create(ineligibleVersionId, activeOfferId, null, new DateOnly(2026, 7, 31), null));
         await context.SaveChangesAsync();
 
         // Act
         var result = await repository.CreateInitialRolloverCandidatesAsync(
-            "2025/26",
-            new DateOnly(2026, 7, 31),
-            createdAt,
+            academicYear,
             CancellationToken.None);
 
         // Assert
@@ -58,10 +62,11 @@ public class RolloverCandidateRepositoryTests
     {
         // Arrange
         await using var context = CreateContext();
-        var repository = new RolloverCandidateRepository(context);
+        var repository = new RolloverCandidateRepository(context, new FakeSystemClockService());
         var qualificationVersionId = Guid.NewGuid();
         var fundingOfferId = Guid.NewGuid();
         var createdAt = new DateTime(2026, 6, 28, 9, 30, 0, DateTimeKind.Utc);
+        var academicYear = new AcademicYear("2025/26", new DateOnly(2025, 8, 1), new DateOnly(2026, 7, 31));
 
         context.QualificationVersions.Add(CreateQualificationVersion(qualificationVersionId, Guid.NewGuid(), 1, true));
         context.QualificationFundings.Add(QualificationFunding.Create(qualificationVersionId, fundingOfferId, null, null, null));
@@ -70,9 +75,7 @@ public class RolloverCandidateRepositoryTests
 
         // Act
         var result = await repository.CreateInitialRolloverCandidatesAsync(
-            "2025/26",
-            new DateOnly(2026, 7, 31),
-            createdAt,
+            academicYear,
             CancellationToken.None);
 
         // Assert
@@ -85,26 +88,22 @@ public class RolloverCandidateRepositoryTests
     {
         // Arrange
         await using var context = CreateContext();
-        var repository = new RolloverCandidateRepository(context);
+        var repository = new RolloverCandidateRepository(context, new FakeSystemClockService());
         var qualificationVersionId = Guid.NewGuid();
         var fundingOfferId = Guid.NewGuid();
-        var createdAt = new DateTime(2026, 6, 28, 9, 30, 0, DateTimeKind.Utc);
+        var academicYear = new AcademicYear("2025/26", new DateOnly(2025, 8, 1), new DateOnly(2026, 7, 31));
 
         context.QualificationVersions.Add(CreateQualificationVersion(qualificationVersionId, Guid.NewGuid(), 1, true));
         context.QualificationFundings.Add(QualificationFunding.Create(qualificationVersionId, fundingOfferId, null, null, null));
         await context.SaveChangesAsync();
 
         await repository.CreateInitialRolloverCandidatesAsync(
-            "2025/26",
-            new DateOnly(2026, 7, 31),
-            createdAt,
+            academicYear,
             CancellationToken.None);
 
         // Act
         var result = await repository.CreateInitialRolloverCandidatesAsync(
-            "2025/26",
-            new DateOnly(2026, 7, 31),
-            createdAt,
+            academicYear,
             CancellationToken.None);
 
         // Assert
@@ -117,12 +116,12 @@ public class RolloverCandidateRepositoryTests
     {
         // Arrange
         await using var context = CreateContext();
-        var repository = new RolloverCandidateRepository(context);
+        var repository = new RolloverCandidateRepository(context, new FakeSystemClockService());
         var qualificationId = Guid.NewGuid();
         var olderEligibleVersionId = Guid.NewGuid();
         var latestIneligibleVersionId = Guid.NewGuid();
         var fundingOfferId = Guid.NewGuid();
-        var createdAt = new DateTime(2026, 6, 28, 9, 30, 0, DateTimeKind.Utc);
+        var academicYear = new AcademicYear("2025/26", new DateOnly(2025, 8, 1), new DateOnly(2026, 7, 31));
 
         context.QualificationVersions.AddRange(
             CreateQualificationVersion(olderEligibleVersionId, qualificationId, 1, true),
@@ -132,9 +131,7 @@ public class RolloverCandidateRepositoryTests
 
         // Act
         var result = await repository.CreateInitialRolloverCandidatesAsync(
-            "2025/26",
-            new DateOnly(2026, 7, 31),
-            createdAt,
+            academicYear,
             CancellationToken.None);
 
         // Assert

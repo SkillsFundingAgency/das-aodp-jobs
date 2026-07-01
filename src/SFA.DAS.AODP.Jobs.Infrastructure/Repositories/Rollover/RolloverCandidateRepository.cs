@@ -2,16 +2,16 @@ using Microsoft.EntityFrameworkCore;
 using SFA.DAS.AODP.Data.Entities.Rollover;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Infrastructure.Interfaces.Rollover;
+using SFA.DAS.AODP.Infrastructure.Models;
 using SFA.DAS.AODP.Infrastructure.Models.Rollover;
+using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
 
 namespace SFA.DAS.AODP.Infrastructure.Repositories.Rollover;
 
-public class RolloverCandidateRepository(IApplicationDbContext context) : IRolloverCandidateRepository
+public class RolloverCandidateRepository(IApplicationDbContext context, ISystemClockService systemClockService) : IRolloverCandidateRepository
 {
     public async Task<int> CreateInitialRolloverCandidatesAsync(
-        string academicYear,
-        DateOnly academicYearEndDate,
-        DateTime createdAt,
+        AcademicYear academicYear,
         CancellationToken cancellationToken)
     {
         var candidateFundingStreams = await RolloverCandidateQueryBuilder
@@ -20,7 +20,7 @@ public class RolloverCandidateRepository(IApplicationDbContext context) : IRollo
                 context.QualificationFundings.AsNoTracking())
             .WithLatestQualificationVersions()
             .WhereEligibleForFunding()
-            .WithActiveFundingStreamsForAcademicYear(academicYearEndDate)
+            .WithActiveFundingStreamsForAcademicYear(academicYear)
             .Build()
             .ToListAsync(cancellationToken);
 
@@ -42,7 +42,7 @@ public class RolloverCandidateRepository(IApplicationDbContext context) : IRollo
         var existingCandidateKeys = await context.RolloverCandidates
             .AsNoTracking()
             .Where(candidate =>
-                candidate.AcademicYear == academicYear &&
+                candidate.AcademicYear == academicYear.Name &&
                 candidate.RolloverRound == 1 &&
                 qualificationVersionIds.Contains(candidate.QualificationVersionId) &&
                 fundingOfferIds.Contains(candidate.FundingOfferId))
@@ -60,8 +60,8 @@ public class RolloverCandidateRepository(IApplicationDbContext context) : IRollo
             .Select(candidate => RolloverCandidate.CreateInitialRound(
                 candidate.QualificationVersionId,
                 candidate.FundingOfferId,
-                academicYear,
-                createdAt,
+                academicYear.Name,
+                systemClockService.UtcNow,
                 candidate.EndDate))
             .ToList();
 

@@ -1,10 +1,11 @@
 using SFA.DAS.AODP.Infrastructure.Extensions.Rollover;
+using SFA.DAS.AODP.Infrastructure.Models;
 
 namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Services.Rollover;
 
 public class RolloverCandidateQueryExtensionTests
 {
-    private readonly DateOnly _academicYearEndDate = new(2026, 7, 31);
+    private readonly AcademicYear _academicYear = new("25/26", new DateOnly(2025, 08, 01), new DateOnly(2026, 7, 31));
 
     [Fact]
     public void WhereEligibleForFunding_ReturnsOnlyEligibleQualificationVersions()
@@ -32,8 +33,8 @@ public class RolloverCandidateQueryExtensionTests
     {
         // Arrange
         var openEndedFunding = QualificationFunding.Create(Guid.NewGuid(), Guid.NewGuid(), null, null, null);
-        var academicYearEndFunding = QualificationFunding.Create(Guid.NewGuid(), Guid.NewGuid(), null, _academicYearEndDate, null);
-        var expiredFunding = QualificationFunding.Create(Guid.NewGuid(), Guid.NewGuid(), null, _academicYearEndDate.AddDays(-1), null);
+        var academicYearEndFunding = QualificationFunding.Create(Guid.NewGuid(), Guid.NewGuid(), null, _academicYear.EndDate, null);
+        var expiredFunding = QualificationFunding.Create(Guid.NewGuid(), Guid.NewGuid(), null, _academicYear.StartDate.AddDays(-1), null);
         var query = new[]
         {
             openEndedFunding,
@@ -42,7 +43,7 @@ public class RolloverCandidateQueryExtensionTests
         }.AsQueryable();
 
         // Act
-        var result = query.WhereActiveForAcademicYear(_academicYearEndDate).ToList();
+        var result = query.WhereActiveForAcademicYear(_academicYear).ToList();
 
         // Assert
         result.ShouldBe([openEndedFunding, academicYearEndFunding]);

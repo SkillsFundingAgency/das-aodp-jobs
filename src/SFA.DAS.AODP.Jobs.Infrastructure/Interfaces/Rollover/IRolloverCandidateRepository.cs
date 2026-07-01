@@ -1,10 +1,10 @@
+using SFA.DAS.AODP.Infrastructure.Models;
+
 namespace SFA.DAS.AODP.Infrastructure.Interfaces.Rollover;
 
 public interface IRolloverCandidateRepository
 {
     Task<int> CreateInitialRolloverCandidatesAsync(
-        string academicYear,
-        DateOnly academicYearEndDate,
-        DateTime createdAt,
+        AcademicYear academicYear,
         CancellationToken cancellationToken);
 }

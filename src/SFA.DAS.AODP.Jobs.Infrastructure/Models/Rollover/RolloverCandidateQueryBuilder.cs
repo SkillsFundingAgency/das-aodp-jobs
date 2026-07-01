@@ -37,9 +37,9 @@ public class RolloverCandidateQueryBuilder
         return this;
     }
 
-    public RolloverCandidateQueryBuilder WithActiveFundingStreamsForAcademicYear(DateOnly academicYearEndDate)
+    public RolloverCandidateQueryBuilder WithActiveFundingStreamsForAcademicYear(AcademicYear academicYear)
     {
-        _fundingStreams = _fundingStreams.WhereActiveForAcademicYear(academicYearEndDate);
+        _fundingStreams = _fundingStreams.WhereActiveForAcademicYear(academicYear);
         return this;
     }
 

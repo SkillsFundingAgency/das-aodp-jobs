@@ -1,6 +1,6 @@
 using SFA.DAS.AODP.Infrastructure.Interfaces.Rollover;
+using SFA.DAS.AODP.Infrastructure.Models;
 using SFA.DAS.AODP.Jobs.Interfaces.Rollover;
-using SFA.DAS.AODP.Jobs.Models.Rollover;
 
 namespace SFA.DAS.AODP.Jobs.Services.Rollover;
 
@@ -15,9 +15,7 @@ public class RolloverCandidateService(
         var academicYear = AcademicYear.FromDate(now);
 
         return repository.CreateInitialRolloverCandidatesAsync(
-            academicYear.Name,
-            academicYear.EndDate,
-            now,
+            AcademicYear.NextAcademicYear(academicYear),
             cancellationToken);
     }
 }
