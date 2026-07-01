@@ -6,25 +6,18 @@ using SFA.DAS.AODP.Infrastructure.Models.Rollover;
 
 namespace SFA.DAS.AODP.Infrastructure.Repositories.Rollover;
 
-public class RolloverCandidateRepository : IRolloverCandidateRepository
+public class RolloverCandidateRepository(IApplicationDbContext context) : IRolloverCandidateRepository
 {
-    private readonly IApplicationDbContext _context;
-
-    public RolloverCandidateRepository(IApplicationDbContext context)
-    {
-        _context = context;
-    }
-
     public async Task<int> CreateInitialRolloverCandidatesAsync(
         string academicYear,
         DateOnly academicYearEndDate,
         DateTime createdAt,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         var candidateFundingStreams = await RolloverCandidateQueryBuilder
             .From(
-                _context.QualificationVersions.AsNoTracking(),
-                _context.QualificationFundings.AsNoTracking())
+                context.QualificationVersions.AsNoTracking(),
+                context.QualificationFundings.AsNoTracking())
             .WithLatestQualificationVersions()
             .WhereEligibleForFunding()
             .WithActiveFundingStreamsForAcademicYear(academicYearEndDate)
@@ -46,7 +39,7 @@ public class RolloverCandidateRepository : IRolloverCandidateRepository
             .Distinct()
             .ToList();
 
-        var existingCandidateKeys = await _context.RolloverCandidates
+        var existingCandidateKeys = await context.RolloverCandidates
             .AsNoTracking()
             .Where(candidate =>
                 candidate.AcademicYear == academicYear &&
@@ -77,8 +70,8 @@ public class RolloverCandidateRepository : IRolloverCandidateRepository
             return 0;
         }
 
-        _context.RolloverCandidates.AddRange(newCandidates);
-        await _context.SaveChangesAsync(cancellationToken);
+        context.RolloverCandidates.AddRange(newCandidates);
+        await context.SaveChangesAsync(cancellationToken);
 
         return newCandidates.Count;
     }

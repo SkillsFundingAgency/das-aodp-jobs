@@ -6,5 +6,5 @@ public interface IRolloverCandidateRepository
         string academicYear,
         DateOnly academicYearEndDate,
         DateTime createdAt,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 }
