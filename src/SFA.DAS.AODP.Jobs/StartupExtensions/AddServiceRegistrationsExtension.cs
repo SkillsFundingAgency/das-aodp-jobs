@@ -1,4 +1,8 @@
 ﻿using SFA.DAS.AODP.Jobs.Functions.Abstractions;
+using SFA.DAS.AODP.Infrastructure.Interfaces.Rollover;
+using SFA.DAS.AODP.Infrastructure.Repositories.Rollover;
+using SFA.DAS.AODP.Jobs.Interfaces.Rollover;
+using SFA.DAS.AODP.Jobs.Services.Rollover;
 
 namespace SFA.DAS.AODP.Jobs.StartupExtensions;
 
@@ -39,6 +43,8 @@ public static class AddServiceRegistrationsExtension
         services.AddScoped<IQualificationsRepository, QualificationsRepository>();
         services.AddScoped<IQualificationVersionRepository, QualificationVersionRepository>();
         services.AddScoped<IImportRepository, ImportRepository>();
+        services.AddScoped<IRolloverCandidateRepository, RolloverCandidateRepository>();
+        services.AddScoped<IRolloverCandidateService, RolloverCandidateService>();
         services.AddAzureClients(clientBuilder =>
         {
             clientBuilder.AddBlobServiceClient(configuration.GetValue<string>("BlobStorageSettings:ConnectionString"));
