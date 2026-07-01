@@ -14,7 +14,7 @@ public class RolloverCandidateServiceTests
         var clock = new Mock<ISystemClockService>();
         var now = new DateTime(2026, 6, 28, 9, 30, 0, DateTimeKind.Utc);
         clock.Setup(x => x.UtcNow).Returns(now);
-        var academicYear = new AcademicYear("2026/27", new DateOnly(2026, 8, 1), new DateOnly(2027, 7, 31));
+        var academicYear = new AcademicYear("2025/26", new DateOnly(2025, 8, 1), new DateOnly(2026, 7, 31));
 
         repository
             .Setup(x => x.CreateInitialRolloverCandidatesAsync(academicYear, It.IsAny<CancellationToken>()))

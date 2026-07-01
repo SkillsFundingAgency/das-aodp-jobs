@@ -15,7 +15,7 @@ public class RolloverCandidateService(
         var academicYear = AcademicYear.FromDate(now);
 
         return repository.CreateInitialRolloverCandidatesAsync(
-            AcademicYear.NextAcademicYear(academicYear),
+            academicYear,
             cancellationToken);
     }
 }
