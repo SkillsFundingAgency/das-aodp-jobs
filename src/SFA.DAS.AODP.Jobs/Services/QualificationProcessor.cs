@@ -138,11 +138,12 @@ namespace SFA.DAS.AODP.Jobs.Services
             var requiresRereview = context.HasKeyChanges || context.EligibilityChanged;
 
 
+            var actionId = requiresRereview ? ActionTypeLookup.ActionRequired.Id : ActionTypeLookup.NoActionRequired.Id;
+            var stageId = requiresRereview ? LifecycleStageLookup.Changed.Id : LifecycleStageLookup.Completed.Id;
+
             if (isApprovedOrRejected)
             {
                 var statusId = requiresRereview ? ProcessStatusLookup.DecisionRequired.Id : context.ExistingStatusId!.Value;
-                var actionId = requiresRereview ? ActionTypeLookup.ActionRequired.Id : ActionTypeLookup.NoActionRequired.Id;
-                var stageId = requiresRereview ? LifecycleStageLookup.Changed.Id : LifecycleStageLookup.Completed.Id;
 
                 return new QualificationProcessorOutcome(
                     StatusId: statusId,
@@ -169,10 +170,10 @@ namespace SFA.DAS.AODP.Jobs.Services
             }
 
             return new QualificationProcessorOutcome(
-                StatusId: ProcessStatusLookup.NoActionRequired.Id,
-                StageId: LifecycleStageLookup.Completed.Id,
-                ActionId: ActionTypeLookup.NoActionRequired.Id,
-                BaseNote: "no action required - changed qualification",
+                StatusId: requiresRereview ? ProcessStatusLookup.DecisionRequired.Id : ProcessStatusLookup.NoActionRequired.Id,
+                StageId: requiresRereview ? LifecycleStageLookup.Changed.Id : LifecycleStageLookup.Completed.Id,
+                ActionId: requiresRereview ? ActionTypeLookup.ActionRequired.Id : ActionTypeLookup.NoActionRequired.Id,
+                BaseNote: requiresRereview ? "decision required - changed qualification" : "no action required - changed qualification",
                 IncludeFieldChanges: true,
                 IncludeEligibilityReasons: false,
                 ReviewRequired: requiresRereview,

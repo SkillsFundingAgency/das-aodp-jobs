@@ -373,13 +373,14 @@ public class QualificationProcessorTests
     }
 
     [Fact]
-    public void Process_UnknownStatus_DefaultsToNoActionRequired()
+    public void Process_UnknownStatus_NoReviewRequired_DefaultsToNoActionRequired()
     {
         // Arrange
         var existingVersion = new QualificationVersions
         {
             ProcessStatusId = Guid.NewGuid(),
-            Qualification = new Qualification { Qan = "123" }
+            Qualification = new Qualification { Qan = "123" },
+            EligibleForFunding = true
         };
 
         _eligibilityMock.Setup(s => s.EvaluateFundingEligibilityRules(It.IsAny<QualificationDTO>()))
@@ -395,5 +396,33 @@ public class QualificationProcessorTests
         result.ShouldNotBeNull();
         result.NewVersion.ProcessStatusId.ShouldBe(ProcessStatusLookup.NoActionRequired.Id);
         result.Discussion.Notes!.ShouldContain("no action required - changed qualification");
+    }
+
+    [Fact]
+    public void Process_UnknownStatus_ReviewRequired_EligibilityChanged_DecisionRequiredAndChanged()
+    {
+        // Arrange
+        var existingVersion = new QualificationVersions
+        {
+            ProcessStatusId = Guid.NewGuid(),
+            Qualification = new Qualification { Qan = "123" },
+            EligibleForFunding = false
+        };
+
+        _eligibilityMock.Setup(s => s.EvaluateFundingEligibilityRules(It.IsAny<QualificationDTO>()))
+            .Returns(new FundingEligibilityEvaluation { Rules =
+                [new("Rule name", true, new List<string> { "IntentionToSeekFundingInEngland" })]
+            });
+
+        _changeMock.Setup(s => s.DetectChanges(It.IsAny<QualificationDTO>(), existingVersion))
+            .Returns(new DetectionResults { ChangesPresent = true });
+
+        // Act
+        var result = _processor.Process(new QualificationDTO(), existingVersion, Guid.NewGuid(), Guid.NewGuid(), false, false);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.NewVersion.ProcessStatusId.ShouldBe(ProcessStatusLookup.DecisionRequired.Id);
+        result.Discussion.Notes!.ShouldContain("decision required - changed qualification");
     }
 }
