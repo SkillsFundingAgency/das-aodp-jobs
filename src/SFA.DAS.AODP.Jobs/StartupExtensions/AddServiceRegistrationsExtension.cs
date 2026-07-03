@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Hosting;
-using SFA.DAS.AODP.Jobs.Functions.Abstractions;
+﻿using SFA.DAS.AODP.Jobs.Functions.Abstractions;
 
 namespace SFA.DAS.AODP.Jobs.StartupExtensions;
 
@@ -22,9 +21,7 @@ public static class AddServiceRegistrationsExtension
 
         services.Configure<BlobStorageSettings>(configuration.GetSection("BlobStorageSettings"));
         services.AddSingleton(cfg => cfg.GetRequiredService<IOptions<BlobStorageSettings>>().Value);
-        services.Configure<QaaSeedDataConfiguration>(configuration.GetSection(QaaSeedDataConfiguration.SectionName));
-        services.AddSingleton(cfg => cfg.GetRequiredService<IOptions<QaaSeedDataConfiguration>>().Value);
-
+        
         services.Configure<StorageConfiguration>(configuration.GetSection(StorageConfiguration.SectionName));
 
         services.AddHttpClient("importPldns", clinet => clinet.Timeout = TimeSpan.FromMinutes(5));

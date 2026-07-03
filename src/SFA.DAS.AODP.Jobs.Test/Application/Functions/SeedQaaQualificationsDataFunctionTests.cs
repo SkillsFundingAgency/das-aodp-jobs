@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Logging.Abstractions;
 using SFA.DAS.AODP.Jobs.Test.Mocks;
-using SFA.DAS.AODP.Models.Config;
 
 namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Functions;
 
@@ -10,25 +9,12 @@ public class SeedQaaQualificationsDataFunctionTests
     private readonly Mock<FunctionContext> _functionContextMock = new();
 
     [Fact]
-    public async Task Run_WhenSeedIsDisabled_ReturnsBadRequest_AndDoesNotSeed()
-    {
-        var function = CreateFunction(new QaaSeedDataConfiguration { Enabled = false });
-        var request = new MockHttpRequestData(_functionContextMock.Object);
-
-        var result = await function.Run(request, _functionContextMock.Object);
-
-        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-        Assert.Contains("disabled", badRequest.Value?.ToString() ?? string.Empty);
-        _seedServiceMock.Verify(service => service.SeedAsync(It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
     public async Task Run_WhenSeedIsEnabled_CallsSeedService_AndReturnsProcessedCount()
     {
         var cancellationToken = CancellationToken.None;
         _functionContextMock.SetupGet(context => context.CancellationToken).Returns(cancellationToken);
         _seedServiceMock.Setup(service => service.SeedAsync(cancellationToken)).ReturnsAsync(12);
-        var function = CreateFunction(new QaaSeedDataConfiguration { Enabled = true });
+        var function = CreateFunction();
         var request = new MockHttpRequestData(_functionContextMock.Object);
 
         var result = await function.Run(request, _functionContextMock.Object);
@@ -38,11 +24,10 @@ public class SeedQaaQualificationsDataFunctionTests
         _seedServiceMock.Verify(service => service.SeedAsync(cancellationToken), Times.Once);
     }
 
-    private SeedQaaQualificationsDataFunction CreateFunction(QaaSeedDataConfiguration configuration)
+    private SeedQaaQualificationsDataFunction CreateFunction()
     {
         return new SeedQaaQualificationsDataFunction(
             NullLogger<SeedQaaQualificationsDataFunction>.Instance,
-            configuration,
             _seedServiceMock.Object);
     }
 }
