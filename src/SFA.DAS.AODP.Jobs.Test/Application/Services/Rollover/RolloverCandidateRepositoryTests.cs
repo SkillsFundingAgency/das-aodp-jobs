@@ -50,7 +50,8 @@ public class RolloverCandidateRepositoryTests
         result.ShouldBe(2);
         var stored = await context.RolloverCandidates.ToListAsync();
         stored.Count.ShouldBe(2);
-        stored.ShouldAllBe(candidate => candidate.QualificationVersionId == latestVersionId);
+        stored.ShouldAllBe(candidate => candidate.SourceType == RolloverSourceTypes.Ofqual);
+        stored.ShouldAllBe(candidate => candidate.SourceQualificationId == latestVersionId);
         stored.Select(candidate => candidate.FundingOfferId).ShouldBe([activeOfferId, openEndedOfferId], ignoreOrder: true);
         stored.ShouldAllBe(candidate => candidate.AcademicYear == "2025/26");
         stored.ShouldAllBe(candidate => candidate.RolloverRound == 1);

@@ -71,7 +71,7 @@ namespace SFA.DAS.AODP.Infrastructure.Context
                 b.Property(x => x.RolloverStatus)
                     .HasConversion<string>();
 
-                b.HasIndex(x => new { x.QualificationVersionId, x.FundingOfferId, x.AcademicYear, x.RolloverRound })
+                b.HasIndex(x => new { x.SourceType, x.SourceQualificationId, x.FundingOfferId, x.AcademicYear, x.RolloverRound })
                     .IsUnique();
             });
         }

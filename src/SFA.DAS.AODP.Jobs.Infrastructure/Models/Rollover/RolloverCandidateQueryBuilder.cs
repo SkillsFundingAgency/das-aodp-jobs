@@ -1,4 +1,5 @@
 using SFA.DAS.AODP.Data.Entities;
+using SFA.DAS.AODP.Data.Entities.Rollover;
 using SFA.DAS.AODP.Infrastructure.Extensions.Rollover;
 
 namespace SFA.DAS.AODP.Infrastructure.Models.Rollover;
@@ -52,7 +53,8 @@ public class RolloverCandidateQueryBuilder
                 qualificationVersion => qualificationVersion.Id,
                 (funding, qualificationVersion) => new RolloverCandidateFundingStream
                 {
-                    QualificationVersionId = qualificationVersion.Id,
+                    SourceType = RolloverSourceTypes.Ofqual,
+                    SourceQualificationId = qualificationVersion.Id,
                     FundingOfferId = funding.FundingOfferId,
                     EndDate = funding.EndDate
                 })

@@ -29,8 +29,8 @@ public class RolloverCandidateRepository(IApplicationDbContext context, ISystemC
             return 0;
         }
 
-        var qualificationVersionIds = candidateFundingStreams
-            .Select(candidate => candidate.QualificationVersionId)
+        var sourceQualificationIds = candidateFundingStreams
+            .Select(candidate => candidate.SourceQualificationId)
             .Distinct()
             .ToList();
 
@@ -44,21 +44,24 @@ public class RolloverCandidateRepository(IApplicationDbContext context, ISystemC
             .Where(candidate =>
                 candidate.AcademicYear == academicYear.Name &&
                 candidate.RolloverRound == 1 &&
-                qualificationVersionIds.Contains(candidate.QualificationVersionId) &&
+                sourceQualificationIds.Contains(candidate.SourceQualificationId) &&
                 fundingOfferIds.Contains(candidate.FundingOfferId))
             .Select(candidate => new
             {
-                candidate.QualificationVersionId,
+                candidate.SourceType,
+                candidate.SourceQualificationId,
                 candidate.FundingOfferId
             })
             .ToListAsync(cancellationToken);
 
         var newCandidates = candidateFundingStreams
             .Where(candidate => !existingCandidateKeys.Any(existing =>
-                existing.QualificationVersionId == candidate.QualificationVersionId &&
+                existing.SourceType == candidate.SourceType &&
+                existing.SourceQualificationId == candidate.SourceQualificationId &&
                 existing.FundingOfferId == candidate.FundingOfferId))
             .Select(candidate => RolloverCandidate.CreateInitialRound(
-                candidate.QualificationVersionId,
+                candidate.SourceType,
+                candidate.SourceQualificationId,
                 candidate.FundingOfferId,
                 academicYear.Name,
                 systemClockService.UtcNow,
