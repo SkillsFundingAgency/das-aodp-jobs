@@ -2,11 +2,11 @@
 
 namespace SFA.DAS.AODP.Jobs.Services;
 
-public class QaaSeedCsvBlobReader(BlobServiceClient blobServiceClient) : IQaaSeedCsvBlobReader
+public class QaaSeedCsvBlobReader(IAzureClientFactory<BlobServiceClient> azureClientFactory) : IQaaSeedCsvBlobReader
 {
     public Task<Stream> OpenReadAsync(string containerName, string blobName, CancellationToken cancellationToken)
     {
-        var blobClient = blobServiceClient
+        var blobClient = azureClientFactory.CreateClient("Storage2")
             .GetBlobContainerClient(containerName)
             .GetBlobClient(blobName);
 
