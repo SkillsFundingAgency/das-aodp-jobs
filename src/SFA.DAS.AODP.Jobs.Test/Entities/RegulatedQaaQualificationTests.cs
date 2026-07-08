@@ -151,6 +151,26 @@ public class RegulatedQaaQualificationTests : UnitTest
         qualification.LatestImportComparisonOutcome.ShouldBe(QaaImportComparisonOutcome.LastDateForRegistrationChanged);
     }
 
+    [Fact]
+    public void ApplyImportedQaaData_NotAlreadyDiscontinued_SetAsDiscontinued()
+    {
+        var qualification = CreateQualification();
+        var changedAt = new DateTime(2024, 03, 15);
+
+        qualification.Update(
+            changedAt,
+            TestQualificationTitle,
+            TestAwardingBody,
+            _testStartDate,
+            _testLastRegistrationDate,
+            new DateOnly(2026, 08, 31),
+            _testSectorSubjectArea,
+            changedAt);
+
+        qualification.LastDateForRegistrationChangeType.ShouldBe(QaaLastDateForRegistrationChangeType.NotChanged);
+        qualification.LatestImportComparisonOutcome.ShouldBe(QaaImportComparisonOutcome.Discontinued);
+    }
+
     private RegulatedQaaQualification CreateQualification(bool isDiscontinued = false)
     {
         return RegulatedQaaQualification.Create(

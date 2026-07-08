@@ -230,7 +230,7 @@ public class RegulatedQaaQualification
         var lastDateForRegistrationChangeType = HasLastDateForRegistrationChanged(registrationClosesOn, out var changed);
         var latestImportComparisonOutcome = !wasDiscontinued && qaaHasDiscontinuedQualification
             ? QaaImportComparisonOutcome.Discontinued
-            : QaaImportComparisonOutcome.LastDateForRegistrationChanged;
+            : changed ? QaaImportComparisonOutcome.LastDateForRegistrationChanged : QaaImportComparisonOutcome.NotChanged;
 
         RememberLatestQaaDetails(
             snapshotTakenAt,
@@ -241,9 +241,10 @@ public class RegulatedQaaQualification
             discontinuedDate,
             sectorSubjectArea);
 
+        LatestImportComparisonOutcome = latestImportComparisonOutcome;
+
         if (!changed)
         {
-            LatestImportComparisonOutcome = QaaImportComparisonOutcome.NotChanged;
             LastDateForRegistrationChangeType = QaaLastDateForRegistrationChangeType.NotChanged;
             return changed;
         }
