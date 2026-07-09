@@ -47,7 +47,7 @@ public static class AddServiceRegistrationsExtension
         {
             if (environment.IsDevelopment())
             {
-                clientBuilder.AddBlobServiceClient("UseDevelopmentStorage=true");
+                clientBuilder.AddBlobServiceClient("UseDevelopmentStorage=true").WithName("Local");
             }
             else
             {
