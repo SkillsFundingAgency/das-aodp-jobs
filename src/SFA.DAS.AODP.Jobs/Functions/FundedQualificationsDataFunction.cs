@@ -12,6 +12,7 @@ namespace SFA.DAS.AODP.Functions
         private readonly IJobConfigurationService _jobConfigurationService;
         private readonly IFundedQualificationWriter _fundedQualificationWriter;
         private readonly IQualificationsRepository _qualificationsRepository;
+        private readonly IQualificationVersionRepository _qualificationVersionRepository;
         private readonly IFileProcessingService _fileProcessingService;
 
         public FundedQualificationsDataFunction(ILogger<FundedQualificationsDataFunction> logger,
@@ -20,6 +21,7 @@ namespace SFA.DAS.AODP.Functions
             IJobConfigurationService jobConfigurationService,
             IFundedQualificationWriter fundedQualificationWriter,
             IQualificationsRepository qualificationsRepository,
+            IQualificationVersionRepository qualificationVersionRepository,
             IFileProcessingService fileProcessingService)
         {
             _logger = logger;
@@ -28,6 +30,7 @@ namespace SFA.DAS.AODP.Functions
             _jobConfigurationService = jobConfigurationService;
             _fundedQualificationWriter = fundedQualificationWriter;
             _qualificationsRepository = qualificationsRepository;
+            _qualificationVersionRepository = qualificationVersionRepository;
             _fileProcessingService = fileProcessingService;
         }
 
@@ -62,8 +65,7 @@ namespace SFA.DAS.AODP.Functions
                     jobControl.JobRunId = await _jobConfigurationService.InsertJobRunAsync(jobControl.JobId, username, JobStatus.Running);
                 }
 
-                var qualifications = await _qualificationsRepository.GetQualificationsAsync();
-                var organisations = await _qualificationsRepository.GetAwardingOrganisationsAsync();
+                var qualificationCache = await _qualificationVersionRepository.GetLatestQualificationVersionSnapshotsAsync();
 
                 var totalRecords = 0;
                 var totalArchivedRecords = 0;
@@ -90,7 +92,7 @@ namespace SFA.DAS.AODP.Functions
                     await using var fundedStream = fundedFileResult.Stream!;
 
 
-                    var approvedQualifications = await _csvReaderService.ReadCsvFromStreamAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(fundedStream, qualifications, organisations, _logger);
+                    var approvedQualifications = await _csvReaderService.ReadCsvFromStreamAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(fundedStream, qualificationCache, _logger);
                     //Commented out method to read a file from disk, useful for testing
                     //var path = "D:\\Source\\Repos\\das-aodp-jobs\\src\\SFA.DAS.AODP.Jobs\\Data\\approved.csv";
                     //var approvedQualifications = _csvReaderService.ReadCSVFromFilePath<FundedQualificationDTO, FundedQualificationsImportClassMap>(path, qualifications, organisations, _logger);
@@ -132,7 +134,7 @@ namespace SFA.DAS.AODP.Functions
 
                     await using var archivedStream = archivedFileResult.Stream!;
 
-                    var archivedQualifications = await _csvReaderService.ReadCsvFromStreamAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(archivedStream, qualifications, organisations, _logger);
+                    var archivedQualifications = await _csvReaderService.ReadCsvFromStreamAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(archivedStream, qualificationCache, _logger);
                     if (archivedQualifications.Any())
                     {
                         if (!tablesCleared)

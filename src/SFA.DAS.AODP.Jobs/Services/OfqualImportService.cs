@@ -1,18 +1,8 @@
 ﻿using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using RestEase;
-using SFA.DAS.AODP.Common.Enum;
 using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Infrastructure.Context;
-using SFA.DAS.AODP.Infrastructure.Interfaces;
-using SFA.DAS.AODP.Jobs.Client;
-using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Jobs.Models;
 using SFA.DAS.AODP.Models.Qualification;
-using System.Diagnostics;
 using System.Text.Json;
 using static SFA.DAS.AODP.Jobs.Services.ChangeDetectionService;
 
@@ -120,7 +110,7 @@ namespace SFA.DAS.AODP.Jobs.Services
         {
             _logger.LogInformation($"[{nameof(OfqualImportService)}] -> [{nameof(ProcessQualificationsDataAsync)}] -> Processing Ofqual Qualifications Staging Data...");
 
-            const int batchSize = 500;
+            const int batchSize = 1000;
             int processedCount = 0;
             _processStopWatch.Restart();
 
@@ -131,10 +121,27 @@ namespace SFA.DAS.AODP.Jobs.Services
 
                 var organisationCache = (await _applicationDbContext.AwardingOrganisation
                     .AsNoTracking()
-                    .Where(w => w.Ukprn.HasValue)
-                    .Select(o => new { Ukprn = o.Ukprn ?? 0, o.Id })
+                    .Where(w => w.Ukprn.HasValue && w.Ukprn.Value > 0)
+                    .Select(o => new
+                    {
+                        o.Ukprn,
+                        o.Id,
+                        o.NameOfqual,
+                        o.NameLegal,
+                        o.Acronym,
+                        o.RecognitionNumber
+                    })
                     .ToListAsync())
-                    .ToDictionary(a => a.Ukprn, a => a.Id);
+                    .ToDictionary(
+                        x => x.Ukprn!.Value,
+                        x => new OrganisationCacheItem(
+                            x.Id,
+                            x.NameOfqual,
+                            x.NameLegal,
+                            x.Acronym,
+                            x.RecognitionNumber
+                        )
+                    );
 
                 var qualificationCache = (await _applicationDbContext.Qualification
                     .AsNoTracking()
@@ -175,9 +182,6 @@ namespace SFA.DAS.AODP.Jobs.Services
                     var newQualifications = new List<Qualification>();
                     var newQualificationVersions = new List<QualificationVersions>();
                     var newQualificationDiscussions = new List<QualificationDiscussionHistory>();
-                    var updatedQualifications = new List<Qualification>();
-                    var updatedQualificationFundings = new List<QualificationFunding>();
-                    var updatedQualificationFeedbacks = new List<QualificationFundingFeedback>();
 
                     var versionFieldChanges = new List<VersionFieldChanges>();
                     var processStatuses = new List<Data.Entities.ProcessStatus>();
@@ -187,24 +191,72 @@ namespace SFA.DAS.AODP.Jobs.Services
                     {
                         // Check Organization
                         var organisationId = Guid.Empty;
-                        if (!organisationCache.ContainsKey(importRecord.OrganisationId ?? 0))
+
+                        if (!importRecord.OrganisationId.HasValue || importRecord.OrganisationId.Value <= 0)
                         {
+                            _logger.LogWarning("Invalid OrganisationId for QAN {Qan} in Ofqual import data", importRecord.QualificationNumberNoObliques);
+                            continue;
+                        }
+
+                        //This is stored as Ukprn in our system but is not actually the UKPRN from the API, it is just a unique identifier for the awarding organisation.
+                        var organisationIdentifier = importRecord.OrganisationId.Value;
+
+                        if (!organisationCache.TryGetValue(organisationIdentifier, out var cachedOrganisation))
+                        {
+                            // New organisation
                             organisationId = Guid.NewGuid();
+
                             var organisation = new AwardingOrganisation
                             {
                                 Id = organisationId,
-                                Ukprn = importRecord.OrganisationId,
+                                Ukprn = organisationIdentifier, 
                                 RecognitionNumber = importRecord.OrganisationRecognitionNumber,
                                 NameOfqual = importRecord.OrganisationName,
                                 NameLegal = importRecord.OrganisationName,
                                 Acronym = importRecord.OrganisationAcronym
                             };
+
                             newOrganisations.Add(organisation);
-                            organisationCache[importRecord.OrganisationId ?? 0] = organisationId;
+
+                            organisationCache[organisationIdentifier] = new OrganisationCacheItem(
+                                organisationId,
+                                importRecord.OrganisationName,
+                                importRecord.OrganisationName,
+                                importRecord.OrganisationAcronym,
+                                importRecord.OrganisationRecognitionNumber
+                            );
                         }
                         else
-                        { 
-                            organisationId = organisationCache[importRecord.OrganisationId ?? 0]; 
+                        {
+                            organisationId = cachedOrganisation.Id;
+
+                            bool organisationChanged =
+                                cachedOrganisation.NameOfqual != importRecord.OrganisationName ||
+                                cachedOrganisation.NameLegal != importRecord.OrganisationName ||
+                                cachedOrganisation.Acronym != importRecord.OrganisationAcronym ||
+                                cachedOrganisation.RecognitionNumber != importRecord.OrganisationRecognitionNumber;
+
+                            if (organisationChanged)
+                            {
+                                var organisationToUpdate = await _applicationDbContext.AwardingOrganisation
+                                    .FirstOrDefaultAsync(o => o.Id == organisationId);
+
+                                if (organisationToUpdate != null)
+                                {
+                                    organisationToUpdate.NameOfqual = importRecord.OrganisationName;
+                                    organisationToUpdate.NameLegal = importRecord.OrganisationName;
+                                    organisationToUpdate.Acronym = importRecord.OrganisationAcronym;
+                                    organisationToUpdate.RecognitionNumber = importRecord.OrganisationRecognitionNumber;
+                                }
+
+                                organisationCache[organisationIdentifier] = new OrganisationCacheItem(
+                                    organisationId,
+                                    importRecord.OrganisationName,
+                                    importRecord.OrganisationName,
+                                    importRecord.OrganisationAcronym,
+                                    importRecord.OrganisationRecognitionNumber
+                                );
+                            }
                         }
 
                         // Check Qualification
@@ -425,7 +477,6 @@ namespace SFA.DAS.AODP.Jobs.Services
                                 if (qualificationToUpdate != null)
                                 {
                                     qualificationToUpdate.QualificationName = importRecord.Title;
-                                    updatedQualifications.Add(qualificationToUpdate);
                                 }
 
                             }
@@ -609,5 +660,13 @@ namespace SFA.DAS.AODP.Jobs.Services
 
             return fundingFeedbacks;
         }
+
+        private sealed record OrganisationCacheItem(
+            Guid Id,
+            string? NameOfqual,
+            string? NameLegal,
+            string? Acronym,
+            string? RecognitionNumber
+        );
     }
 }

@@ -1,58 +1,23 @@
-﻿using Microsoft.Extensions.Logging;
-using SFA.DAS.AODP.Common.Enum;
-using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Models.Qualification;
-using System.Linq;
+﻿using SFA.DAS.AODP.Models.Qualification;
 
-namespace SFA.DAS.AODP.Jobs.Services
+namespace SFA.DAS.AODP.Jobs.Services;
+
+public class FundingEligibilityService : IFundingEligibilityService
 {
-    public class FundingEligibilityService : IFundingEligibilityService
+    private readonly ILogger<FundingEligibilityService> _logger;
+
+    public FundingEligibilityService(ILogger<FundingEligibilityService> logger)
     {
-        private readonly ILogger<FundingEligibilityService> _logger;
-
-        public FundingEligibilityService(ILogger<FundingEligibilityService> logger)
-        {
-            _logger = logger;
-        }
-
-        public bool EligibleForFunding(QualificationDTO qualification)
-        {
-            var eligibleForFunding = qualification.OfferedInEngland
-                                      && (qualification.IntentionToSeekFundingInEngland ?? false)
-                                      && qualification.Type != QualificationReference.EndPointAssessment
-                                      && !QualificationReference.IneligibleQualifications.Any(s => qualification.Title.Contains(s, StringComparison.OrdinalIgnoreCase))
-                                      && !QualificationReference.IneligibleQualificationsShortForms.Any(s => qualification.Title.Contains(s, StringComparison.OrdinalIgnoreCase))
-                                      && qualification.Glh.HasValue && qualification.Tqt.HasValue
-                                      && qualification.Glh.Value > 0 && qualification.Tqt.Value > 0
-                                      && qualification.Glh < qualification.Tqt;
-
-            if (eligibleForFunding)
-            {
-                _logger.LogInformation($"[{nameof(FundingEligibilityService)}] -> [{nameof(EligibleForFunding)}] -> Qualification {qualification.QualificationNumberNoObliques} eligible for funding");
-            }
-            else
-            {
-                _logger.LogInformation($"[{nameof(FundingEligibilityService)}] -> [{nameof(EligibleForFunding)}] -> Qualification {qualification.QualificationNumberNoObliques} NOT eligible for funding");
-            }
-
-            return eligibleForFunding;
-        }
-
-        public string DetermineFailureReason(QualificationDTO qualification)
-        {
-            var reason = ImportReason.NoAction;
-
-            var noGlhOrTqt = !qualification.Glh.HasValue 
-                            || !qualification.Tqt.HasValue
-                            || (qualification.Glh.Value <= 0 && qualification.Tqt.Value <= 0);
-
-            if (noGlhOrTqt)
-            {
-                _logger.LogInformation($"[{nameof(FundingEligibilityService)}] -> [{nameof(EligibleForFunding)}] -> Qualification {qualification.QualificationNumberNoObliques} has no GLH/TQT");
-                reason = ImportReason.NoGLHOrTQT;
-            }            
-
-            return reason;
-        }
+        _logger = logger;
     }
+
+    public bool EligibleForFunding(QualificationDTO qualification)
+    {
+        return qualification.OfferedInEngland
+               && (qualification.IntentionToSeekFundingInEngland ?? false)
+               && !QualificationReference.IsIneligibleType(qualification.Type)
+               && !QualificationReference.HasIneligibleTitle(qualification.Level, qualification.Title);
+    }
+
+    public string DetermineFailureReason(QualificationDTO qualification) => ImportReason.NoAction;
 }
