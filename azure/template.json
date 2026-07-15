@@ -94,9 +94,9 @@
         },
         "malwareScanHandlerFunctionName": {
           "type": "string",
-          "defaultValue": "MalwareScanEventHandler",
+          "defaultValue": "DefenderScanResultFunction",
           "metadata": {
-            "description": "Name of the function inside the Function App that handles Defender malware scan events"
+            "description": "Name of the function inside the Function App that handles Defender malware scan events. Must match the [Function(...)] name in DefenderScanResultFunction.cs and the malwareScanFunctionName parameter used by the das-aodp-api Event Grid subscription."
           }
         }
     },

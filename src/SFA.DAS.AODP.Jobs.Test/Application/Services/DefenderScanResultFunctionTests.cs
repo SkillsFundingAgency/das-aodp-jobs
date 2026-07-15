@@ -3,6 +3,7 @@ using Azure.Messaging.EventGrid;
 using Azure.Storage.Blobs;
 using SFA.DAS.AODP.Data.Entities.Files;
 using SFA.DAS.AODP.Data.Repositories.Jobs;
+using SFA.DAS.AODP.Jobs.Models.Jobs;
 
 namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Functions;
 
@@ -128,15 +129,9 @@ public class DefenderScanResultFunctionTests
             "1.0",
             BinaryData.FromObjectAsJson(new DefenderScanEvent
             {
-                Url = "https://storage/container/file.csv",
+                BlobUri = "https://storage/container/file.csv",
                 ScanResultType = scanResult
             })
         );
     }
-}
-
-public class DefenderScanEvent
-{
-    public string? Url { get; set; }
-    public string? ScanResultType { get; set; }
 }
