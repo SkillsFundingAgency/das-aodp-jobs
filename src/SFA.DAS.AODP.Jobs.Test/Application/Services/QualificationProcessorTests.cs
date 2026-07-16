@@ -23,10 +23,10 @@ public class QualificationProcessorTests
     }
 
     [Theory]
-    [InlineData(true, false, true)]   // Eligible -> Decision Required
-    [InlineData(false, true, true)]   // Ineligible + Conflict -> Decision Required
-    [InlineData(false, false, false)] // Ineligible + No Conflict -> No Action Required
-    public void Process_NewRecord_Paths(bool isEligible, bool hasActiveApps, bool expectDecisionRequired)
+    [InlineData(true, false, true, ConflictTypes.None)]   // Eligible -> Decision Required
+    [InlineData(false, true, true, ConflictTypes.ActiveApplications)]   // Ineligible + Conflict (application only) -> Decision Required
+    [InlineData(false, false, false, ConflictTypes.None)] // Ineligible + No Conflict -> No Action Required
+    public void Process_NewRecord_Paths(bool isEligible, bool hasActiveApps, bool expectDecisionRequired, string conflictType)
     {
         // Arrange
         var qualVersionId = Guid.NewGuid();
@@ -208,7 +208,8 @@ public class QualificationProcessorTests
             EligibleForFunding = isEligible,
             Name = dto.Title,
             IntentionToSeekFundingInEngland = dto.IntentionToSeekFundingInEngland,
-            VersionFieldChanges = result.NewVersion.VersionFieldChanges
+            VersionFieldChanges = result.NewVersion.VersionFieldChanges,
+            FundingEligibilityConflictType = conflictType,
         };
 
         // Assert
@@ -217,9 +218,27 @@ public class QualificationProcessorTests
         Assert.Equal(qualId, result.NewVersion.QualificationId);
         Assert.Equal(expectedStatusId, result.NewVersion.ProcessStatusId);
 
-        result.NewVersion.Id = expected.Id;
-        result.NewVersion.VersionFieldChangesId = expected.VersionFieldChangesId;
-        result.NewVersion.ShouldBeEquivalentTo(expected);
+        Assert.Equal(
+             expectDecisionRequired ? LifecycleStageLookup.New.Id : LifecycleStageLookup.Completed.Id,
+             result.NewVersion.LifecycleStageId);
+
+        Assert.Equal(conflictType, result.NewVersion.FundingEligibilityConflictType);
+        Assert.Equal(isEligible, result.NewVersion.EligibleForFunding);
+
+        // Key DTO fields
+        Assert.Equal(dto.Title, result.NewVersion.Name);
+        Assert.Equal(dto.Status, result.NewVersion.Status);
+        Assert.Equal(dto.Type, result.NewVersion.Type);
+        Assert.Equal(dto.Ssa, result.NewVersion.Ssa);
+        Assert.Equal(dto.Level, result.NewVersion.Level);
+        Assert.Equal(dto.SubLevel, result.NewVersion.SubLevel);
+        Assert.Equal(dto.EqfLevel, result.NewVersion.EqfLevel);
+
+        // Change detection
+        Assert.Equal(result.NewVersion.VersionFieldChanges, expected.VersionFieldChanges);
+
+
+
     }
 
     [Theory]

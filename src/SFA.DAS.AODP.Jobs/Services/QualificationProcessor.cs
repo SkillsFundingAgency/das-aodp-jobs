@@ -27,7 +27,8 @@ namespace SFA.DAS.AODP.Jobs.Services
             VersionFieldChanges VersionFieldChange,
             bool EligibleForFunding,
             int? Version,
-            string? IneligibleForFundingFieldNames);
+            string? IneligibleForFundingFieldNames,
+            string? IneligibilityConflictType);
         public record QualificationProcessorResult(
             QualificationVersions NewVersion,
             QualificationDiscussionHistory Discussion,
@@ -104,6 +105,10 @@ namespace SFA.DAS.AODP.Jobs.Services
 
             var outcome = DetermineOutcome(context);
 
+            var conflictType = incomingEval.IsEligible
+                ? string.Empty
+                : GetConflictType(hasApplicationsInProgress, hasFundingWhichHasNotEnded);
+
             return BuildResult(
                 importRecord,
                 existingVersion,
@@ -111,7 +116,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                 organisationId,
                 outcome,
                 changes,
-                incomingEval
+                incomingEval,
+                conflictType
             );
         }
 
@@ -256,7 +262,8 @@ namespace SFA.DAS.AODP.Jobs.Services
             Guid oId,
             QualificationProcessorOutcome outcome,
             DetectionResults? changes,
-            FundingEligibilityEvaluation eval)
+            FundingEligibilityEvaluation eval,
+            string? ineligibleConflictType)
         {
             var versionNumber = (existing?.Version ?? 0) + 1;
 
@@ -297,7 +304,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                     VersionFieldChange: fieldChange,
                     EligibleForFunding: eval.IsEligible,
                     Version: versionNumber,
-                    IneligibleForFundingFieldNames: eval.GetFailedFieldsCsv()));
+                    IneligibleForFundingFieldNames: eval.GetFailedFieldsCsv(),
+                    IneligibilityConflictType:  ineligibleConflictType));
 
             QualificationFundingTracker? tracker = null;
             if (existing != null && outcome.HasFundingWhichHasNotEnded)
@@ -375,7 +383,22 @@ namespace SFA.DAS.AODP.Jobs.Services
                 Name = qualificationData.Title,
                 IntentionToSeekFundingInEngland = qualificationData.IntentionToSeekFundingInEngland,
                 FundingEligibilityFailedFields = request.IneligibleForFundingFieldNames,
+                FundingEligibilityConflictType = request.IneligibilityConflictType,
             };
+        }
+
+        private static string GetConflictType(bool hasApplications, bool hasFunding)
+        {
+            if (hasApplications && hasFunding)
+                return ConflictTypes.ActiveFundingAndApplications;
+
+            if (hasFunding)
+                return ConflictTypes.ActiveFunding;
+
+            if (hasApplications)
+                return ConflictTypes.ActiveApplications;
+
+            return string.Empty;
         }
     }
 }
