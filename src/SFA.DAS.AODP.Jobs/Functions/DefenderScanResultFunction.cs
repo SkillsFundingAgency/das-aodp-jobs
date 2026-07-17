@@ -28,13 +28,13 @@ public class DefenderScanResultFunction
 
         var data = eventGridEvent.Data.ToObjectFromJson<DefenderScanEvent>();
 
-        if (data?.Url == null)
+        if (data?.BlobUri == null)
         {
             _logger.LogWarning("Invalid event payload");
             return;
         }
 
-        var uri = new Uri(data.Url);
+        var uri = new Uri(data.BlobUri);
 
         var containerName = uri.Segments[1].TrimEnd('/');
         var blobPath = string.Join("", uri.Segments.Skip(2));

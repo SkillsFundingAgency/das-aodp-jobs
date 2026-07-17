@@ -1,8 +1,13 @@
-﻿namespace SFA.DAS.AODP.Jobs.Models.Jobs
+using System.Text.Json.Serialization;
+
+namespace SFA.DAS.AODP.Jobs.Models.Jobs
 {
     public sealed class DefenderScanEvent
     {
-        public string? Url { get; set; }
+        [JsonPropertyName("blobUri")]
+        public string? BlobUri { get; set; }
+
+        [JsonPropertyName("scanResultType")]
         public string? ScanResultType { get; set; }
     }
 }

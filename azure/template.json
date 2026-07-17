@@ -71,16 +71,10 @@
         },
         "EnableRouteTableAssociation": {
             "type": "bool",
-            "defaultValue": false,
-            "metadata": {
-                "description": "Determines whether to enable route table association on subnet"
-            }
+            "defaultValue": false
         },
         "SharedRouteTableName": {
-            "type": "string",
-            "metadata": {
-                "description": "Determines whether to enable route table association on subnet"
-            }
+            "type": "string"
         },
         "sharedSQLServerName": {
             "type": "string"
@@ -92,12 +86,13 @@
             "type": "bool",
             "defaultValue": false
         },
+        "enableMalwareScanSubscription": {
+          "type": "bool",
+          "defaultValue": false
+        },
         "malwareScanHandlerFunctionName": {
           "type": "string",
-          "defaultValue": "MalwareScanEventHandler",
-          "metadata": {
-            "description": "Name of the function inside the Function App that handles Defender malware scan events"
-          }
+          "defaultValue": "DefenderScanResultFunction"
         }
     },
     "variables": {
@@ -106,6 +101,9 @@
         "resourceGroupName": "[concat(variables('resourceNamePrefix'), '-rg')]",
         "functionAppName": "[concat(variables('resourceNamePrefix'), '-fa')]",
         "appServicePlanName": "[concat(variables('resourceNamePrefix'), '-asp')]",
+        "malwareScanEventGridTopicName": "[concat(replace(variables('resourceNamePrefix'), 'wkr', ''), '-egt')]",
+        "malwareScanEventGridSubscriptionName": "[concat(replace(variables('resourceNamePrefix'), 'wkr', ''), '-egs')]",
+        "malwareScanTopicResourceGroup": "[concat(replace(variables('resourceNamePrefix'), 'wkr', 'api'), '-rg')]",
         "configNames": "SFA.DAS.AODP.Jobs",
         "routeTableId": {
             "id": "[resourceId(subscription().subscriptionId, parameters('sharedEnvResourceGroup'), 'Microsoft.Network/routeTables', parameters('SharedRouteTableName'))]"
@@ -340,6 +338,48 @@
                 "parameters": {
                     "functionAppName": {
                         "value": "[variables('functionAppName')]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[concat(variables('functionAppName'), '-', parameters('utcValue'))]"
+            ]
+        },
+        {
+            "condition": "[parameters('enableMalwareScanSubscription')]",
+            "apiVersion": "2021-04-01",
+            "name": "[concat(variables('malwareScanEventGridTopicName'), '-subscription-', parameters('utcValue'))]",
+            "type": "Microsoft.Resources/deployments",
+            "resourceGroup": "[variables('malwareScanTopicResourceGroup')]",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('deploymentUrlBase'), 'event-grid-subscription.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "topicName": {
+                        "value": "[variables('malwareScanEventGridTopicName')]"
+                    },
+                    "eventSubscriptionName": {
+                        "value": "[variables('malwareScanEventGridSubscriptionName')]"
+                    },
+                    "includedEventTypes": {
+                        "value": [
+                            "Microsoft.Security.MalwareScanningResult"
+                        ]
+                    },
+                    "functionAppName": {
+                        "value": "[variables('functionAppName')]"
+                    },
+                    "functionName": {
+                        "value": "[parameters('malwareScanHandlerFunctionName')]"
+                    },
+                    "functionResourceGroup": {
+                        "value": "[variables('resourceGroupName')]"
+                    },
+                    "functionSubscriptionId": {
+                        "value": "[subscription().subscriptionId]"
                     }
                 }
             },
