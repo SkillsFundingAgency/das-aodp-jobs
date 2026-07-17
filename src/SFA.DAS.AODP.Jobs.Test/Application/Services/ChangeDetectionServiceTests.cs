@@ -38,6 +38,199 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         }
 
         [Fact]
+        public void DetectChanges_WhenAllFieldsChange_ShouldReturnAllChangedFields()
+        {
+            // Arrange
+
+            var qualification = new Qualification
+            {
+                Qan = "12345678",
+                QualificationName = "Original Qualification"
+            };
+
+            var organisation = new AwardingOrganisation
+            {
+                Acronym = "old",
+                NameOfqual = "old",
+                Ukprn = 1,
+                RecognitionNumber = "old"
+            };
+
+            var version = new QualificationVersions
+            {
+                Qualification = qualification,
+                Organisation = organisation,
+                Ssa = "SSA",
+                Pathways = "Pathway",
+                Status = "Active",
+                SsaId = 1,
+                AppearsOnPublicRegister = true,
+                ApprenticeshipStandardReferenceNumber = "ASR1",
+                ApprenticeshipStandardTitle = "Standard Title",
+                ApprovedForDelFundedProgramme = "true",
+                CertificationEndDate = new DateTime(2025, 1, 1),
+                EighteenPlus = true,
+                EntitlementFrameworkDesign = "Framework",
+                EqfLevel = "EQF1",
+                GceSizeEquivelence = "GCE",
+                GcseSizeEquivelence = "GCSE",
+                Glh = 100,
+                GradingScale = "Scale",
+                GradingScaleId = 1,
+                GradingType = "Type",
+                ImportStatus = "Imported",
+                InsertedDate = new DateTime(2025, 1, 1),
+                LastUpdatedDate = new DateTime(2025, 1, 2),
+                Level = "Level1",
+                LinkToSpecification = "https://old.com",
+                MaximumGlh = 200,
+                MinimumGlh = 50,
+                NiDiscountCode = "DISC",
+                NineteenPlus = true,
+                OfferedInEngland = true,
+                OfferedInNi = true,
+                OfferedInternationally = true,
+                OperationalEndDate = new DateTime(2030, 1, 1),
+                OperationalStartDate = new DateTime(2020, 1, 1),
+                PreSixteen = true,
+                RegulatedByNorthernIreland = true,
+                RegulationStartDate = new DateTime(2020, 2, 1),
+                ReviewDate = new DateTime(2026, 1, 1),
+                SixteenToEighteen = true,
+                Specialism = "Specialism",
+                SubLevel = "Sub",
+                TotalCredits = 10,
+                Tqt = 100,
+                Type = "QualificationType",
+                TypeId = 1,
+                UiLastUpdatedDate = new DateTime(2025, 3, 1),
+                IntentionToSeekFundingInEngland = true
+            };
+
+            var dto = new QualificationDTO
+            {
+                Ssa = "SSA_CHANGED",
+                Pathways = "Pathway_CHANGED",
+                Status = "Inactive",
+                SsaId = 2,
+                AppearsOnPublicRegister = false,
+                ApprenticeshipStandardReferenceNumber = "ASR2",
+                ApprenticeshipStandardTitle = "Standard Title Changed",
+                ApprovedForDelfundedProgramme = "false",
+                CertificationEndDate = new DateTime(2025, 2, 1),
+                EighteenPlus = false,
+                EntitlementFrameworkDesignation = "Framework Changed",
+                EqfLevel = "EQF2",
+                GceSizeEquivalence = "GCE Changed",
+                GcseSizeEquivalence = "GCSE Changed",
+                Glh = 101,
+                GradingScale = "Scale Changed",
+                GradingScaleId = 2,
+                GradingType = "Type Changed",
+                ImportStatus = "Pending",
+                InsertedDate = new DateTime(2025, 2, 1),
+                LastUpdatedDate = new DateTime(2025, 2, 2),
+                Level = "Level2",
+                LinkToSpecification = "https://new.com",
+                MaximumGlh = 201,
+                MinimumGlh = 51,
+                NiDiscountCode = "DISC2",
+                NineteenPlus = false,
+                OfferedInEngland = false,
+                OfferedInNorthernIreland = false,
+                OfferedInternationally = false,
+                OperationalEndDate = new DateTime(2031, 1, 1),
+                OperationalStartDate = new DateTime(2021, 1, 1),
+
+                OrganisationAcronym = "NEWORG",
+                OrganisationName = "New Organisation",
+                OrganisationId = 20000002,
+                OrganisationRecognitionNumber = "RN002",
+
+                PreSixteen = false,
+                QualificationNumberNoObliques = "87654321",
+                RegulatedByNorthernIreland = false,
+                RegulationStartDate = new DateTime(2021, 2, 1),
+                ReviewDate = new DateTime(2027, 1, 1),
+                SixteenToEighteen = false,
+                Specialism = "Specialism Changed",
+                SubLevel = "Sub Changed",
+                Title = "New Qualification",
+                TotalCredits = 20,
+                Tqt = 200,
+                Type = "QualificationTypeChanged",
+                TypeId = 2,
+                UiLastUpdatedDate = new DateTime(2025, 4, 1),
+                IntentionToSeekFundingInEngland = false
+            };
+
+            var sut = new ChangeDetectionService();
+
+            var expectedFields = new[]
+            {
+                "Ssa",
+                "Pathways",
+                "Status",
+                "SsaId",
+                "AppearsOnPublicRegister",
+                "ApprenticeshipStandardReferenceNumber",
+                "ApprenticeshipStandardTitle",
+                "ApprovedForDelfundedProgramme",
+                "CertificationEndDate",
+                "EighteenPlus",
+                "EntitlementFrameworkDesignation",
+                "EqfLevel",
+                "GceSizeEquivalence",
+                "GcseSizeEquivelence",
+                "Glh",
+                "GradingScale",
+                "GradingScaleId",
+                "GradingType",
+                "ImportStatus",
+                "InsertedDate",
+                "LastUpdatedDate",
+                "Level",
+                "LinkToSpecification",
+                "MaximumGlh",
+                "MinimumGlh",
+                "NiDiscountCode",
+                "NineteenPlus",
+                "OfferedInEngland",
+                "OfferedInNorthernIreland",
+                "OfferedInternationally",
+                "OperationalEndDate",
+                "OperationalStartDate",
+                "OrganisationAcronym",
+                "OrganisationName",
+                "OrganisationId",
+                "OrganisationRecognitionNumber",
+                "PreSixteen",
+                "QualificationNumberNoObliques",
+                "RegulatedByNorthernIreland",
+                "RegulationStartDate",
+                "ReviewDate",
+                "SixteenToEighteen",
+                "Specialism",
+                "SubLevel",
+                "Title",
+                "TotalCredits",
+                "Tqt",
+                "Type",
+                "TypeId",
+                "UiLastUpdatedDate",
+                "IntentionToSeekFundingInEngland"
+            };
+
+            // Act
+            var result = sut.DetectChanges(dto, version);
+
+            // Assert
+            result.ChangesPresent.ShouldBeTrue();
+            result.ChangedFields.Count.ShouldBe(expectedFields.Length);
+            result.ChangedFields.ShouldBe(expectedFields);
+        }
+
+        [Fact]
         public void DetectChanges_NonKeyFieldChanged_ChangesPresentButNotKey()
         {
             // Arrange
