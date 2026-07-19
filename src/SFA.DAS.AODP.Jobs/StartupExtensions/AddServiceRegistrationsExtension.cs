@@ -33,6 +33,7 @@ public static class AddServiceRegistrationsExtension
         services.AddTransient<IFundingEligibilityService, FundingEligibilityService>();
         services.AddScoped<ICsvReaderService, CsvReaderService>();
         services.AddScoped<ISystemClockService, SystemClockService>();
+        services.AddScoped<IGuidProvider, GuidProvider>();
         services.AddScoped<IJobConfigurationService, JobConfigurationService>();
         services.AddScoped<IChangeDetectionService, ChangeDetectionService>();
         services.AddScoped<ISchedulerClientService, SchedulerClientService>();
