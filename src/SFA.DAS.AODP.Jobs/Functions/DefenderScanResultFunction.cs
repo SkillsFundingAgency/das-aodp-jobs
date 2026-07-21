@@ -54,7 +54,7 @@ public class DefenderScanResultFunction
         file.LastScanAt = DateTime.UtcNow;
 
         if (status == MalwareScanStatus.Malicious)
-        {
+    {
             _logger.LogWarning("Malware detected — deleting blob");
 
             var container = _blobServiceClient.GetBlobContainerClient(containerName);

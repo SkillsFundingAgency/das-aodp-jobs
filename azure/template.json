@@ -87,12 +87,18 @@
             "defaultValue": false
         },
         "enableMalwareScanSubscription": {
-          "type": "bool",
-          "defaultValue": false
+            "type": "bool",
+            "defaultValue": false,
+            "metadata": {
+                "description": "When true, subscribes the malware scan handler function to the Event Grid topic created by das-aodp-api. Leave false on a first deploy: ARM runs before the function code is deployed, so the subscription cannot bind to a function that does not exist yet. Set to true and redeploy once the function is live."
+            }
         },
         "malwareScanHandlerFunctionName": {
-          "type": "string",
-          "defaultValue": "DefenderScanResultFunction"
+            "type": "string",
+            "defaultValue": "DefenderScanResultFunction",
+            "metadata": {
+                "description": "Name of the function in this Function App that handles MalwareScanningResult events. Must match the [Function(...)] attribute on the deployed function."
+            }
         }
     },
     "variables": {
@@ -348,7 +354,7 @@
         {
             "condition": "[parameters('enableMalwareScanSubscription')]",
             "apiVersion": "2021-04-01",
-            "name": "[concat(variables('malwareScanEventGridTopicName'), '-subscription-', parameters('utcValue'))]",
+            "name": "[concat(variables('malwareScanEventGridSubscriptionName'), '-', parameters('utcValue'))]",
             "type": "Microsoft.Resources/deployments",
             "resourceGroup": "[variables('malwareScanTopicResourceGroup')]",
             "properties": {
