@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Infrastructure.Extensions.Rollover;
 
@@ -46,16 +47,13 @@ public class RolloverCandidateQueryBuilder
     public IQueryable<RolloverCandidateFundingStream> Build()
     {
         return _fundingStreams
-            .Join(
-                _qualificationVersions,
-                funding => funding.QualificationVersionId,
-                qualificationVersion => qualificationVersion.Id,
-                (funding, qualificationVersion) => new RolloverCandidateFundingStream
-                {
-                    QualificationVersionId = qualificationVersion.Id,
-                    FundingOfferId = funding.FundingOfferId,
-                    EndDate = funding.EndDate
-                })
+            .Include(o => o.QualificationVersion)
+            .Select(o => new RolloverCandidateFundingStream
+            {
+                EndDate = o.EndDate,
+                FundingOfferId = o.FundingOfferId,
+                QualificationVersionId = o.QualificationVersionId
+            })
             .Distinct();
     }
 }

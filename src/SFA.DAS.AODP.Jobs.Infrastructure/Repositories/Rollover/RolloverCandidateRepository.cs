@@ -18,11 +18,10 @@ public class RolloverCandidateRepository(IApplicationDbContext context, ISystemC
             .From(
                 context.QualificationVersions.AsNoTracking(),
                 context.QualificationFundings.AsNoTracking())
-            .WithLatestQualificationVersions()
             .WhereEligibleForFunding()
             .WithActiveFundingStreamsForAcademicYear(academicYear)
             .Build()
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken: cancellationToken);
 
         if (candidateFundingStreams.Count == 0)
         {
