@@ -69,7 +69,7 @@ public class DefenderScanPollingFunction
         }
     }
 
-    //[Function("DefenderScanPollingFunction")]
+    [Function("DefenderScanPollingFunction")]
     public async Task Run([TimerTrigger("0 */3 * * * *")] TimerInfo timer)
     {
         _logger.LogInformation("Scan polling started at {Time}", DateTime.UtcNow);
@@ -95,24 +95,27 @@ public class DefenderScanPollingFunction
             var container = _blobServiceClient.GetBlobContainerClient(file.BlobContainer);
             var blob = container.GetBlobClient(file.BlobPath);
 
-            var properties = await blob.GetPropertiesAsync();
+            var tagResponse = await blob.GetTagsAsync();
+            var tags = tagResponse.Value.Tags;
 
-            var metadata = properties.Value.Metadata;
-
-            var kvp = metadata.FirstOrDefault(m =>
-                m.Key.Contains("scanresult", StringComparison.OrdinalIgnoreCase));
-
-            var scanResult = kvp.Value;
-
-            if (string.IsNullOrEmpty(scanResult))
+            if (!tags.TryGetValue("ms-scan-result", out var scanResult))
             {
+                _logger.LogInformation("Blob {Path} has no ms-scan-result tag yet", file.BlobPath);
                 return;
             }
 
+            if (string.IsNullOrWhiteSpace(scanResult))
+            {
+                _logger.LogInformation("File {Path} still pending scan (no metadata)", file.BlobPath);
+                return;
+            }
+
+            _logger.LogInformation("Scan Result {scanResult}", scanResult);
             var status = MapScanResult(scanResult);
 
             if (status == MalwareScanStatus.NotScanned)
             {
+                _logger.LogInformation("File {Path} still pending scan (status = NotScanned)", file.BlobPath);
                 return;
             }
 
@@ -122,13 +125,13 @@ public class DefenderScanPollingFunction
             if (status == MalwareScanStatus.Malicious)
             {
                 _logger.LogWarning("Malware detected: {Path}", file.BlobPath);
-
                 await blob.DeleteIfExistsAsync();
             }
 
             await _fileRepository.UpdateAsync(file);
 
-            _logger.LogInformation("Updated {Path} → {Status}", file.BlobPath, status);
+            _logger.LogInformation("Updated {Path} → {Status} (raw metadata = {Raw})",
+                file.BlobPath, status, scanResult);
         }
         catch (RequestFailedException ex) when (ex.ErrorCode == "BlobNotFound")
         {
@@ -151,6 +154,9 @@ public class DefenderScanPollingFunction
         {
             "no threats found" => MalwareScanStatus.Clean,
             "malicious" => MalwareScanStatus.Malicious,
+            "error" => MalwareScanStatus.Error,
+            "unsupported" => MalwareScanStatus.Error,
+            "scan timed out" => MalwareScanStatus.Error,
             _ => MalwareScanStatus.NotScanned
         };
     }

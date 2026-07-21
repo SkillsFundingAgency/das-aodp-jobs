@@ -25,7 +25,6 @@ public class DefenderScanResultFunction
     {
         _logger.LogInformation("Received Defender scan event");
 
-
         var data = eventGridEvent.Data.ToObjectFromJson<DefenderScanEvent>();
 
         if (data?.BlobUri == null)
@@ -66,15 +65,23 @@ public class DefenderScanResultFunction
 
         await _fileRepository.UpdateAsync(file);
 
-        _logger.LogInformation("Updated file status to {Status}", status);
+        _logger.LogInformation(
+            "Updated file status to {Status} (raw metadata = {Raw})",
+            status,
+            data.ScanResultType
+        );
     }
+
 
     private MalwareScanStatus MapScanResult(string? scanResult)
     {
-        return scanResult switch
+        return scanResult?.ToLowerInvariant() switch
         {
-            "No threats found" => MalwareScanStatus.Clean,
-            "Malicious" => MalwareScanStatus.Malicious,
+            "no threats found" => MalwareScanStatus.Clean,
+            "malicious" => MalwareScanStatus.Malicious,
+            "error" => MalwareScanStatus.Error,
+            "unsupported" => MalwareScanStatus.Error,
+            "scan timed out" => MalwareScanStatus.Error,
             _ => MalwareScanStatus.NotScanned
         };
     }
