@@ -2,5 +2,5 @@
 
 public interface IBlobStorageFileService
 {
-    Task<Stream> DownloadFileAsync(string filename, CancellationToken cancellationToken = default);
+    Task<Stream> DownloadFileAsync(string container, string blobPath,  CancellationToken cancellationToken = default);
 }

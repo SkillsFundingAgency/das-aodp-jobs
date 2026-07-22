@@ -1,4 +1,5 @@
-﻿using SFA.DAS.AODP.Jobs.Functions.Abstractions;
+﻿using Azure.Storage.Blobs;
+using SFA.DAS.AODP.Jobs.Functions.Abstractions;
 
 namespace SFA.DAS.AODP.Jobs.StartupExtensions;
 
@@ -30,6 +31,7 @@ public static class AddServiceRegistrationsExtension
         services.AddTransient<IOfqualImportService, OfqualImportService>();
         services.AddTransient<IReferenceDataService, ReferenceDataService>();
         services.AddTransient<IFundingEligibilityService, FundingEligibilityService>();
+        services.AddScoped<IFileProcessingService, FileProcessingService>();
         services.AddScoped<ICsvReaderService, CsvReaderService>();
         services.AddScoped<ISystemClockService, SystemClockService>();
         services.AddScoped<IJobConfigurationService, JobConfigurationService>();
@@ -39,10 +41,22 @@ public static class AddServiceRegistrationsExtension
         services.AddScoped<IQualificationsRepository, QualificationsRepository>();
         services.AddScoped<IQualificationVersionRepository, QualificationVersionRepository>();
         services.AddScoped<IImportRepository, ImportRepository>();
-        services.AddAzureClients(clientBuilder =>
+        services.AddScoped<IFileRecordRepository, FileRecordRepository>();
+
+        services.AddSingleton(sp =>
         {
-            clientBuilder.AddBlobServiceClient(configuration.GetValue<string>("BlobStorageSettings:ConnectionString"));
+            var configuration = sp.GetRequiredService<IConfiguration>();
+
+            var connectionString =
+                configuration.GetValue<string>("BlobStorageSettings:ConnectionString");
+
+            // Pin Blob API version so Azurite supports copy/exists operations
+            var options = new BlobClientOptions(
+                BlobClientOptions.ServiceVersion.V2023_11_03);
+
+            return new BlobServiceClient(connectionString, options);
         });
+
 
         services.AddScoped<IBlobStorageFileService, BlobStorageFileService>();
 
