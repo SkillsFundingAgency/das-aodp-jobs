@@ -49,13 +49,16 @@ namespace SFA.DAS.AODP.Jobs.Services
 
         private readonly IFundingEligibilityService _fundingService;
         private readonly IChangeDetectionService _changeService;
+        private readonly IGuidProvider _guidProvider;
 
         public QualificationProcessor(
             IFundingEligibilityService fundingService,
-            IChangeDetectionService changeService)
+            IChangeDetectionService changeService,
+            IGuidProvider guidProvider)
         {
             _fundingService = fundingService;
             _changeService = changeService;
+            _guidProvider = guidProvider;
         }
 
         public QualificationProcessorResult? Process(
@@ -249,7 +252,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                 HasFundingWhichHasNotEnded: false);
         }
 
-        private static QualificationProcessorResult BuildResult(
+        private QualificationProcessorResult BuildResult(
             QualificationDTO import,
             QualificationVersions? existing,
             Guid qId,
@@ -262,7 +265,7 @@ namespace SFA.DAS.AODP.Jobs.Services
 
             var fieldChange = new VersionFieldChanges
             {
-                Id = Guid.NewGuid(),
+                Id = _guidProvider.NewGuidFor(nameof(VersionFieldChanges)),
                 QualificationVersionNumber = versionNumber,
                 ChangedFieldNames = outcome.IncludeFieldChanges ? changes?.ChangedFieldsCsv : null
             };
@@ -279,7 +282,7 @@ namespace SFA.DAS.AODP.Jobs.Services
 
             var discussion = new QualificationDiscussionHistory
             {
-                Id = Guid.NewGuid(),
+                Id = _guidProvider.NewGuidFor(nameof(QualificationDiscussionHistory)),
                 QualificationId = qId,
                 ActionTypeId = outcome.ActionId,
                 Notes = outcome.BaseNote,
@@ -300,7 +303,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                     IneligibleForFundingFieldNames: eval.GetFailedFieldsCsv()));
 
             QualificationFundingTracker? tracker = null;
-            if (existing != null && outcome.HasFundingWhichHasNotEnded)
+            if (existing != null)
             {
                 tracker = new QualificationFundingTracker { OldVersionId = existing.Id, NewVersionId = newVersion.Id };
             }
@@ -308,13 +311,13 @@ namespace SFA.DAS.AODP.Jobs.Services
             return new QualificationProcessorResult(newVersion, discussion, fieldChange, tracker);
         }
 
-        private static QualificationVersions CreateQualificationVersion(CreateQualificationVersionRequest request)
+        private QualificationVersions CreateQualificationVersion(CreateQualificationVersionRequest request)
         {
             var qualificationData = request.QualificationData;
 
             return new QualificationVersions
             {
-                Id = Guid.NewGuid(),
+                Id = _guidProvider.NewGuidFor(nameof(QualificationVersions)),
                 QualificationId = request.QualificationId,
                 VersionFieldChangesId = request.VersionFieldChange.Id,
                 ProcessStatusId = request.ProcessStatusId,
