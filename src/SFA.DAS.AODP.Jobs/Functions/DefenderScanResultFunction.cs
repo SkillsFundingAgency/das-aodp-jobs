@@ -1,5 +1,8 @@
 ﻿using Azure.Messaging.EventGrid;
 using Azure.Storage.Blobs;
+using CsvHelper;
+using SFA.DAS.AODP.Common.Storage;
+using SFA.DAS.AODP.Data.Entities.Files;
 
 /**
  * Handles Event Grid notifications to check file scan status in blob storage. Untested.
@@ -40,21 +43,65 @@ public class DefenderScanResultFunction
 
         _logger.LogInformation("Processing blob: {Container}/{Path}", containerName, blobPath);
 
-        var file = await _fileRepository.GetByPathAsync(containerName, blobPath);
+        var fileRecord = await _fileRepository.GetByPathAsync(containerName, blobPath);
 
-        if (file == null)
+        if (fileRecord == null)
         {
-            _logger.LogWarning("No FileRecord found for blob");
-            return;
+            _logger.LogWarning("FileRecord missing — loading blob metadata");
+
+            var container = _blobServiceClient.GetBlobContainerClient(containerName);
+
+            if (!await container.ExistsAsync())
+            {
+                _logger.LogWarning(
+                    "Blob container '{Container}' does not exist — cannot process Defender event.",
+                    containerName);
+
+                return;
+            }
+
+            var blob = container.GetBlobClient(blobPath);
+
+            if (!await blob.ExistsAsync())
+            {
+                _logger.LogWarning(
+                    "Blob does not exist — cannot create FileRecord. " +
+                    "Event may have arrived after blob deletion."
+                );
+                return; 
+            }
+
+            var blobProperties = await blob.GetPropertiesAsync();
+
+            var parsedBlobPath = ParseBlobPath(containerName, blobPath);
+
+            fileRecord = new FileRecord
+            {
+                Id = Guid.NewGuid(),
+                FileName = Path.GetFileName(blobPath),
+                ContentType = blobProperties.Value.ContentType,
+                BlobPath = blobPath,
+                BlobContainer = containerName,
+                FileCategory = parsedBlobPath.Category,
+                ApplicationId = parsedBlobPath.ApplicationId,
+                MessageId = parsedBlobPath.MessageId,
+                QuestionId = parsedBlobPath.QuestionId,
+                UploadedAt = blobProperties.Value.CreatedOn.UtcDateTime,
+                UploadedByDisplayName = "DfEStaffUser",
+                ScanResult = MalwareScanStatus.NotScanned,
+                LastScanAt = null
+            };
+
+            await _fileRepository.InsertAsync(fileRecord);
         }
 
         var status = MapScanResult(data.ScanResultType);
 
-        file.ScanResult = status;
-        file.LastScanAt = DateTime.UtcNow;
+        fileRecord.ScanResult = status;
+        fileRecord.LastScanAt = DateTime.UtcNow;
 
         if (status == MalwareScanStatus.Malicious)
-    {
+        {
             _logger.LogWarning("Malware detected — deleting blob");
 
             var container = _blobServiceClient.GetBlobContainerClient(containerName);
@@ -63,7 +110,7 @@ public class DefenderScanResultFunction
             await blob.DeleteIfExistsAsync();
         }
 
-        await _fileRepository.UpdateAsync(file);
+        await _fileRepository.UpdateAsync(fileRecord);
 
         _logger.LogInformation(
             "Updated file status to {Status} (raw metadata = {Raw})",
@@ -71,7 +118,6 @@ public class DefenderScanResultFunction
             data.ScanResultType
         );
     }
-
 
     private MalwareScanStatus MapScanResult(string? scanResult)
     {
@@ -85,4 +131,65 @@ public class DefenderScanResultFunction
             _ => MalwareScanStatus.NotScanned
         };
     }
+
+    public static (FileCategory Category, Guid? ApplicationId, Guid? MessageId, Guid? QuestionId) ParseBlobPath(string containerName, string blobPath)
+    {
+        var segments = blobPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+
+        FileCategory category = FileCategory.Unknown;
+        Guid? applicationId = null;
+        Guid? messageId = null;
+        Guid? questionId = null;
+
+        // importfilescontainer/DefundingList/{fileId}
+        if (containerName.Equals(BlobStoragePaths.ContainerImportFiles, StringComparison.OrdinalIgnoreCase))
+        {
+            if (segments[0].Equals(BlobStoragePaths.FolderDefundingList, StringComparison.OrdinalIgnoreCase))
+            {
+                category = FileCategory.DefundingList;
+            }
+            else if (segments[0].Equals(BlobStoragePaths.FolderPldns, StringComparison.OrdinalIgnoreCase))
+            {
+                category = FileCategory.Pldns;
+            }
+        }
+        // files/messages/{appId}/{messageId}/{fileId}
+        else if (containerName.Equals(BlobStoragePaths.ContainerFiles, StringComparison.OrdinalIgnoreCase))
+        {
+            if (segments[0].Equals(BlobStoragePaths.FolderMessages, StringComparison.OrdinalIgnoreCase))
+            {
+                category = FileCategory.MessageAttachment;
+                applicationId = Guid.Parse(segments[1]);
+                messageId = Guid.Parse(segments[2]);
+            }
+            else
+            {
+                // files/{applicationId}/{questionId}/{fileId}
+                category = FileCategory.QuestionUpload;
+                applicationId = Guid.Parse(segments[0]);
+                questionId = Guid.Parse(segments[1]);
+            }
+        }
+        // funded-qualifiations-import/approved.csv or archived.csv
+        else if (containerName.Equals(BlobStoragePaths.ContainerFundingImport, StringComparison.OrdinalIgnoreCase))
+        {
+            if (segments[0].Equals(BlobStoragePaths.ApprovedFundingFileName, StringComparison.OrdinalIgnoreCase))
+            {
+                category = FileCategory.ApprovedFunding;
+            }
+            else if (segments[0].Equals(BlobStoragePaths.ArchivedFundingFileName, StringComparison.OrdinalIgnoreCase))
+            {
+                category = FileCategory.ArchivedFunding;
+            }
+        }
+        // funded-qualifications-output/{date}-AOdPApprovedOutputFile.csv
+        else if (containerName.Equals(BlobStoragePaths.ContainerFundingOutput, StringComparison.OrdinalIgnoreCase))
+        {
+            category = FileCategory.FundingOutput;
+        }
+
+        return (category, applicationId, messageId, questionId);
+    }
+
+
 }

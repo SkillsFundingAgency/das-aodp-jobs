@@ -1,12 +1,14 @@
 ﻿using Azure;
 using Azure.Storage.Blobs;
-using Microsoft.Azure.Functions.Worker.Http;
 using SFA.DAS.AODP.Data.Entities.Files;
+using FeatureManagementOptions = SFA.DAS.AODP.Jobs.FeatureManagement.FeatureManagementOptions;
 
 namespace SFA.DAS.AODP.Jobs.Functions;
 
 /**
- * Retrieves unscanned file records from the database and checks their current scan status in blob storage.
+ * Retrieves unscanned file records from the database , checks their current scan status in blob storage
+ * and updates status in the database. If a file is found to be malicious, it is deleted from blob storage
+ * but the file remains in the database.
  * */
 public class DefenderScanPollingFunction
 {
@@ -14,78 +16,40 @@ public class DefenderScanPollingFunction
     private readonly ILogger<DefenderScanPollingFunction> _logger;
     private readonly IFileRecordRepository _fileRepository;
     private readonly BlobServiceClient _blobServiceClient;
+    private readonly FeatureManagementOptions _features;
 
     public DefenderScanPollingFunction(
         ILogger<DefenderScanPollingFunction> logger,
         IFileRecordRepository fileRepository,
-        BlobServiceClient blobServiceClient)
+        BlobServiceClient blobServiceClient,
+        IOptionsSnapshot<FeatureManagementOptions> features)
     {
         _logger = logger;
         _fileRepository = fileRepository;
         _blobServiceClient = blobServiceClient;
-    }
-
-    [Function("DefenderScanPollingHttp")]
-    public async Task<HttpResponseData> RunHttp(
-    [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "scanPolling")]
-    HttpRequestData req)
-    {
-        _logger.LogInformation("Manual scan polling triggered at {Time}", DateTime.UtcNow);
-
-        var response = req.CreateResponse();
-
-        try
-        {
-            var cutoff = DateTime.UtcNow.AddHours(-24);
-
-            var pendingFiles = await _fileRepository.GetPendingScanAsync(cutoff);
-
-            var processed = 0;
-
-            foreach (var file in pendingFiles)
-            {
-                await ProcessFile(file);
-                processed++;
-            }
-
-            _logger.LogInformation("Manual scan polling completed. Processed {Count} files", processed);
-
-            response.StatusCode = HttpStatusCode.OK;
-
-            await response.WriteStringAsync(
-                $"Scan polling completed. Processed {processed} files.");
-
-            return response;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Manual scan polling failed");
-
-            response.StatusCode = HttpStatusCode.InternalServerError;
-
-            await response.WriteStringAsync("Error occurred during scan polling.");
-
-            return response;
-        }
+        _features = features.Value;
     }
 
     [Function("DefenderScanPollingFunction")]
     public async Task Run([TimerTrigger("0 */3 * * * *")] TimerInfo timer)
     {
-        _logger.LogInformation("Scan polling started at {Time}", DateTime.UtcNow);
-
-        var cutoff = DateTime.UtcNow.AddHours(-24);
-
-        //Get files from db where scan result is still pending and
-        //uploaded within the last 24 hours 
-        var pendingFiles = await _fileRepository.GetPendingScanAsync(cutoff);
-
-        foreach (var file in pendingFiles)
+        if(_features.DefenderPollingEnabled)
         {
-            await ProcessFile(file);
-        }
+            _logger.LogInformation("Scan polling started at {Time}", DateTime.UtcNow);
 
-        _logger.LogInformation("Scan polling completed at {Time}", DateTime.UtcNow);
+            var cutoff = DateTime.UtcNow.AddHours(-24);
+
+            //Get files from db where scan result is still pending and
+            //uploaded within the last 24 hours 
+            var pendingFiles = await _fileRepository.GetPendingScanAsync(cutoff);
+
+            foreach (var file in pendingFiles)
+            {
+                await ProcessFile(file);
+            }
+
+            _logger.LogInformation("Scan polling completed at {Time}", DateTime.UtcNow);
+        }
     }
 
     private async Task ProcessFile(FileRecord file)
@@ -98,7 +62,7 @@ public class DefenderScanPollingFunction
             var tagResponse = await blob.GetTagsAsync();
             var tags = tagResponse.Value.Tags;
 
-            if (!tags.TryGetValue("ms-scan-result", out var scanResult))
+            if (!tags.TryGetValue("Malware Scanning scan result", out var scanResult))
             {
                 _logger.LogInformation("Blob {Path} has no ms-scan-result tag yet", file.BlobPath);
                 return;

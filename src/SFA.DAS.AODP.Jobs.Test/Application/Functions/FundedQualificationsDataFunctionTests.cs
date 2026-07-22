@@ -1,15 +1,5 @@
 ﻿using AutoFixture;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
-using SFA.DAS.AODP.Common.Enum;
-using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Data.Entities.Files;
-using SFA.DAS.AODP.Data.Repositories.Jobs;
 using SFA.DAS.AODP.Functions;
-using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Infrastructure.Interfaces;
 using SFA.DAS.AODP.Jobs.Services.CSV;
 using SFA.DAS.AODP.Jobs.Test.Mocks;
@@ -80,228 +70,425 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
                 _fileProcessingService.Object);
         }
 
-    //    [Fact]
-    //    public async Task Run_ShouldReturnOk()
-    //    {
-    //        // Arrange
-    //        var qualificationLookups = _fixture.Build<QualificationLookupItem>()
-    //            .CreateMany(20)
-    //            .ToList();
+        [Fact]
+        public async Task Run_ShouldReturnOk_WhenBothFilesReadyAndHaveData()
+        {
+            var qualificationLookups = _fixture.CreateMany<QualificationLookupItem>(20).ToList();
+            var fundedImport = _fixture.CreateMany<FundedQualificationDTO>(20).ToList();
+            var archivedImport = _fixture.CreateMany<FundedQualificationDTO>(10).ToList();
 
-    //        _fileProcessingService
-    //            .Setup(s => s.GetReadyFileAsync(
-    //                FileCategory.ApprovedFunding,
-    //                It.IsAny<string>(),
-    //                It.IsAny<Guid>(),
-    //                It.IsAny<Guid>(),
-    //                It.IsAny<DateTime>(),
-    //                It.IsAny<CancellationToken>()))
-    //            .ReturnsAsync(new FileProcessingResult(true, false, new MemoryStream(new byte[] { 1, 2, 3 })));
+            _qualificationVersionRepository
+                .Setup(s => s.GetLatestQualificationVersionSnapshotsAsync())
+                .ReturnsAsync(qualificationLookups);
 
-    //        _fileProcessingService
-    //            .Setup(s => s.GetReadyFileAsync(
-    //                FileCategory.ArchivedFunding,
-    //                It.IsAny<string>(),
-    //                It.IsAny<Guid>(),
-    //                It.IsAny<Guid>(),
-    //                It.IsAny<DateTime>(),
-    //                It.IsAny<CancellationToken>()))
-    //            .ReturnsAsync(new FileProcessingResult(true, false, new MemoryStream(new byte[] { 4, 5, 6 })));
+            _fileProcessingService
+                .Setup(s => s.GetReadyFileAsync(
+                    FileCategory.ApprovedFunding,
+                    It.IsAny<string>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<DateTime>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new FileProcessingResult(true, false, new MemoryStream(new byte[] { 1 })));
+
+            _fileProcessingService
+                .Setup(s => s.GetReadyFileAsync(
+                    FileCategory.ArchivedFunding,
+                    It.IsAny<string>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<DateTime>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new FileProcessingResult(true, false, new MemoryStream(new byte[] { 2 })));
+
+            _csvReaderServiceMock
+                .SetupSequence(s => s.ReadCsvFromStreamAsync<
+                    FundedQualificationDTO,
+                    FundedQualificationsImportClassMap>(
+                    It.IsAny<Stream>(),
+                    qualificationLookups,
+                    It.IsAny<ILogger>()))
+                .ReturnsAsync(fundedImport)
+                .ReturnsAsync(archivedImport);
+
+            _qualificationsRepository.Setup(s => s.TruncateFundingTables()).Returns(Task.CompletedTask);
+            _fundedQualificationWriter.Setup(s => s.WriteQualifications(fundedImport)).ReturnsAsync(true);
+            _fundedQualificationWriter.Setup(s => s.WriteQualifications(archivedImport)).ReturnsAsync(true);
+            _fundedQualificationWriter.Setup(s => s.SeedFundingData()).ReturnsAsync(true);
+
+            var httpRequestData = new MockHttpRequestData(_functionContext);
+
+            var response = await _function.Run(httpRequestData, "user");
+
+            Assert.IsType<OkObjectResult>(response);
+        }
+
+        [Fact]
+        public async Task Run_ShouldReturnNotFound_WhenApprovedCsvIsEmpty()
+        {
+            var qualificationLookups = _fixture.CreateMany<QualificationLookupItem>(20).ToList();
+
+            _qualificationVersionRepository
+                .Setup(s => s.GetLatestQualificationVersionSnapshotsAsync())
+                .ReturnsAsync(qualificationLookups);
+
+            _fileProcessingService
+                .Setup(s => s.GetReadyFileAsync(
+                    FileCategory.ApprovedFunding,
+                    It.IsAny<string>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<DateTime>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new FileProcessingResult(true, false, new MemoryStream(new byte[] { 1 })));
+
+            _csvReaderServiceMock
+                .Setup(s => s.ReadCsvFromStreamAsync<
+                    FundedQualificationDTO,
+                    FundedQualificationsImportClassMap>(
+                    It.IsAny<Stream>(),
+                    qualificationLookups,
+                    It.IsAny<ILogger>()))
+                .ReturnsAsync(new List<FundedQualificationDTO>());
+
+            var httpRequestData = new MockHttpRequestData(_functionContext);
+
+            var response = await _function.Run(httpRequestData, "user");
+
+            Assert.IsType<NotFoundObjectResult>(response);
+        }
+
+        [Fact]
+        public async Task Run_ShouldStatusCode500_WhenSystemExceptionThrown()
+        {
+            var qualificationLookups = _fixture.CreateMany<QualificationLookupItem>(20).ToList();
+
+            _qualificationVersionRepository
+                .Setup(s => s.GetLatestQualificationVersionSnapshotsAsync())
+                .ReturnsAsync(qualificationLookups);
+
+            _fileProcessingService
+                .Setup(s => s.GetReadyFileAsync(
+                    FileCategory.ApprovedFunding,
+                    It.IsAny<string>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<DateTime>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new FileProcessingResult(true, false, new MemoryStream(new byte[] { 1 })));
+
+            _csvReaderServiceMock
+                .Setup(s => s.ReadCsvFromStreamAsync<
+                    FundedQualificationDTO,
+                    FundedQualificationsImportClassMap>(
+                    It.IsAny<Stream>(),
+                    qualificationLookups,
+                    It.IsAny<ILogger>()))
+                .ThrowsAsync(new InvalidOperationException("boom"));
+
+            var httpRequestData = new MockHttpRequestData(_functionContext);
+
+            var response = await _function.Run(httpRequestData, "user");
+
+            var result = Assert.IsType<StatusCodeResult>(response);
+            Assert.Equal(500, result.StatusCode);
+        }
+
+        [Fact]
+        public async Task Run_ShouldReturnOk_WhenApprovedFileNotReady()
+        {
+            _fileProcessingService
+                .Setup(s => s.GetReadyFileAsync(
+                    FileCategory.ApprovedFunding,
+                    It.IsAny<string>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<DateTime>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new FileProcessingResult(false, false, null));
+
+            var httpRequestData = new MockHttpRequestData(_functionContext);
+
+            var response = await _function.Run(httpRequestData, "user");
+
+            var ok = Assert.IsType<OkObjectResult>(response);
+            Assert.Contains("File not ready", ok.Value?.ToString());
+        }
+
+        [Fact]
+        public async Task Run_ShouldReturnOk_WhenArchivedFileNotReady()
+        {
+            var qualificationLookups = _fixture.CreateMany<QualificationLookupItem>(20).ToList();
+            var fundedImport = _fixture.CreateMany<FundedQualificationDTO>(10).ToList();
+
+            _qualificationVersionRepository
+                .Setup(s => s.GetLatestQualificationVersionSnapshotsAsync())
+                .ReturnsAsync(qualificationLookups);
+
+            _fileProcessingService
+                .Setup(s => s.GetReadyFileAsync(
+                    FileCategory.ApprovedFunding,
+                    It.IsAny<string>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<DateTime>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new FileProcessingResult(true, false, new MemoryStream(new byte[] { 1 })));
+
+            _fileProcessingService
+                .Setup(s => s.GetReadyFileAsync(
+                    FileCategory.ArchivedFunding,
+                    It.IsAny<string>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<DateTime>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new FileProcessingResult(false, false, null));
+
+            _csvReaderServiceMock
+                .Setup(s => s.ReadCsvFromStreamAsync<
+                    FundedQualificationDTO,
+                    FundedQualificationsImportClassMap>(
+                    It.IsAny<Stream>(),
+                    qualificationLookups,
+                    It.IsAny<ILogger>()))
+                .ReturnsAsync(fundedImport);
+
+            _qualificationsRepository.Setup(s => s.TruncateFundingTables()).Returns(Task.CompletedTask);
+            _fundedQualificationWriter.Setup(s => s.WriteQualifications(fundedImport)).ReturnsAsync(true);
+
+            var httpRequestData = new MockHttpRequestData(_functionContext);
+
+            var response = await _function.Run(httpRequestData, "user");
+
+            var ok = Assert.IsType<OkObjectResult>(response);
+            Assert.Contains("File not ready", ok.Value?.ToString());
+        }
+
+        [Fact]
+        public async Task Run_ShouldReturnOk_WhenJobDisabled()
+        {
+            _control.JobEnabled = false;
+            var httpRequestData = new MockHttpRequestData(_functionContext);
+            var response = await _function.Run(httpRequestData, "user");
+            Assert.IsType<OkObjectResult>(response);
+        }
+
+        [Fact]
+        public async Task Run_ShouldReturnOk_WhenJobAlreadyRunning()
+        {
+            _control.Status = JobStatus.Running.ToString();
+            var httpRequestData = new MockHttpRequestData(_functionContext);
+            var response = await _function.Run(httpRequestData, "user");
+            Assert.IsType<OkObjectResult>(response);
+        }
+
+        [Fact]
+        public async Task Run_ShouldReturnNotFound_WhenArchivedCsvIsEmpty()
+        {
+            var qualificationLookups = _fixture.CreateMany<QualificationLookupItem>(20).ToList();
+            var fundedImport = _fixture.CreateMany<FundedQualificationDTO>(10).ToList();
+
+            _qualificationVersionRepository
+                .Setup(s => s.GetLatestQualificationVersionSnapshotsAsync())
+                .ReturnsAsync(qualificationLookups);
+
+            _fileProcessingService
+                .Setup(s => s.GetReadyFileAsync(
+                    FileCategory.ApprovedFunding,
+                    It.IsAny<string>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<DateTime>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new FileProcessingResult(true, false, new MemoryStream(new byte[] { 1 })));
+
+            _fileProcessingService
+                .Setup(s => s.GetReadyFileAsync(
+                    FileCategory.ArchivedFunding,
+                    It.IsAny<string>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<DateTime>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new FileProcessingResult(true, false, new MemoryStream(new byte[] { 2 })));
+
+            _csvReaderServiceMock
+                .SetupSequence(s => s.ReadCsvFromStreamAsync<
+                    FundedQualificationDTO,
+                    FundedQualificationsImportClassMap>(
+                    It.IsAny<Stream>(),
+                    qualificationLookups,
+                    It.IsAny<ILogger>()))
+                .ReturnsAsync(fundedImport)
+                .ReturnsAsync(new List<FundedQualificationDTO>());
+
+            _qualificationsRepository.Setup(s => s.TruncateFundingTables()).Returns(Task.CompletedTask);
+            _fundedQualificationWriter.Setup(s => s.WriteQualifications(fundedImport)).ReturnsAsync(true);
+
+            var httpRequestData = new MockHttpRequestData(_functionContext);
+            var response = await _function.Run(httpRequestData, "user");
+
+            Assert.IsType<NotFoundObjectResult>(response);
+        }
+
+        [Fact]
+        public async Task Run_ShouldReturnApiStatusCode_WhenApiExceptionThrown()
+        {
+            var qualificationLookups = _fixture.CreateMany<QualificationLookupItem>(20).ToList();
+
+            _qualificationVersionRepository
+                .Setup(s => s.GetLatestQualificationVersionSnapshotsAsync())
+                .ReturnsAsync(qualificationLookups);
+
+            _fileProcessingService
+                .Setup(s => s.GetReadyFileAsync(
+                    FileCategory.ApprovedFunding,
+                    It.IsAny<string>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<DateTime>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new FileProcessingResult(true, false, new MemoryStream(new byte[] { 1 })));
+
+            var request = new HttpRequestMessage(HttpMethod.Get, "https://example.com");
+            var response = new HttpResponseMessage((HttpStatusCode)418)
+            {
+                ReasonPhrase = "Failure reason",
+                Content = new StringContent("fail")
+            };
+
+            _csvReaderServiceMock
+                .Setup(s => s.ReadCsvFromStreamAsync<
+                    FundedQualificationDTO,
+                    FundedQualificationsImportClassMap>(
+                    It.IsAny<Stream>(),
+                    qualificationLookups,
+                    It.IsAny<ILogger>()))
+                .ThrowsAsync(new ApiException(request, response, "fail"));
+
+            var httpRequestData = new MockHttpRequestData(_functionContext);
+            var result = await _function.Run(httpRequestData, "user");
+
+            var status = Assert.IsType<StatusCodeResult>(result);
+            Assert.Equal(418, status.StatusCode);
+        }
 
 
-    //        _csvReaderServiceMock
-    //            .SetupSequence(s => s.ReadCsvFromStreamAsync<
-    //                FundedQualificationDTO,
-    //                FundedQualificationsImportClassMap>(
-    //                It.IsAny<Stream>(),
-    //                qualificationLookups,
-    //                It.IsAny<ILogger>()))
-    //            .ReturnsAsync(fundedImport)
-    //            .ReturnsAsync(archivedImport);
+        [Fact]
+        public async Task Run_ShouldNotSeedFundingData_WhenNoRecordsProcessed()
+        {
+            var qualificationLookups = _fixture.CreateMany<QualificationLookupItem>(20).ToList();
 
-    //        _qualificationVersionRepository.Setup(s => s.GetLatestQualificationVersionSnapshotsAsync()).ReturnsAsync(qualificationLookups).Verifiable();
-    //        _qualificationsRepository.Setup(s => s.TruncateFundingTables()).Verifiable(Times.Once);
-    //        _fundedQualificationWriter.Setup(s => s.WriteQualifications(fundedImport)).ReturnsAsync(true).Verifiable();
-    //        _fundedQualificationWriter.Setup(s => s.WriteQualifications(archivedImport)).ReturnsAsync(true).Verifiable();
-    //        _fundedQualificationWriter.Setup(s => s.SeedFundingData()).ReturnsAsync(true).Verifiable();
+            _qualificationVersionRepository
+                .Setup(s => s.GetLatestQualificationVersionSnapshotsAsync())
+                .ReturnsAsync(qualificationLookups);
 
+            _fileProcessingService
+                .Setup(s => s.GetReadyFileAsync(
+                    FileCategory.ApprovedFunding,
+                    It.IsAny<string>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<DateTime>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new FileProcessingResult(true, false, new MemoryStream(new byte[] { 1 })));
 
-    //        var httpRequestData = new MockHttpRequestData(_functionContext);
+            _csvReaderServiceMock
+                .Setup(s => s.ReadCsvFromStreamAsync<
+                    FundedQualificationDTO,
+                    FundedQualificationsImportClassMap>(
+                    It.IsAny<Stream>(),
+                    qualificationLookups,
+                    It.IsAny<ILogger>()))
+                .ReturnsAsync(new List<FundedQualificationDTO>());
 
-    //        // Act
-    //        var response = await _function.Run(httpRequestData);
+            var httpRequestData = new MockHttpRequestData(_functionContext);
+            var response = await _function.Run(httpRequestData, "user");
 
-    //        // Assert
-    //        Assert.IsType<OkObjectResult>(response);
+            Assert.IsType<NotFoundObjectResult>(response);
+            _fundedQualificationWriter.Verify(s => s.SeedFundingData(), Times.Never);
+        }
 
-    //        _qualificationsRepository.Verify();
-    //        _fundedQualificationWriter.Verify();
-    //    }
+        [Fact]
+        public async Task Run_ShouldSkipFundedImport_WhenImportFundedCsvIsFalse()
+        {
+            _control.ImportFundedCsv = false;
 
-    //    [Fact]
-    //    public async Task Run_ShouldReturnNotFound_WhenCsvIsEmpty()
-    //    {
-    //        var qualificationLookups = _fixture.Build<QualificationLookupItem>()
-    //            .CreateMany(20)
-    //            .ToList();
+            var qualificationLookups = _fixture.CreateMany<QualificationLookupItem>(20).ToList();
+            var archivedImport = _fixture.CreateMany<FundedQualificationDTO>(10).ToList();
 
-    //        var archivedImport = _fixture.Build<FundedQualificationDTO>()
-    //            .CreateMany(10)
-    //            .ToList();
+            _qualificationVersionRepository
+                .Setup(s => s.GetLatestQualificationVersionSnapshotsAsync())
+                .ReturnsAsync(qualificationLookups);
 
+            _fileProcessingService
+                .Setup(s => s.GetReadyFileAsync(
+                    FileCategory.ArchivedFunding,
+                    It.IsAny<string>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<DateTime>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new FileProcessingResult(true, false, new MemoryStream(new byte[] { 2 })));
 
-    //        // Files ready
-    //        _fileProcessingService
-    //            .Setup(s => s.GetReadyFileAsync(
-    //                It.IsAny<FileCategory>(),
-    //                It.IsAny<string>(),
-    //                It.IsAny<Guid>(),
-    //                It.IsAny<Guid>(),
-    //                It.IsAny<DateTime>(),
-    //                It.IsAny<CancellationToken>()))
-    //            .ReturnsAsync(new FileProcessingResult(true, false, new MemoryStream(new byte[] { 1 })));
+            _csvReaderServiceMock
+                .Setup(s => s.ReadCsvFromStreamAsync<
+                    FundedQualificationDTO,
+                    FundedQualificationsImportClassMap>(
+                    It.IsAny<Stream>(),
+                    qualificationLookups,
+                    It.IsAny<ILogger>()))
+                .ReturnsAsync(archivedImport);
 
-    //        _qualificationVersionRepository.Setup(s => s.GetLatestQualificationVersionSnapshotsAsync()).ReturnsAsync(qualificationLookups).Verifiable();
-    //        _qualificationsRepository.Setup(s => s.TruncateFundingTables()).Verifiable(Times.Once);
-    //        _fundedQualificationWriter.Setup(s => s.WriteQualifications(fundedImport)).ReturnsAsync(true).Verifiable();
-    //        _fundedQualificationWriter.Setup(s => s.WriteQualifications(archivedImport)).ReturnsAsync(true).Verifiable();
-    //        _fundedQualificationWriter.Setup(s => s.SeedFundingData()).ReturnsAsync(true).Verifiable();
+            _fundedQualificationWriter.Setup(s => s.WriteQualifications(archivedImport)).ReturnsAsync(true);
 
-    //        // Arrange
-    //        _csvReaderServiceMock
-    //            .Setup(s => s.ReadCsvFromStreamAsync<
-    //                FundedQualificationDTO,
-    //                FundedQualificationsImportClassMap>(
-    //                It.IsAny<Stream>(),
-    //                It.IsAny<IEnumerable<Qualification>>(),
-    //                It.IsAny<ILogger>()))
-    //            .ReturnsAsync(new List<FundedQualificationDTO>());
+            var httpRequestData = new MockHttpRequestData(_functionContext);
+            var response = await _function.Run(httpRequestData, "user");
 
-    //        var httpRequestData = new MockHttpRequestData(_functionContext);
+            Assert.IsType<OkObjectResult>(response);
+            _fundedQualificationWriter.Verify(s => s.WriteQualifications(It.IsAny<List<FundedQualificationDTO>>()), Times.Once);
+        }
 
-    //        // Act
-    //        var response = await _function.Run(httpRequestData);
+        [Fact]
+        public async Task Run_ShouldSkipArchivedImport_WhenImportArchivedCsvIsFalse()
+        {
+            _control.ImportArchivedCsv = false;
 
-    //        // Assert
-    //        Assert.IsType<NotFoundObjectResult>(response);
-    //    }
+            var qualificationLookups = _fixture.CreateMany<QualificationLookupItem>(20).ToList();
+            var fundedImport = _fixture.CreateMany<FundedQualificationDTO>(10).ToList();
 
+            _qualificationVersionRepository
+                .Setup(s => s.GetLatestQualificationVersionSnapshotsAsync())
+                .ReturnsAsync(qualificationLookups);
 
-    //    [Fact]
-    //    public async Task Run_ShouldStatusCode_WhenException()
-    //    {
-    //        var qualificationLookups = _fixture.Build<QualificationLookupItem>()
-    //            .CreateMany(20)
-    //            .ToList();
+            _fileProcessingService
+                .Setup(s => s.GetReadyFileAsync(
+                    FileCategory.ApprovedFunding,
+                    It.IsAny<string>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<DateTime>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new FileProcessingResult(true, false, new MemoryStream(new byte[] { 1 })));
 
-    //        _qualificationsRepository
-    //            .Setup(s => s.GetAwardingOrganisationsAsync())
-    //            .ReturnsAsync(organisations);
+            _csvReaderServiceMock
+                .Setup(s => s.ReadCsvFromStreamAsync<
+                    FundedQualificationDTO,
+                    FundedQualificationsImportClassMap>(
+                    It.IsAny<Stream>(),
+                    qualificationLookups,
+                    It.IsAny<ILogger>()))
+                .ReturnsAsync(fundedImport);
 
-    //        _qualificationsRepository
-    //            .Setup(s => s.GetQualificationsAsync())
-    //            .ReturnsAsync(qualifications);
+            _fundedQualificationWriter.Setup(s => s.WriteQualifications(fundedImport)).ReturnsAsync(true);
 
-    //        // Mock BOTH files as ready
-    //        _fileProcessingService
-    //            .Setup(s => s.GetReadyFileAsync(
-    //                It.IsAny<FileCategory>(),
-    //                It.IsAny<string>(),
-    //                It.IsAny<Guid>(),
-    //                It.IsAny<Guid>(),
-    //                It.IsAny<DateTime>(),
-    //                It.IsAny<CancellationToken>()))
-    //            .ReturnsAsync(new FileProcessingResult(true, false, new MemoryStream(new byte[] { 1 })));
-    //        _qualificationVersionRepository.Setup(s => s.GetLatestQualificationVersionSnapshotsAsync()).ReturnsAsync(qualificationLookups).Verifiable();
-    //        _qualificationsRepository.Setup(s => s.TruncateFundingTables()).Verifiable(Times.Once);
-    //        _fundedQualificationWriter.Setup(s => s.WriteQualifications(fundedImport)).ReturnsAsync(true).Verifiable();
-    //        _fundedQualificationWriter.Setup(s => s.WriteQualifications(archivedImport)).ReturnsAsync(true).Verifiable();
-    //        _fundedQualificationWriter.Setup(s => s.SeedFundingData()).ReturnsAsync(true).Verifiable();
+            var httpRequestData = new MockHttpRequestData(_functionContext);
+            var response = await _function.Run(httpRequestData, "user");
 
-    //        // Force exception during processing
-    //        _csvReaderServiceMock
-    //            .Setup(s => s.ReadCsvFromStreamAsync<
-    //                FundedQualificationDTO,
-    //                FundedQualificationsImportClassMap>(
-    //                It.IsAny<Stream>(),
-    //                It.IsAny<IEnumerable<Qualification>>(),
-    //                It.IsAny<ILogger>()))
-    //            .ThrowsAsync(new InvalidOperationException("exception occurred"));
+            Assert.IsType<OkObjectResult>(response);
+            _fundedQualificationWriter.Verify(s => s.WriteQualifications(fundedImport), Times.Once);
+        }
 
-    //        var httpRequestData = new MockHttpRequestData(_functionContext);
-
-    //        // Act
-    //        var response = await _function.Run(httpRequestData);
-
-    //        // Assert
-    //        var result = Assert.IsType<StatusCodeResult>(response);
-    //        Assert.Equal(500, result.StatusCode);
-    //    }
-
-    //    [Fact]
-    //    public async Task Run_ShouldReturnOk_WhenApprovedFileNotReady()
-    //    {
-    //        _fileProcessingService
-    //            .Setup(s => s.GetReadyFileAsync(
-    //                It.IsAny<FileCategory>(),
-    //                It.IsAny<string>(),
-    //                It.IsAny<Guid>(),
-    //                It.IsAny<Guid>(),
-    //                It.IsAny<DateTime>(),
-    //                It.IsAny<CancellationToken>()))
-    //            .ReturnsAsync(new FileProcessingResult(false, false, null));
-
-    //        var httpRequestData = new MockHttpRequestData(_functionContext);
-
-    //        var response = await _function.Run(httpRequestData);
-
-    //        Assert.IsType<OkObjectResult>(response);
-    //    }
-
-    //    [Fact]
-    //    public async Task Run_ShouldReturnOk_WhenArchivedFileNotReady()
-    //    {
-    //        // Approved is ready
-    //        _fileProcessingService
-    //            .Setup(s => s.GetReadyFileAsync(
-    //                FileCategory.ApprovedFunding,
-    //                It.IsAny<string>(),
-    //                It.IsAny<Guid>(),
-    //                It.IsAny<Guid>(),
-    //                It.IsAny<DateTime>(),
-    //                It.IsAny<CancellationToken>()))
-    //            .ReturnsAsync(new FileProcessingResult(true, false, new MemoryStream(new byte[] { 1 })));
-
-    //        // Archived is NOT ready
-    //        _fileProcessingService
-    //            .Setup(s => s.GetReadyFileAsync(
-    //                FileCategory.ArchivedFunding,
-    //                It.IsAny<string>(),
-    //                It.IsAny<Guid>(),
-    //                It.IsAny<Guid>(),
-    //                It.IsAny<DateTime>(),
-    //                It.IsAny<CancellationToken>()))
-    //            .ReturnsAsync(new FileProcessingResult(false, false, null));
-
-    //        // ✅ FIX: prevent null exception
-    //        _csvReaderServiceMock
-    //            .Setup(s => s.ReadCsvFromStreamAsync<
-    //                FundedQualificationDTO,
-    //                FundedQualificationsImportClassMap>(
-    //                It.IsAny<Stream>(),
-    //                It.IsAny<IEnumerable<Qualification>>(),
-    //                It.IsAny<IEnumerable<AwardingOrganisation>>(),
-    //                It.IsAny<ILogger>()))
-    //            .ReturnsAsync(new List<FundedQualificationDTO> { new() });
-
-    //        var httpRequestData = new MockHttpRequestData(_functionContext);
-
-    //        var response = await _function.Run(httpRequestData);
-
-    //        var ok = Assert.IsType<OkObjectResult>(response);
-
-    //        Assert.Contains("not ready", ok.Value?.ToString(), StringComparison.OrdinalIgnoreCase);
-    //    }
-    //
     }
 }
