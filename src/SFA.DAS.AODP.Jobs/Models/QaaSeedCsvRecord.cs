@@ -1,6 +1,6 @@
 ﻿namespace SFA.DAS.AODP.Jobs.Models;
 
-public class QaaSeedCsvRecord
+public record QaaSeedCsvRecord
 {
     public string AimCode { get; set; } = null!;
 

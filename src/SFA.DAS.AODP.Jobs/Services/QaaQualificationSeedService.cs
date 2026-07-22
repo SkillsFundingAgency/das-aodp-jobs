@@ -6,6 +6,7 @@ using SFA.DAS.AODP.Models.Qualification;
 
 namespace SFA.DAS.AODP.Jobs.Services;
 
+[ExcludeFromCodeCoverage(Justification = "This is temporary code")]
 public class QaaQualificationSeedService(
     ILogger<QaaQualificationSeedService> logger,
     IQaaSeedCsvBlobReader blobReader,

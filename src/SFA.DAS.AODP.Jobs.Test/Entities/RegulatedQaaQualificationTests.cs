@@ -13,6 +13,53 @@ public class RegulatedQaaQualificationTests : UnitTest
     private readonly SectorSubjectArea _testSectorSubjectArea = SectorSubjectArea.FromTiers("1", "1");
 
     [Fact]
+    public void CreateFromExisting_ValidateAllPropertiesSet()
+    {
+        // Arrange & Act
+        var qualification = RegulatedQaaQualification.CreateFromExisting(
+            _testSnapshot,
+            TestAimCode,
+            TestQualificationTitle,
+            TestAwardingBody,
+            new DateOnly(2023, 09, 01),
+            _testLastRegistrationDate,
+            _testSectorSubjectArea,
+            new DateOnly(2028, 02, 01),
+            new DateOnly(2027, 03, 07),
+            new DateOnly(2027, 03, 07),
+            new DateOnly(2027, 03, 07));
+
+        // Assert
+        qualification.DateOfDataSnapshot.ShouldBe(_testSnapshot);
+        qualification.AimCode.ShouldBe(TestAimCode);
+        qualification.QualificationTitle.ShouldBe(TestQualificationTitle);
+        qualification.AwardingBody.ShouldBe(TestAwardingBody);
+        qualification.StartDate.ShouldBe(_testStartDate);
+        qualification.LastDateForRegistration.ShouldBe(_testLastRegistrationDate);
+
+        qualification.IsDiscontinued.ShouldBeTrue();
+        qualification.DiscontinuedDate.ShouldBe(new DateOnly(2028, 02, 01));
+
+        qualification.SectorSubjectArea.ShouldBeSameAs(_testSectorSubjectArea);
+
+        qualification.Level.ShouldBe("Level 3");
+        qualification.Type.ShouldBe("Access to Higher Education");
+        qualification.Status.ShouldBe("Approved");
+
+        qualification.Age1619FundingApprovalEndDate.ShouldBe(new DateOnly(2027, 03, 07));
+        qualification.AdvancedLearnerLoansFundingApprovalEndDate.ShouldBe(new DateOnly(2027, 03, 07));
+        qualification.LegalEntitlementL2L3FundingApprovalEndDate.ShouldBe(new DateOnly(2027, 03, 07));
+        qualification.LatestQaaQualificationHistoryId.ShouldBeNull();
+
+        qualification.LatestImportComparisonOutcome.ShouldBe(QaaImportComparisonOutcome.NotChanged);
+        qualification.LastDateForRegistrationChangeType.ShouldBe(QaaLastDateForRegistrationChangeType.NotChanged);
+
+        qualification.FirstSeenAt.ShouldBe(_testSnapshot);
+
+        qualification.Id.ShouldNotBe(Guid.Empty);
+    }
+
+    [Fact]
     public void Create_WithValidParameters_ReturnsInstanceWithCorrectValuesAndDefaults()
     {
         var qualification = CreateQualification(isDiscontinued: true);

@@ -3,6 +3,7 @@ using SFA.DAS.AODP.Models.Qualification;
 
 namespace SFA.DAS.AODP.Jobs.Services.CSV;
 
+[ExcludeFromCodeCoverage(Justification = "This is temporary code")]
 public class QaaFundedQualificationsImportClassMap : ClassMap<FundedQualificationDTO>
 {
     private readonly Dictionary<string, (Guid? qualificationId, Guid? organisationId)> _qualificationLookupCache;

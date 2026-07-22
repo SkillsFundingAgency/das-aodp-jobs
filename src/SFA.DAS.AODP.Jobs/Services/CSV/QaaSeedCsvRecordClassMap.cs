@@ -4,6 +4,7 @@ using System.Globalization;
 
 namespace SFA.DAS.AODP.Jobs.Services.CSV;
 
+[ExcludeFromCodeCoverage(Justification = "This is temporary code")]
 public class QaaSeedCsvRecordClassMap : ClassMap<QaaSeedCsvRecord>
 {
     private const string FullDateFormat = "dd/MM/yyyy";

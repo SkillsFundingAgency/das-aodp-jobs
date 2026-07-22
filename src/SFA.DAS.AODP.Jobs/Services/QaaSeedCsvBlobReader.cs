@@ -2,6 +2,7 @@
 
 namespace SFA.DAS.AODP.Jobs.Services;
 
+[ExcludeFromCodeCoverage(Justification = "This is temporary code")]
 public class QaaSeedCsvBlobReader(IAzureClientFactory<BlobServiceClient> azureClientFactory, IHostEnvironment environment) : IQaaSeedCsvBlobReader
 {
     public Task<Stream> OpenReadAsync(string containerName, string blobName, CancellationToken cancellationToken)
