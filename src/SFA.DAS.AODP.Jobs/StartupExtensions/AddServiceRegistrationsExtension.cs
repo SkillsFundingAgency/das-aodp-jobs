@@ -1,4 +1,5 @@
 ﻿using SFA.DAS.AODP.Jobs.Functions.Abstractions;
+using SFA.DAS.AODP.Models.Config;
 
 namespace SFA.DAS.AODP.Jobs.StartupExtensions;
 
@@ -32,6 +33,7 @@ public static class AddServiceRegistrationsExtension
         services.AddTransient<IFundingEligibilityService, FundingEligibilityService>();
         services.AddScoped<ICsvReaderService, CsvReaderService>();
         services.AddScoped<ISystemClockService, SystemClockService>();
+        services.AddScoped<IGuidProvider, GuidProvider>();
         services.AddScoped<IJobConfigurationService, JobConfigurationService>();
         services.AddScoped<IChangeDetectionService, ChangeDetectionService>();
         services.AddScoped<ISchedulerClientService, SchedulerClientService>();
@@ -39,6 +41,7 @@ public static class AddServiceRegistrationsExtension
         services.AddScoped<IQualificationsRepository, QualificationsRepository>();
         services.AddScoped<IQualificationVersionRepository, QualificationVersionRepository>();
         services.AddScoped<IImportRepository, ImportRepository>();
+        services.AddScoped<IQualificationProcessor, QualificationProcessor>();
         services.AddAzureClients(clientBuilder =>
         {
             clientBuilder.AddBlobServiceClient(configuration.GetValue<string>("BlobStorageSettings:ConnectionString"));

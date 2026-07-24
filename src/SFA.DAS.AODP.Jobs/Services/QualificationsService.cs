@@ -1,10 +1,5 @@
-﻿using System.Reflection.Metadata.Ecma335;
-using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+﻿using System.Text.Json;
 using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Infrastructure.Context;
-using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Models.Qualification;
 
 namespace SFA.DAS.AODP.Jobs.Services

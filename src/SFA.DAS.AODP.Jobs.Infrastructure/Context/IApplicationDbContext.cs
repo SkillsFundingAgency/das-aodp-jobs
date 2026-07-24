@@ -6,6 +6,7 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 {
     public interface IApplicationDbContext
     {
+        DbSet<Application> Applications { get; set; }
         DbSet<ActionType> ActionType { get; set; }
         DbSet<LifecycleStage> LifecycleStages { get; set; }
         DbSet<AwardingOrganisation> AwardingOrganisation { get; set; }
