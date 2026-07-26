@@ -49,6 +49,8 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         public virtual DbSet<DefundingList> DefundingLists { get; set; }
         
         public virtual DbSet<RegulatedQaaQualification> RegulatedQaaQualification { get; set; }
+
+        public virtual DbSet<QaaQualificationFunding> QaaQualificationFundings { get; set; }
         
         public virtual DbSet<RolloverCandidate> RolloverCandidates { get; set; }
 

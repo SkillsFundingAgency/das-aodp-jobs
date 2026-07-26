@@ -11,4 +11,15 @@ public static class QualificationFundingQueryExtensions
     {
         return query.Where(funding => funding.EndDate == null || funding.EndDate >= academicYear.StartDate && funding.EndDate <= academicYear.EndDate);
     }
+
+    public static IQueryable<QaaQualificationFunding> WhereActiveForAcademicYear(
+        this IQueryable<QaaQualificationFunding> query,
+        AcademicYear academicYear)
+    {
+        return query.Where(funding =>
+            funding.AcademicYear == academicYear.Name &&
+            (funding.EndDate == null ||
+             funding.EndDate >= academicYear.StartDate &&
+             funding.EndDate <= academicYear.EndDate));
+    }
 }

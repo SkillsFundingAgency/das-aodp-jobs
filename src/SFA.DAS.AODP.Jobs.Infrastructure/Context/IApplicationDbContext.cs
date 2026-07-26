@@ -27,6 +27,7 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         DbSet<Pldns> Pldns { get; set; }
         DbSet<DefundingList> DefundingLists { get; set; }
         DbSet<RegulatedQaaQualification> RegulatedQaaQualification { get; set; }
+        DbSet<QaaQualificationFunding> QaaQualificationFundings { get; set; }
         DbSet<RolloverCandidate> RolloverCandidates { get; set; }
 
         void StartingBulkInsert();

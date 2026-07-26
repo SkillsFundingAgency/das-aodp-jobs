@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SFA.DAS.AODP.Data.Entities.Rollover;
 using SFA.DAS.AODP.Infrastructure.Context;
+using SFA.DAS.AODP.Infrastructure.Extensions.Rollover;
 using SFA.DAS.AODP.Infrastructure.Interfaces.Rollover;
 using SFA.DAS.AODP.Infrastructure.Models;
 using SFA.DAS.AODP.Infrastructure.Models.Rollover;
@@ -14,7 +15,7 @@ public class RolloverCandidateRepository(IApplicationDbContext context, ISystemC
         AcademicYear academicYear,
         CancellationToken cancellationToken)
     {
-        var candidateFundingStreams = await RolloverCandidateQueryBuilder
+        var ofqualCandidateFundingStreams = await RolloverCandidateQueryBuilder
             .From(
                 context.QualificationVersions.AsNoTracking(),
                 context.QualificationFundings.AsNoTracking())
@@ -23,6 +24,28 @@ public class RolloverCandidateRepository(IApplicationDbContext context, ISystemC
             .WithActiveFundingStreamsForAcademicYear(academicYear)
             .Build()
             .ToListAsync(cancellationToken);
+
+        var qaaCandidateFundingStreams = await context.QaaQualificationFundings
+            .AsNoTracking()
+            .WhereActiveForAcademicYear(academicYear)
+            .Select(funding => new RolloverCandidateFundingStream
+            {
+                SourceType = RolloverSourceTypes.Qaa,
+                SourceQualificationId = funding.QaaQualificationId,
+                FundingOfferId = funding.FundingOfferId,
+                EndDate = funding.EndDate
+            })
+            .ToListAsync(cancellationToken);
+
+        var candidateFundingStreams = ofqualCandidateFundingStreams
+            .Concat(qaaCandidateFundingStreams)
+            .DistinctBy(candidate => new
+            {
+                candidate.SourceType,
+                candidate.SourceQualificationId,
+                candidate.FundingOfferId
+            })
+            .ToList();
 
         if (candidateFundingStreams.Count == 0)
         {

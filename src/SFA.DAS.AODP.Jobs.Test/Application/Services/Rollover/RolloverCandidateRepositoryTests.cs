@@ -140,6 +140,159 @@ public class RolloverCandidateRepositoryTests
         context.RolloverCandidates.ShouldBeEmpty();
     }
 
+    [Fact]
+    public async Task CreateInitialRolloverCandidatesAsync_CreatesOneQaaCandidatePerFundingOffer()
+    {
+        await using var context = CreateContext();
+        var repository = new RolloverCandidateRepository(
+            context,
+            new FakeSystemClockService());
+        var qualificationId = Guid.NewGuid();
+        var fundingOfferIds = new[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
+        var academicYear = new AcademicYear(
+            "2025/26",
+            new DateOnly(2025, 8, 1),
+            new DateOnly(2026, 7, 31));
+        context.QaaQualificationFundings.AddRange(fundingOfferIds.Select(
+            fundingOfferId => QaaQualificationFunding.Create(
+                qualificationId,
+                fundingOfferId,
+                academicYear.Name,
+                academicYear.StartDate,
+                academicYear.EndDate,
+                "Not funded",
+                new DateTime(2026, 7, 1))));
+        await context.SaveChangesAsync();
+
+        var result = await repository.CreateInitialRolloverCandidatesAsync(
+            academicYear,
+            CancellationToken.None);
+
+        result.ShouldBe(3);
+        var stored = await context.RolloverCandidates.ToListAsync();
+        stored.Count.ShouldBe(3);
+        stored.ShouldAllBe(candidate =>
+            candidate.SourceType == RolloverSourceTypes.Qaa &&
+            candidate.SourceQualificationId == qualificationId &&
+            candidate.AcademicYear == academicYear.Name);
+        stored.Select(candidate => candidate.FundingOfferId)
+            .ShouldBe(fundingOfferIds, ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task CreateInitialRolloverCandidatesAsync_QaaRequiresMatchingAcademicYear()
+    {
+        await using var context = CreateContext();
+        var repository = new RolloverCandidateRepository(
+            context,
+            new FakeSystemClockService());
+        var academicYear = new AcademicYear(
+            "2025/26",
+            new DateOnly(2025, 8, 1),
+            new DateOnly(2026, 7, 31));
+        context.QaaQualificationFundings.Add(QaaQualificationFunding.Create(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "2026/27",
+            new DateOnly(2026, 8, 1),
+            new DateOnly(2027, 7, 31),
+            "Approved",
+            new DateTime(2026, 7, 1)));
+        await context.SaveChangesAsync();
+
+        var result = await repository.CreateInitialRolloverCandidatesAsync(
+            academicYear,
+            CancellationToken.None);
+
+        result.ShouldBe(0);
+        context.RolloverCandidates.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task CreateInitialRolloverCandidatesAsync_DoesNotDuplicateApiCreatedQaaCandidate()
+    {
+        await using var context = CreateContext();
+        var repository = new RolloverCandidateRepository(
+            context,
+            new FakeSystemClockService());
+        var qualificationId = Guid.NewGuid();
+        var fundingOfferId = Guid.NewGuid();
+        var academicYear = new AcademicYear(
+            "2025/26",
+            new DateOnly(2025, 8, 1),
+            new DateOnly(2026, 7, 31));
+        context.QaaQualificationFundings.Add(QaaQualificationFunding.Create(
+            qualificationId,
+            fundingOfferId,
+            academicYear.Name,
+            academicYear.StartDate,
+            null,
+            null,
+            new DateTime(2026, 7, 1)));
+        context.RolloverCandidates.Add(RolloverCandidate.CreateInitialRound(
+            RolloverSourceTypes.Qaa,
+            qualificationId,
+            fundingOfferId,
+            academicYear.Name,
+            new DateTime(2026, 6, 30),
+            null));
+        await context.SaveChangesAsync();
+
+        var result = await repository.CreateInitialRolloverCandidatesAsync(
+            academicYear,
+            CancellationToken.None);
+
+        result.ShouldBe(0);
+        context.RolloverCandidates.Count().ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task CreateInitialRolloverCandidatesAsync_IsolatesMatchingIdsBySourceType()
+    {
+        await using var context = CreateContext();
+        var repository = new RolloverCandidateRepository(
+            context,
+            new FakeSystemClockService());
+        var sourceQualificationId = Guid.NewGuid();
+        var fundingOfferId = Guid.NewGuid();
+        var academicYear = new AcademicYear(
+            "2025/26",
+            new DateOnly(2025, 8, 1),
+            new DateOnly(2026, 7, 31));
+        context.QualificationVersions.Add(CreateQualificationVersion(
+            sourceQualificationId,
+            Guid.NewGuid(),
+            1,
+            true));
+        context.QualificationFundings.Add(QualificationFunding.Create(
+            sourceQualificationId,
+            fundingOfferId,
+            null,
+            academicYear.EndDate,
+            null));
+        context.QaaQualificationFundings.Add(QaaQualificationFunding.Create(
+            sourceQualificationId,
+            fundingOfferId,
+            academicYear.Name,
+            academicYear.StartDate,
+            academicYear.EndDate,
+            null,
+            new DateTime(2026, 7, 1)));
+        await context.SaveChangesAsync();
+
+        var result = await repository.CreateInitialRolloverCandidatesAsync(
+            academicYear,
+            CancellationToken.None);
+
+        result.ShouldBe(2);
+        var stored = await context.RolloverCandidates.ToListAsync();
+        stored.Count.ShouldBe(2);
+        stored.Select(candidate => candidate.SourceType)
+            .ShouldBe(
+                [RolloverSourceTypes.Ofqual, RolloverSourceTypes.Qaa],
+                ignoreOrder: true);
+    }
+
     private static ApplicationDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
