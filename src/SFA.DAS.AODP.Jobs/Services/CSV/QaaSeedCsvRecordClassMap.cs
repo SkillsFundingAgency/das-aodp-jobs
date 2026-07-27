@@ -4,6 +4,8 @@ using System.Globalization;
 
 namespace SFA.DAS.AODP.Jobs.Services.CSV;
 
+// This is temporary code to seed the raw Qaa data from a file we had at the last point we published,
+// before we had the qaa api. This can be removed once we have ran the seed function for Qaa in production.
 [SuppressMessage(
     "Major Code Smell",
     "S1699:Constructors should only call non-overridable methods",
@@ -20,15 +22,12 @@ public sealed class QaaSeedCsvRecordClassMap : ClassMap<QaaSeedCsvRecord>
         Map(m => m.DiplomaTitle).Name("Diploma Title");
         Map(m => m.SsaTier1).Name("SSA Tier 1");
         Map(m => m.SsaTier2).Name("SSA Tier 2");
-        //Map(m => m.StartDateOfQualification).Name("Start date of qualification");
         Map(m => m.FullStartDateOfQualification)
             .Name("Full start date of qualification")
             .Convert(args => ParseRequiredDate(args.Row.GetField("Full start date of qualification")));
-        //Map(m => m.LastDateForRegistration).Name("Last date for registrations");
         Map(m => m.FullLastDateForRegistration)
             .Name("Full Last date for registrations")
             .Convert(args => ParseRequiredDate(args.Row.GetField("Full Last date for registrations")));
-        //Map(m => m.LastDateForCertification).Name("Last date for certifications");
         Map(m => m.FullLastDateForCertification)
             .Name("Full last date for certifications")
             .Convert(args => ParseRequiredDate(args.Row.GetField("Full last date for certifications")));

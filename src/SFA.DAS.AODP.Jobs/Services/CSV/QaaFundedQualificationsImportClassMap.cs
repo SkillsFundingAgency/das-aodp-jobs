@@ -3,6 +3,9 @@ using SFA.DAS.AODP.Models.Qualification;
 
 namespace SFA.DAS.AODP.Jobs.Services.CSV;
 
+// This code is temporary, it is only to seed the initial Qaa data from the existing funded files,
+// such that we have a baseline set of data to go by.
+// This code can be removed once the seed function has been ran in production.
 [SuppressMessage(
     "Major Code Smell", 
     "S1699:Constructors should only call non-overridable methods", 

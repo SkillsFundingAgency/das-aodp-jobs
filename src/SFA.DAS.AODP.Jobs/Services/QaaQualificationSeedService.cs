@@ -6,6 +6,7 @@ using SFA.DAS.AODP.Models.Qualification;
 
 namespace SFA.DAS.AODP.Jobs.Services;
 
+// This is temporary code only existing for the initial seeding process and can be removed when the seed function has ran in production.
 [ExcludeFromCodeCoverage(Justification = "This is temporary code")]
 public class QaaQualificationSeedService(
     ILogger<QaaQualificationSeedService> logger,
