@@ -16,7 +16,7 @@ public class QaaRepository(IDbContextFactory<ApplicationDbContext> dbContextFact
     /// <inheritdoc/>.
     public async Task<int> ImportQaaQualificationsAsync(
         IReadOnlyCollection<QaaQualificationResponse> proposedQualifications,
-        DateTime snapshotTakenAt,
+        DateTime dateOfSnapshot,
         CancellationToken cancellationToken)
     {
         await using var context = await _applicationDbContext.CreateDbContextAsync(cancellationToken);
@@ -29,7 +29,7 @@ public class QaaRepository(IDbContextFactory<ApplicationDbContext> dbContextFact
                 context,
                 currentQualifications,
                 proposedQaaQualification,
-                snapshotTakenAt,
+                dateOfSnapshot,
                 cancellationToken);
         }
 

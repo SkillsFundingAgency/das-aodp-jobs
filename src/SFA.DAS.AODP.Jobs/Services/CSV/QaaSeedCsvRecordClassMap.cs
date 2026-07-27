@@ -4,8 +4,12 @@ using System.Globalization;
 
 namespace SFA.DAS.AODP.Jobs.Services.CSV;
 
+[SuppressMessage(
+    "Major Code Smell",
+    "S1699:Constructors should only call non-overridable methods",
+    Justification = "Class is sealed and follows CsvHelper ClassMap registration pattern.")]
 [ExcludeFromCodeCoverage(Justification = "This is temporary code")]
-public class QaaSeedCsvRecordClassMap : ClassMap<QaaSeedCsvRecord>
+public sealed class QaaSeedCsvRecordClassMap : ClassMap<QaaSeedCsvRecord>
 {
     private const string FullDateFormat = "dd/MM/yyyy";
 

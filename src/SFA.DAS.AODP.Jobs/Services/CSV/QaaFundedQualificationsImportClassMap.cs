@@ -3,8 +3,12 @@ using SFA.DAS.AODP.Models.Qualification;
 
 namespace SFA.DAS.AODP.Jobs.Services.CSV;
 
+[SuppressMessage(
+    "Major Code Smell", 
+    "S1699:Constructors should only call non-overridable methods", 
+    Justification = "Class is sealed and follows CsvHelper ClassMap registration pattern.")]
 [ExcludeFromCodeCoverage(Justification = "This is temporary code")]
-public class QaaFundedQualificationsImportClassMap : ClassMap<FundedQualificationDTO>
+public sealed class QaaFundedQualificationsImportClassMap : ClassMap<FundedQualificationDTO>
 {
     private readonly Dictionary<string, (Guid? qualificationId, Guid? organisationId)> _qualificationLookupCache;
     private readonly ILogger _logger;
@@ -53,9 +57,7 @@ public class QaaFundedQualificationsImportClassMap : ClassMap<FundedQualificatio
                 return default;
             }
 
-            return _qualificationLookupCache.TryGetValue(qan, out var value)
-                ? value.organisationId
-                : null;
+            return TryQualificationLookup(qan);
         });
 
         Map(m => m.Level).Name("Level");
@@ -89,15 +91,9 @@ public class QaaFundedQualificationsImportClassMap : ClassMap<FundedQualificatio
                 var endDateRaw = row.Row.GetField(endKey);
                 var startDateRaw = row.Row.GetField(startKey);
 
-                DateTime? endDate =
-                    DateTime.TryParse(endDateRaw, out var e) && e >= _minDate
-                        ? e
-                        : null;
+                DateTime? endDate = ParseDate(endDateRaw);
 
-                DateTime? startDate =
-                    DateTime.TryParse(startDateRaw, out var s) && s >= _minDate
-                        ? s
-                        : null;
+                DateTime? startDate = ParseDate(startDateRaw);
 
                 offers.Add(new FundedQualificationOfferDTO
                 {
@@ -112,6 +108,19 @@ public class QaaFundedQualificationsImportClassMap : ClassMap<FundedQualificatio
 
             return offers;
         });
+    }
 
+    private Guid? TryQualificationLookup(string qan)
+    {
+        return _qualificationLookupCache.TryGetValue(qan, out var value)
+            ? value.organisationId
+            : null;
+    }
+
+    private DateTime? ParseDate(string? endDateRaw)
+    {
+        return DateTime.TryParse(endDateRaw, out var e) && e >= _minDate
+            ? e
+            : null;
     }
 }
