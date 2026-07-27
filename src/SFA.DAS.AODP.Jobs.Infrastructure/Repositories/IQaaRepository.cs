@@ -1,4 +1,4 @@
-﻿using SFA.DAS.AODP.Data.Entities;
+﻿using SFA.DAS.AODP.Models.QaaQualification;
 
 namespace SFA.DAS.AODP.Infrastructure.Repositories;
 
@@ -8,16 +8,14 @@ namespace SFA.DAS.AODP.Infrastructure.Repositories;
 public interface IQaaRepository
 {
     /// <summary>
-    /// Runs pre-import steps required to allow the import to work correctly.
+    /// Imports QAA qualifications as an upsert keyed by AIM code.
     /// </summary>
+    /// <param name="proposedQualifications">The QAA qualifications returned from the API.</param>
+    /// <param name="dateOfSnapshot">The date and time of the snapshot.</param>
     /// <param name="cancellationToken">Propagates a notification that the operation should be cancelled.</param>
-    Task<int> RunPrerequisitesForImportAsync(CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Performs the import of the data as a single unit of work.
-    /// </summary>
-    /// <param name="entries">The <see cref="RegulatedQaaQualification"/>s to create.</param>
-    /// <param name="cancellationToken">Propagates a notification that the operation should be cancelled.</param>
-    /// <returns>The completed task.</returns>
-    Task RunImportAsync(IEnumerable<RegulatedQaaQualification> entries, CancellationToken cancellationToken);
+    /// <returns>The number of records processed.</returns>
+    Task<int> ImportQaaQualificationsAsync(
+        IReadOnlyCollection<QaaQualificationResponse> proposedQualifications,
+        DateTime dateOfSnapshot,
+        CancellationToken cancellationToken);
 }

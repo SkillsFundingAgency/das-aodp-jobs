@@ -55,6 +55,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             fields = fields.AppendIf(Normalise(newRecord.GcseSizeEquivalence) != Normalise(qualificationVersion.GcseSizeEquivelence), "GcseSizeEquivelence");
             fields = fields.AppendIf(newRecord.Glh != qualificationVersion.Glh, "Glh");
             fields = fields.AppendIf(Normalise(newRecord.GradingScale) != Normalise(qualificationVersion.GradingScale), "GradingScale");
+            fields = fields.AppendIf(newRecord.GradingScaleId != qualificationVersion.GradingScaleId, "GradingScaleId");
             fields = fields.AppendIf(Normalise(newRecord.GradingType) != Normalise(qualificationVersion.GradingType), "GradingType");
             fields = fields.AppendIf(Normalise(newRecord.ImportStatus) != Normalise(qualificationVersion.ImportStatus), "ImportStatus");
             fields = fields.AppendIf(NormaliseDate(newRecord.InsertedDate) != NormaliseDate(qualificationVersion.InsertedDate), "InsertedDate");
@@ -89,7 +90,7 @@ namespace SFA.DAS.AODP.Jobs.Services
             fields = fields.AppendIf(newRecord.TotalCredits != qualificationVersion.TotalCredits, "TotalCredits");
             fields = fields.AppendIf(newRecord.Tqt != qualificationVersion.Tqt, "Tqt");
             fields = fields.AppendIf(Normalise(newRecord.Type) != Normalise(qualificationVersion.Type), "Type");
-            fields = fields.AppendIf(newRecord.TypeId != qualificationVersion.TypeId, "Type");
+            fields = fields.AppendIf(newRecord.TypeId != qualificationVersion.TypeId, "TypeId");
             fields = fields.AppendIf(NormaliseDate(newRecord.UiLastUpdatedDate) != NormaliseDate(qualificationVersion.UiLastUpdatedDate), "UiLastUpdatedDate");
             fields = fields.AppendIf(newRecord.IntentionToSeekFundingInEngland != qualificationVersion.IntentionToSeekFundingInEngland, "IntentionToSeekFundingInEngland");
 
