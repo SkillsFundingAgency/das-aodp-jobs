@@ -31,7 +31,6 @@ global using SFA.DAS.AODP.Jobs.Services;
 global using SFA.DAS.AODP.Jobs.StartupExtensions;
 global using SFA.DAS.AODP.Models.Config;
 global using SFA.DAS.AODP.Models.QaaQualification;
-global using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
 global using SFA.DAS.AODP.Common.Enum;
 global using SFA.DAS.AODP.Jobs.Models.Jobs;
 

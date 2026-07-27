@@ -1,3 +1,5 @@
+using Shouldly;
+
 namespace SFA.DAS.AODP.Jobs.UnitTests.Entities;
 
 public class RegulatedQaaQualificationTests : UnitTest
@@ -11,94 +13,222 @@ public class RegulatedQaaQualificationTests : UnitTest
     private readonly SectorSubjectArea _testSectorSubjectArea = SectorSubjectArea.FromTiers("1", "1");
 
     [Fact]
+    public void CreateFromExisting_ValidateAllPropertiesSet()
+    {
+        // Arrange & Act
+        var qualification = RegulatedQaaQualification.CreateFromExisting(
+            _testSnapshot,
+            TestAimCode,
+            TestQualificationTitle,
+            TestAwardingBody,
+            new DateOnly(2023, 09, 01),
+            _testLastRegistrationDate,
+            _testSectorSubjectArea,
+            new DateOnly(2028, 02, 01),
+            new DateOnly(2027, 03, 07),
+            new DateOnly(2027, 03, 07),
+            new DateOnly(2027, 03, 07));
+
+        // Assert
+        qualification.DateOfDataSnapshot.ShouldBe(_testSnapshot);
+        qualification.AimCode.ShouldBe(TestAimCode);
+        qualification.QualificationTitle.ShouldBe(TestQualificationTitle);
+        qualification.AwardingBody.ShouldBe(TestAwardingBody);
+        qualification.StartDate.ShouldBe(_testStartDate);
+        qualification.LastDateForRegistration.ShouldBe(_testLastRegistrationDate);
+
+        qualification.IsDiscontinued.ShouldBeTrue();
+        qualification.DiscontinuedDate.ShouldBe(new DateOnly(2028, 02, 01));
+
+        qualification.SectorSubjectArea.ShouldBeSameAs(_testSectorSubjectArea);
+
+        qualification.Level.ShouldBe("Level 3");
+        qualification.Type.ShouldBe("Access to Higher Education");
+        qualification.Status.ShouldBe("Approved");
+
+        qualification.Age1619FundingApprovalEndDate.ShouldBe(new DateOnly(2027, 03, 07));
+        qualification.AdvancedLearnerLoansFundingApprovalEndDate.ShouldBe(new DateOnly(2027, 03, 07));
+        qualification.LegalEntitlementL2L3FundingApprovalEndDate.ShouldBe(new DateOnly(2027, 03, 07));
+        qualification.LatestQaaQualificationHistoryId.ShouldBeNull();
+
+        qualification.LatestImportComparisonOutcome.ShouldBe(QaaImportComparisonOutcome.NotChanged);
+        qualification.LastDateForRegistrationChangeType.ShouldBe(QaaLastDateForRegistrationChangeType.NotChanged);
+
+        qualification.FirstSeenAt.ShouldBe(_testSnapshot);
+
+        qualification.Id.ShouldNotBe(Guid.Empty);
+    }
+
+    [Fact]
     public void Create_WithValidParameters_ReturnsInstanceWithCorrectValuesAndDefaults()
     {
-        // Act
-        var qualification = RegulatedQaaQualification.Create(
+        var qualification = CreateQualification(isDiscontinued: true);
+
+        qualification.DateOfDataSnapshot.ShouldBe(_testSnapshot);
+        qualification.AimCode.ShouldBe(TestAimCode);
+        qualification.QualificationTitle.ShouldBe(TestQualificationTitle);
+        qualification.AwardingBody.ShouldBe(TestAwardingBody);
+        qualification.StartDate.ShouldBe(_testStartDate);
+        qualification.LastDateForRegistration.ShouldBe(_testLastRegistrationDate);
+
+        qualification.IsDiscontinued.ShouldBeTrue();
+        qualification.DiscontinuedDate.ShouldBe(new DateOnly(2024, 01, 31));
+
+        qualification.SectorSubjectArea.ShouldBeSameAs(_testSectorSubjectArea);
+
+        qualification.Level.ShouldBe("Level 3");
+        qualification.Type.ShouldBe("Access to Higher Education");
+        qualification.Status.ShouldBe("Approved");
+
+        qualification.LastChangedAt.ShouldBe(_testSnapshot);
+
+        qualification.Age1619FundingApprovalEndDate.ShouldBeNull();
+        qualification.AdvancedLearnerLoansFundingApprovalEndDate.ShouldBeNull();
+        qualification.LegalEntitlementL2L3FundingApprovalEndDate.ShouldBeNull();
+        qualification.LatestQaaQualificationHistoryId.ShouldBeNull();
+
+        qualification.LatestImportComparisonOutcome.ShouldBe(QaaImportComparisonOutcome.New);
+        qualification.LastDateForRegistrationChangeType.ShouldBe(QaaLastDateForRegistrationChangeType.NotChanged);
+
+        qualification.FirstSeenAt.ShouldBe(_testSnapshot);
+
+        qualification.Id.ShouldNotBe(Guid.Empty);
+    }
+
+    [Fact]
+    public void HasMaterialQaaChange_WhenLastDateForRegistrationChanges_ReturnsTrue()
+    {
+        var qualification = CreateQualification();
+
+        var result = qualification.AnyChanges(new DateOnly(2026, 08, 31));
+
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void ApplyImportedQaaData_WhenOnlyDescriptiveFieldsChange_DoesNotChangeMaterialState()
+    {
+        var qualification = CreateQualification();
+        var historyId = Guid.NewGuid();
+        qualification.RecordHistory(historyId);
+        var originalLastChangedAt = qualification.LastChangedAt;
+        var newSnapshot = new DateTime(2024, 03, 15);
+
+        qualification.Update(
+            newSnapshot,
+            "Updated title",
+            "Updated awarding body",
+            new DateOnly(2024, 09, 01),
+            _testLastRegistrationDate,
+            null,
+            SectorSubjectArea.FromTiers("4", "1"),
+            newSnapshot);
+
+        qualification.QualificationTitle.ShouldBe("Updated title");
+        qualification.AwardingBody.ShouldBe("Updated awarding body");
+        qualification.StartDate.ShouldBe(new DateOnly(2024, 09, 01));
+        qualification.SectorSubjectArea.ShouldBe(SectorSubjectArea.Engineering);
+
+        qualification.DateOfDataSnapshot.ShouldBe(newSnapshot);
+        qualification.LastChangedAt.ShouldBe(originalLastChangedAt);
+
+        qualification.LatestQaaQualificationHistoryId.ShouldBe(historyId);
+        qualification.LatestImportComparisonOutcome.ShouldBe(QaaImportComparisonOutcome.NotChanged);
+        qualification.LastDateForRegistrationChangeType.ShouldBe(QaaLastDateForRegistrationChangeType.NotChanged);
+    }
+
+    [Fact]
+    public void ApplyImportedQaaData_WhenLastDateForRegistrationIsExtended_RecordsMaterialChange()
+    {
+        var qualification = CreateQualification();
+        var changedAt = new DateTime(2024, 03, 15);
+
+        qualification.Update(
+            changedAt,
+            TestQualificationTitle,
+            TestAwardingBody,
+            _testStartDate,
+            new DateOnly(2026, 08, 31),
+            null,
+            _testSectorSubjectArea,
+            changedAt);
+
+        qualification.LastChangedAt.ShouldBe(changedAt);
+        qualification.LatestImportComparisonOutcome.ShouldBe(QaaImportComparisonOutcome.LastDateForRegistrationChanged);
+        qualification.LastDateForRegistrationChangeType.ShouldBe(QaaLastDateForRegistrationChangeType.Extended);
+    }
+
+    [Fact]
+    public void ApplyImportedQaaData_WhenAlreadyDiscontinuedAndMaterialFieldsAreUnchanged_RecordsUnchanged()
+    {
+        var qualification = CreateQualification(isDiscontinued: true);
+        var changedAt = new DateTime(2024, 03, 15);
+
+        qualification.Update(
+            changedAt,
+            TestQualificationTitle,
+            TestAwardingBody,
+            _testStartDate,
+            _testLastRegistrationDate,
+            new DateOnly(2024, 01, 31),
+            _testSectorSubjectArea,
+            changedAt);
+
+        qualification.IsDiscontinued.ShouldBeTrue();
+        qualification.LatestImportComparisonOutcome.ShouldBe(QaaImportComparisonOutcome.NotChanged);
+    }
+
+    [Fact]
+    public void ApplyImportedQaaData_WhenLastDateForRegistrationIsBroughtForward_RecordsMovement()
+    {
+        var qualification = CreateQualification();
+        var changedAt = new DateTime(2024, 03, 15);
+
+        qualification.Update(
+            changedAt,
+            TestQualificationTitle,
+            TestAwardingBody,
+            _testStartDate,
+            new DateOnly(2024, 08, 31),
+            null,
+            _testSectorSubjectArea,
+            changedAt);
+
+        qualification.LastDateForRegistrationChangeType.ShouldBe(QaaLastDateForRegistrationChangeType.BroughtForward);
+        qualification.LatestImportComparisonOutcome.ShouldBe(QaaImportComparisonOutcome.LastDateForRegistrationChanged);
+    }
+
+    [Fact]
+    public void ApplyImportedQaaData_NotAlreadyDiscontinued_SetAsDiscontinued()
+    {
+        var qualification = CreateQualification();
+        var changedAt = new DateTime(2024, 03, 15);
+
+        qualification.Update(
+            changedAt,
+            TestQualificationTitle,
+            TestAwardingBody,
+            _testStartDate,
+            _testLastRegistrationDate,
+            new DateOnly(2026, 08, 31),
+            _testSectorSubjectArea,
+            changedAt);
+
+        qualification.LastDateForRegistrationChangeType.ShouldBe(QaaLastDateForRegistrationChangeType.NotChanged);
+        qualification.LatestImportComparisonOutcome.ShouldBe(QaaImportComparisonOutcome.Discontinued);
+    }
+
+    private RegulatedQaaQualification CreateQualification(bool isDiscontinued = false)
+    {
+        return RegulatedQaaQualification.Create(
             _testSnapshot,
             TestAimCode,
             TestQualificationTitle,
             TestAwardingBody,
             _testStartDate,
             _testLastRegistrationDate,
-            _testSectorSubjectArea);
-
-        // Assert
-        Assert.Equal(_testSnapshot, qualification.DateOfDataSnapshot);
-        Assert.Equal(TestAimCode, qualification.AimCode);
-        Assert.Equal(TestQualificationTitle, qualification.QualificationTitle);
-        Assert.Equal(TestAwardingBody, qualification.AwardingBody);
-        Assert.Equal(_testStartDate, qualification.StartDate);
-        Assert.Equal(_testLastRegistrationDate, qualification.LastDateForRegistration);
-        Assert.Same(_testSectorSubjectArea, qualification.SectorSubjectArea);
-        Assert.Equal("Level 3", qualification.Level);
-        Assert.Equal("Access to HE", qualification.Type);
-        Assert.Equal("Approved", qualification.Status);
-        Assert.Null(qualification.LastFundingApprovalEndDate);
-    }
-
-    [Fact]
-    public void Create_WithVaryingInputs_MapsPropertiesCorrectly()
-    {
-        // Arrange
-        var qualifications = new[]
-        {
-            ("Z1234567", "Diploma 1", "Body 1"),
-            ("Z7654321", "Diploma 2", "Body 2"),
-            ("Z1111111", "Diploma 3", "Body 3")
-        };
-
-        // Act
-        var createdQualifications = qualifications
-            .Select(q => RegulatedQaaQualification.Create(
-                _testSnapshot,
-                q.Item1,
-                q.Item2,
-                q.Item3,
-                _testStartDate,
-                _testLastRegistrationDate,
-                _testSectorSubjectArea))
-            .ToList();
-
-        // Assert
-        Assert.Equal(3, createdQualifications.Count);
-        Assert.Equal("Z1234567", createdQualifications[0].AimCode);
-        Assert.Equal("Diploma 1", createdQualifications[0].QualificationTitle);
-        Assert.Equal("Body 1", createdQualifications[0].AwardingBody);
-
-        Assert.Equal("Z7654321", createdQualifications[1].AimCode);
-        Assert.Equal("Diploma 2", createdQualifications[1].QualificationTitle);
-        Assert.Equal("Body 2", createdQualifications[1].AwardingBody);
-
-        Assert.Equal("Z1111111", createdQualifications[2].AimCode);
-        Assert.Equal("Diploma 3", createdQualifications[2].QualificationTitle);
-        Assert.Equal("Body 3", createdQualifications[2].AwardingBody);
-    }
-
-    [Fact]
-    public void Create_WithDifferentSnapshots_EachInstancePreservesCorrectDate()
-    {
-        // Arrange
-        var snapshot1 = new DateTime(2024, 02, 15);
-        var snapshot2 = new DateTime(2024, 03, 15);
-        var snapshot3 = new DateTime(2024, 04, 15);
-
-        // Act
-        var qualification1 = RegulatedQaaQualification.Create(
-            snapshot1, TestAimCode, TestQualificationTitle, TestAwardingBody,
-            _testStartDate, _testLastRegistrationDate, _testSectorSubjectArea);
-
-        var qualification2 = RegulatedQaaQualification.Create(
-            snapshot2, TestAimCode, TestQualificationTitle, TestAwardingBody,
-            _testStartDate, _testLastRegistrationDate, _testSectorSubjectArea);
-
-        var qualification3 = RegulatedQaaQualification.Create(
-            snapshot3, TestAimCode, TestQualificationTitle, TestAwardingBody,
-            _testStartDate, _testLastRegistrationDate, _testSectorSubjectArea);
-
-        // Assert
-        Assert.Equal(snapshot1, qualification1.DateOfDataSnapshot);
-        Assert.Equal(snapshot2, qualification2.DateOfDataSnapshot);
-        Assert.Equal(snapshot3, qualification3.DateOfDataSnapshot);
+            _testSectorSubjectArea,
+            isDiscontinued ? new DateOnly(2024, 01, 31) : null,
+            _testSnapshot);
     }
 }

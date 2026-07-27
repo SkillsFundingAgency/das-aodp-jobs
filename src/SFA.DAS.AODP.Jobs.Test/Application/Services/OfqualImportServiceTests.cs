@@ -10,6 +10,7 @@ using SFA.DAS.AODP.Jobs.Models.Jobs.FundingEligibility;
 using SFA.DAS.AODP.Models.Qualification;
 using System.Collections.Specialized;
 using System.Text.Json;
+using SFA.DAS.AODP.Infrastructure.Services;
 using static SFA.DAS.AODP.Jobs.Services.QualificationProcessor;
 
 namespace SFA.DAS.AODP.Jobs.Test.Application.Services

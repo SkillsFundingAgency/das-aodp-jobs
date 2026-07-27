@@ -8,11 +8,8 @@ public static partial class QaaQualificationImportServiceLoggerMessages
     [LoggerMessage(LogLevel.Information, message: "No qualifications found from QAA Api, nothing to do.")]
     public static partial void NoQaaQualificationsFound(this ILogger logger);
 
-    [LoggerMessage(LogLevel.Information, message: "{RowsDeleted} were deleted, ready for fresh import")]
-    public static partial void DeletedExistingRows(this ILogger logger, int rowsDeleted);
-
-    [LoggerMessage(LogLevel.Information, message: "Finished import, created {NumberOfRecordsCreated}")]
-    public static partial void FinishedImport(this ILogger logger, int numberOfRecordsCreated);
+    [LoggerMessage(LogLevel.Information, message: "Finished import, processed {NumberOfRecordsProcessed}")]
+    public static partial void FinishedImport(this ILogger logger, int numberOfRecordsProcessed);
 
     [LoggerMessage(LogLevel.Error, message: "Could not call the Qaa API.")]
     public static partial void FailedToCallQaaApi(this ILogger logger, Exception ex);
