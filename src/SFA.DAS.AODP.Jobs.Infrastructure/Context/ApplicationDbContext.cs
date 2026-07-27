@@ -9,6 +9,8 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options) { }
 
+        public virtual DbSet<Application> Applications { get; set; }
+
         public virtual DbSet<ActionType> ActionType { get; set; }
 
         public virtual DbSet<LifecycleStage> LifecycleStages { get; set; }

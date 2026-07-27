@@ -8,8 +8,6 @@ namespace SFA.DAS.AODP.Jobs.Interfaces
     {
         Task<PaginatedResult<QualificationDTO>> SearchPrivateQualificationsAsync(QualificationsQueryParameters parameters);
 
-        List<QualificationDTO> ExtractQualificationsList(PaginatedResult<QualificationDTO> paginatedResult);
-
         QualificationsQueryParameters ParseQueryParameters(NameValueCollection query);
     }
 }
