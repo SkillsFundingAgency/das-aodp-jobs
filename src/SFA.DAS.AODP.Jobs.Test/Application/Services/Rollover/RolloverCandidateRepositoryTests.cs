@@ -3,6 +3,7 @@ using SFA.DAS.AODP.Data.Entities.Rollover;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Infrastructure.Models;
 using SFA.DAS.AODP.Infrastructure.Repositories.Rollover;
+using SFA.DAS.AODP.Infrastructure.Services;
 
 namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Services.Rollover;
 
@@ -11,6 +12,7 @@ public class RolloverCandidateRepositoryTests
     private class FakeSystemClockService : ISystemClockService
     {
         public DateTime UtcNow => new(2026, 07, 01);
+        public DateOnly Today => new(2026, 07, 01);
     }
 
     [Fact(Skip = "temp ignore")]

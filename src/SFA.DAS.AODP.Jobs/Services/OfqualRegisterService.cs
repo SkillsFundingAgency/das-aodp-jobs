@@ -1,11 +1,4 @@
 ﻿using System.Collections.Specialized;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using RestEase;
-using SFA.DAS.AODP.Data;
-using SFA.DAS.AODP.Jobs.Client;
-using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Models.Config;
 using SFA.DAS.AODP.Models.Qualification;
 
 namespace SFA.DAS.AODP.Jobs.Services
@@ -59,72 +52,6 @@ namespace SFA.DAS.AODP.Jobs.Services
                 _logger.LogError(ex, $"[{nameof(OfqualRegisterService)}] -> [{nameof(SearchPrivateQualificationsAsync)}] -> An error occurred while retrieving qualification records.");
                 throw;
             }
-        }
-
-        public List<QualificationDTO> ExtractQualificationsList(PaginatedResult<QualificationDTO> paginatedResult)
-        {
-            _logger.LogInformation($"[{nameof(OfqualRegisterService)}] -> [{nameof(ExtractQualificationsList)}] -> Extracting qualifications from ofqual api response data...");
-
-            return paginatedResult.Results.Select(q => new QualificationDTO
-            {
-                QualificationNumber = q.QualificationNumber,
-                QualificationNumberNoObliques = q.QualificationNumberNoObliques ?? "",
-                Title = q.Title,
-                Status = q.Status,
-                OrganisationName = q.OrganisationName,
-                OrganisationAcronym = q.OrganisationAcronym,
-                OrganisationRecognitionNumber = q.OrganisationRecognitionNumber,
-                Type = q.Type,
-                Ssa = q.Ssa,
-                Level = q.Level,
-                SubLevel = q.SubLevel,
-                EqfLevel = q.EqfLevel,
-                GradingType = q.GradingType,
-                GradingScale = q.GradingScale,
-                TotalCredits = q.TotalCredits,
-                Tqt = q.Tqt,
-                Glh = q.Glh,
-                MinimumGlh = q.MinimumGlh,
-                MaximumGlh = q.MaximumGlh,
-                RegulationStartDate = q.RegulationStartDate,
-                OperationalStartDate = q.OperationalStartDate,
-                OperationalEndDate = q.OperationalEndDate,
-                CertificationEndDate = q.CertificationEndDate,
-                ReviewDate = q.ReviewDate,
-                OfferedInEngland = q.OfferedInEngland,
-                OfferedInNorthernIreland = q.OfferedInNorthernIreland,
-                OfferedInternationally = q.OfferedInternationally,
-                Specialism = q.Specialism,
-                Pathways = q.Pathways,
-                AssessmentMethods = q.AssessmentMethods != null
-                     ? string.Join(",", q.AssessmentMethods)
-                     : null,
-                ApprovedForDelfundedProgramme = q.ApprovedForDelfundedProgramme,
-                LinkToSpecification = q.LinkToSpecification,
-                ApprenticeshipStandardReferenceNumber = q.ApprenticeshipStandardReferenceNumber,
-                ApprenticeshipStandardTitle = q.ApprenticeshipStandardTitle,
-                RegulatedByNorthernIreland = q.RegulatedByNorthernIreland,
-                NiDiscountCode = q.NiDiscountCode,
-                GceSizeEquivalence = q.GceSizeEquivalence,
-                GcseSizeEquivalence = q.GcseSizeEquivalence,
-                EntitlementFrameworkDesignation = q.EntitlementFrameworkDesignation,
-                LastUpdatedDate = q.LastUpdatedDate,
-                UiLastUpdatedDate = q.UiLastUpdatedDate,
-                InsertedDate = q.InsertedDate,
-                Version = q.Version,
-                AppearsOnPublicRegister = q.AppearsOnPublicRegister,
-                OrganisationId = q.OrganisationId,
-                LevelId = q.LevelId,
-                TypeId = q.TypeId,
-                SsaId = q.SsaId,
-                GradingTypeId = q.GradingTypeId,
-                GradingScaleId = q.GradingScaleId,
-                PreSixteen = q.PreSixteen,
-                SixteenToEighteen = q.SixteenToEighteen,
-                EighteenPlus = q.EighteenPlus,
-                NineteenPlus = q.NineteenPlus,
-                ImportStatus = "New"
-            }).ToList();
         }
 
         public QualificationsQueryParameters ParseQueryParameters(NameValueCollection query)

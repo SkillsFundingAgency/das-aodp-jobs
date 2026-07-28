@@ -62,7 +62,7 @@ public class QualificationDTO
 
     public string? Pathways { get; set; }
 
-    public Object? AssessmentMethods { get; set; }
+    public string[]? AssessmentMethods { get; set; }
 
     public string? ApprovedForDelfundedProgramme { get; set; }
 

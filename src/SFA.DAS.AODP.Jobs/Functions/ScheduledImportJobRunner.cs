@@ -5,7 +5,6 @@ using RestEase;
 using SFA.DAS.AODP.Common.Enum;
 using SFA.DAS.AODP.Jobs.Interfaces;
 using SFA.DAS.AODP.Models.Config;
-using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
 
 namespace SFA.DAS.AODP.Jobs.Functions
 {

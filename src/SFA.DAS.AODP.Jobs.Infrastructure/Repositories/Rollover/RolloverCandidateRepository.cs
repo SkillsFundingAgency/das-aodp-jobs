@@ -4,7 +4,7 @@ using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Infrastructure.Interfaces.Rollover;
 using SFA.DAS.AODP.Infrastructure.Models;
 using SFA.DAS.AODP.Infrastructure.Models.Rollover;
-using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
+using SFA.DAS.AODP.Infrastructure.Services;
 
 namespace SFA.DAS.AODP.Infrastructure.Repositories.Rollover;
 
