@@ -324,7 +324,7 @@
             "apiVersion": "2021-04-01",
             "name": "[concat('role-assignment-', variables('functionAppName'), '-', parameters('utcValue'))]",
             "type": "Microsoft.Resources/deployments",
-            "resourceGroup": "[variables('resourceGroupName')]",
+            "resourceGroup": "[replace(variables('resourceGroupName'), 'wkr', 'api')]",
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
