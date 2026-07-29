@@ -7,6 +7,7 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 {
     public interface IApplicationDbContext
     {
+        DbSet<Application> Applications { get; set; }
         DbSet<ActionType> ActionType { get; set; }
         DbSet<LifecycleStage> LifecycleStages { get; set; }
         DbSet<AwardingOrganisation> AwardingOrganisation { get; set; }
@@ -27,6 +28,7 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         DbSet<Pldns> Pldns { get; set; }
         DbSet<DefundingList> DefundingLists { get; set; }
         DbSet<RegulatedQaaQualification> RegulatedQaaQualification { get; set; }
+        DbSet<RegulatedQaaQualificationHistory> RegulatedQaaQualificationHistory { get; set; }
         DbSet<QaaQualificationFunding> QaaQualificationFundings { get; set; }
         DbSet<RolloverCandidate> RolloverCandidates { get; set; }
 

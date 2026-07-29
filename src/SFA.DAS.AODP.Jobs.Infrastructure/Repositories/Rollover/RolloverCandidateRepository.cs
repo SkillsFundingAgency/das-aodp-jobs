@@ -5,7 +5,7 @@ using SFA.DAS.AODP.Infrastructure.Extensions.Rollover;
 using SFA.DAS.AODP.Infrastructure.Interfaces.Rollover;
 using SFA.DAS.AODP.Infrastructure.Models;
 using SFA.DAS.AODP.Infrastructure.Models.Rollover;
-using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
+using SFA.DAS.AODP.Infrastructure.Services;
 
 namespace SFA.DAS.AODP.Infrastructure.Repositories.Rollover;
 
@@ -19,11 +19,10 @@ public class RolloverCandidateRepository(IApplicationDbContext context, ISystemC
             .From(
                 context.QualificationVersions.AsNoTracking(),
                 context.QualificationFundings.AsNoTracking())
-            .WithLatestQualificationVersions()
             .WhereEligibleForFunding()
             .WithActiveFundingStreamsForAcademicYear(academicYear)
             .Build()
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken: cancellationToken);
 
         var qaaCandidateFundingStreams = await context.QaaQualificationFundings
             .AsNoTracking()
