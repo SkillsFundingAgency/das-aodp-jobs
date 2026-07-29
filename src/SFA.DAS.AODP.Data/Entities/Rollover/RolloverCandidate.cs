@@ -89,4 +89,29 @@ public class RolloverCandidate
             createdAt,
             previousFundingEndDate);
     }
+
+    public void RefreshFunding(DateOnly? fundingEndDate, DateTime updatedAt)
+    {
+        PreviousFundingEndDate = fundingEndDate?.ToDateTime(TimeOnly.MinValue);
+        UpdatedAt = updatedAt;
+    }
+
+    public void Deactivate(DateTime updatedAt)
+    {
+        IsActive = false;
+        UpdatedAt = updatedAt;
+    }
+
+    public void Reactivate(DateOnly? fundingEndDate, DateTime updatedAt)
+    {
+        IsActive = true;
+        RolloverStatus = RolloverStatus.NeedsReview;
+        ExclusionReason = null;
+        PreviousFundingEndDate = fundingEndDate?.ToDateTime(TimeOnly.MinValue);
+        NewFundingEndDate = null;
+        RolloverDecisionRunId = null;
+        ReviewedAt = null;
+        ReviewedByUsername = null;
+        UpdatedAt = updatedAt;
+    }
 }

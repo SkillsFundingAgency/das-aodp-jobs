@@ -24,10 +24,7 @@ public class RegulatedQaaQualificationTests : UnitTest
             new DateOnly(2023, 09, 01),
             _testLastRegistrationDate,
             _testSectorSubjectArea,
-            new DateOnly(2028, 02, 01),
-            new DateOnly(2027, 03, 07),
-            new DateOnly(2027, 03, 07),
-            new DateOnly(2027, 03, 07));
+            new DateOnly(2028, 02, 01));
 
         // Assert
         qualification.DateOfDataSnapshot.ShouldBe(_testSnapshot);
@@ -46,9 +43,7 @@ public class RegulatedQaaQualificationTests : UnitTest
         qualification.Type.ShouldBe("Access to Higher Education");
         qualification.Status.ShouldBe("Approved");
 
-        qualification.Age1619FundingApprovalEndDate.ShouldBe(new DateOnly(2027, 03, 07));
-        qualification.AdvancedLearnerLoansFundingApprovalEndDate.ShouldBe(new DateOnly(2027, 03, 07));
-        qualification.LegalEntitlementL2L3FundingApprovalEndDate.ShouldBe(new DateOnly(2027, 03, 07));
+        qualification.Fundings.ShouldBeEmpty();
         qualification.LatestQaaQualificationHistoryId.ShouldBeNull();
 
         qualification.LatestImportComparisonOutcome.ShouldBe(QaaImportComparisonOutcome.NotChanged);
@@ -82,9 +77,7 @@ public class RegulatedQaaQualificationTests : UnitTest
 
         qualification.LastChangedAt.ShouldBe(_testSnapshot);
 
-        qualification.Age1619FundingApprovalEndDate.ShouldBeNull();
-        qualification.AdvancedLearnerLoansFundingApprovalEndDate.ShouldBeNull();
-        qualification.LegalEntitlementL2L3FundingApprovalEndDate.ShouldBeNull();
+        qualification.Fundings.ShouldBeEmpty();
         qualification.LatestQaaQualificationHistoryId.ShouldBeNull();
 
         qualification.LatestImportComparisonOutcome.ShouldBe(QaaImportComparisonOutcome.New);

@@ -11,8 +11,6 @@ public class QaaQualificationFunding
 
     public Guid FundingOfferId { get; private set; }
 
-    public string AcademicYear { get; private set; } = null!;
-
     public DateOnly? StartDate { get; private set; }
 
     public DateOnly? EndDate { get; private set; }
@@ -25,10 +23,11 @@ public class QaaQualificationFunding
 
     public DateTime UpdatedAt { get; private set; }
 
+    public virtual RegulatedQaaQualification QaaQualification { get; private set; } = null!;
+
     public static QaaQualificationFunding Create(
         Guid qaaQualificationId,
         Guid fundingOfferId,
-        string academicYear,
         DateOnly? startDate,
         DateOnly? endDate,
         string? fundingStatus,
@@ -49,17 +48,11 @@ public class QaaQualificationFunding
                 nameof(fundingOfferId));
         }
 
-        if (string.IsNullOrWhiteSpace(academicYear))
-        {
-            throw new ArgumentNullException(nameof(academicYear));
-        }
-
         return new QaaQualificationFunding
         {
             Id = Guid.NewGuid(),
             QaaQualificationId = qaaQualificationId,
             FundingOfferId = fundingOfferId,
-            AcademicYear = academicYear,
             StartDate = startDate,
             EndDate = endDate,
             FundingStatus = fundingStatus,
@@ -67,5 +60,19 @@ public class QaaQualificationFunding
             CreatedAt = createdAt,
             UpdatedAt = createdAt
         };
+    }
+
+    public void Update(
+        DateOnly? startDate,
+        DateOnly? endDate,
+        string? fundingStatus,
+        DateTime updatedAt,
+        string? comments = null)
+    {
+        StartDate = startDate;
+        EndDate = endDate;
+        FundingStatus = fundingStatus;
+        Comments = comments;
+        UpdatedAt = updatedAt;
     }
 }

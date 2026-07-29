@@ -17,9 +17,8 @@ public static class QualificationFundingQueryExtensions
         AcademicYear academicYear)
     {
         return query.Where(funding =>
-            funding.AcademicYear == academicYear.Name &&
-            (funding.EndDate == null ||
+            funding.EndDate == null ||
              funding.EndDate >= academicYear.StartDate &&
-             funding.EndDate <= academicYear.EndDate));
+             funding.EndDate <= academicYear.EndDate);
     }
 }

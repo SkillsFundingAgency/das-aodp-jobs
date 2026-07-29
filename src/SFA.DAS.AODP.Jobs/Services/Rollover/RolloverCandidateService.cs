@@ -13,7 +13,6 @@ public class RolloverCandidateService(
     {
         var now = systemClockService.UtcNow;
         var academicYear = AcademicYear.FromDate(now);
-        academicYear = AcademicYear.NextAcademicYear(AcademicYear.FromDate(now));
 
         return repository.CreateInitialRolloverCandidatesAsync(
             academicYear,

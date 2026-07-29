@@ -31,6 +31,7 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         DbSet<RegulatedQaaQualificationHistory> RegulatedQaaQualificationHistory { get; set; }
         DbSet<QaaQualificationFunding> QaaQualificationFundings { get; set; }
         DbSet<RolloverCandidate> RolloverCandidates { get; set; }
+        DbSet<RolloverWorkflowCandidate> RolloverWorkflowCandidates { get; set; }
 
         void StartingBulkInsert();
 

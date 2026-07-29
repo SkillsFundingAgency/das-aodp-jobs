@@ -11,6 +11,9 @@ namespace SFA.DAS.AODP.Infrastructure.Repositories.Rollover;
 
 public class RolloverCandidateRepository(IApplicationDbContext context, ISystemClockService systemClockService) : IRolloverCandidateRepository
 {
+    private const string FundingNoLongerApplicableReason =
+        "The source funding is no longer applicable for rollover.";
+
     public async Task<int> CreateInitialRolloverCandidatesAsync(
         AcademicYear academicYear,
         CancellationToken cancellationToken)
@@ -19,6 +22,7 @@ public class RolloverCandidateRepository(IApplicationDbContext context, ISystemC
             .From(
                 context.QualificationVersions.AsNoTracking(),
                 context.QualificationFundings.AsNoTracking())
+            .WithLatestQualificationVersions()
             .WhereEligibleForFunding()
             .WithActiveFundingStreamsForAcademicYear(academicYear)
             .Build()
@@ -46,58 +50,91 @@ public class RolloverCandidateRepository(IApplicationDbContext context, ISystemC
             })
             .ToList();
 
-        if (candidateFundingStreams.Count == 0)
-        {
-            return 0;
-        }
-
-        var sourceQualificationIds = candidateFundingStreams
-            .Select(candidate => candidate.SourceQualificationId)
-            .Distinct()
-            .ToList();
-
-        var fundingOfferIds = candidateFundingStreams
-            .Select(candidate => candidate.FundingOfferId)
-            .Distinct()
-            .ToList();
-
-        var existingCandidateKeys = await context.RolloverCandidates
-            .AsNoTracking()
+        var existingCandidates = await context.RolloverCandidates
             .Where(candidate =>
                 candidate.AcademicYear == academicYear.Name &&
-                candidate.RolloverRound == 1 &&
-                sourceQualificationIds.Contains(candidate.SourceQualificationId) &&
-                fundingOfferIds.Contains(candidate.FundingOfferId))
-            .Select(candidate => new
-            {
-                candidate.SourceType,
-                candidate.SourceQualificationId,
-                candidate.FundingOfferId
-            })
+                (candidate.SourceType == RolloverSourceTypes.Ofqual ||
+                 candidate.SourceType == RolloverSourceTypes.Qaa))
             .ToListAsync(cancellationToken);
 
-        var newCandidates = candidateFundingStreams
-            .Where(candidate => !existingCandidateKeys.Any(existing =>
-                existing.SourceType == candidate.SourceType &&
-                existing.SourceQualificationId == candidate.SourceQualificationId &&
-                existing.FundingOfferId == candidate.FundingOfferId))
-            .Select(candidate => RolloverCandidate.CreateInitialRound(
+        var now = systemClockService.UtcNow;
+        var deactivatedCandidateIds = new List<Guid>();
+        var eligibleKeys = candidateFundingStreams
+            .Select(funding => (
+                funding.SourceType,
+                funding.SourceQualificationId,
+                funding.FundingOfferId))
+            .ToHashSet();
+        var candidatesByFundingKey = existingCandidates.ToLookup(candidate => (
+            candidate.SourceType,
+            candidate.SourceQualificationId,
+            candidate.FundingOfferId));
+
+        foreach (var candidate in existingCandidates.Where(candidate => candidate.IsActive))
+        {
+            var remainsEligible = eligibleKeys.Contains((
                 candidate.SourceType,
                 candidate.SourceQualificationId,
-                candidate.FundingOfferId,
-                academicYear.Name,
-                systemClockService.UtcNow,
-                candidate.EndDate))
-            .ToList();
+                candidate.FundingOfferId));
 
-        if (newCandidates.Count == 0)
-        {
-            return 0;
+            if (!remainsEligible)
+            {
+                candidate.Deactivate(now);
+                deactivatedCandidateIds.Add(candidate.Id);
+            }
         }
 
-        context.RolloverCandidates.AddRange(newCandidates);
+        var created = 0;
+        foreach (var funding in candidateFundingStreams)
+        {
+            var matchingCandidates = candidatesByFundingKey[(
+                    funding.SourceType,
+                    funding.SourceQualificationId,
+                    funding.FundingOfferId)]
+                .OrderByDescending(candidate => candidate.RolloverRound)
+                .ToList();
+
+            var activeCandidate = matchingCandidates.FirstOrDefault(candidate => candidate.IsActive);
+            if (activeCandidate is not null)
+            {
+                activeCandidate.RefreshFunding(funding.EndDate, now);
+                continue;
+            }
+
+            var inactiveCandidate = matchingCandidates.FirstOrDefault();
+            if (inactiveCandidate is not null)
+            {
+                inactiveCandidate.Reactivate(funding.EndDate, now);
+                continue;
+            }
+
+            var newCandidate = RolloverCandidate.CreateInitialRound(
+                funding.SourceType,
+                funding.SourceQualificationId,
+                funding.FundingOfferId,
+                academicYear.Name,
+                now,
+                funding.EndDate);
+            context.RolloverCandidates.Add(newCandidate);
+            created++;
+        }
+
+        if (deactivatedCandidateIds.Count > 0)
+        {
+            var workflowCandidates = await context.RolloverWorkflowCandidates
+                .Where(candidate =>
+                    deactivatedCandidateIds.Contains(candidate.RolloverCandidatesId) &&
+                    !candidate.InvalidatedAt.HasValue)
+                .ToListAsync(cancellationToken);
+
+            foreach (var workflowCandidate in workflowCandidates)
+            {
+                workflowCandidate.Invalidate(FundingNoLongerApplicableReason, now);
+            }
+        }
+
         await context.SaveChangesAsync(cancellationToken);
 
-        return newCandidates.Count;
+        return created;
     }
 }
