@@ -136,4 +136,6 @@ public partial class QualificationVersions
     public virtual Qualification Qualification { get; set; } = null!;
 
     public virtual VersionFieldChanges VersionFieldChanges { get; set; } = null!;
+
+    public string? FundingEligibilityConflictType { get; set; }
 }
