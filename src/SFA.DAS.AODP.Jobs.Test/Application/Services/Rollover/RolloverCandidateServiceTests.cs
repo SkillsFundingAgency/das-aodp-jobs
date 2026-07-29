@@ -7,7 +7,7 @@ namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Services.Rollover;
 
 public class RolloverCandidateServiceTests
 {
-    [Fact(Skip = "temp ignore")]
+    [Fact]
     public async Task GenerateRolloverCandidatesAsync_UsesCurrentAcademicYear()
     {
         // Arrange

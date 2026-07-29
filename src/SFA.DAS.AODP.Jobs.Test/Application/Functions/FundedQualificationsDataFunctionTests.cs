@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using SFA.DAS.AODP.Functions;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Infrastructure.Interfaces;
+using SFA.DAS.AODP.Jobs.Interfaces.Rollover;
 using SFA.DAS.AODP.Jobs.Services.CSV;
 using SFA.DAS.AODP.Jobs.Test.Mocks;
 using SFA.DAS.AODP.Models.Config;
@@ -21,6 +22,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
         private readonly Mock<IFundedQualificationWriter> _fundedQualificationWriter;
         private readonly Mock<IQualificationsRepository> _qualificationsRepository;
         private readonly Mock<IQualificationVersionRepository> _qualificationVersionRepository;
+        private readonly Mock<IRolloverCandidateService> _rolloverCandidateService;
         private readonly FunctionContext _functionContext;
         private readonly FundedQualificationsDataFunction _function;
         private readonly AodpJobsConfiguration _config;
@@ -62,6 +64,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
             _fundedQualificationWriter = new Mock<IFundedQualificationWriter>();
             _qualificationsRepository = new Mock<IQualificationsRepository>();
             _qualificationVersionRepository = new Mock<IQualificationVersionRepository>();
+            _rolloverCandidateService = new Mock<IRolloverCandidateService>();
 
             _function = new FundedQualificationsDataFunction(
                 _loggerMock.Object,               
@@ -70,7 +73,8 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
                 _jobConfigurationService.Object,
                 _fundedQualificationWriter.Object,
                 _qualificationsRepository.Object,
-                _qualificationVersionRepository.Object);
+                _qualificationVersionRepository.Object,
+                _rolloverCandidateService.Object);
         }
 
         [Fact]
@@ -101,6 +105,10 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
             _fundedQualificationWriter.Setup(s => s.WriteQualifications(fundedImport)).ReturnsAsync(true).Verifiable();
             _fundedQualificationWriter.Setup(s => s.WriteQualifications(archivedImport)).ReturnsAsync(true).Verifiable();
             _fundedQualificationWriter.Setup(s => s.SeedFundingData()).ReturnsAsync(true).Verifiable();
+            _rolloverCandidateService
+                .Setup(service => service.GenerateRolloverCandidatesAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(0)
+                .Verifiable();
 
             var httpRequestData = new MockHttpRequestData(_functionContext);           
 
@@ -111,6 +119,7 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
             var okResult = Assert.IsType<OkObjectResult>(response);
             _qualificationsRepository.VerifyAll();
             _fundedQualificationWriter.VerifyAll();
+            _rolloverCandidateService.VerifyAll();
         }
 
         [Fact]

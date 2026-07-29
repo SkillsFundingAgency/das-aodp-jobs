@@ -8,7 +8,9 @@ public class RolloverCandidate
 {
     public Guid Id { get; private set; }
 
-    public Guid QualificationVersionId { get; private set; }
+    public string SourceType { get; private set; } = null!;
+
+    public Guid SourceQualificationId { get; private set; }
 
     public Guid FundingOfferId { get; private set; }
 
@@ -36,17 +38,21 @@ public class RolloverCandidate
 
     public DateTime UpdatedAt { get; private set; }
 
-    public virtual QualificationVersions QualificationVersion { get; set; } = null!;
-
     public virtual FundingOffer FundingOffer { get; set; } = null!;
 
     public static RolloverCandidate CreateInitialRound(
-        Guid qualificationVersionId,
+        string sourceType,
+        Guid sourceQualificationId,
         Guid fundingOfferId,
         string academicYear,
         DateTime createdAt,
         DateOnly? previousFundingEndDate)
     {
+        if (string.IsNullOrWhiteSpace(sourceType))
+        {
+            throw new ArgumentNullException(nameof(sourceType));
+        }
+
         if (string.IsNullOrWhiteSpace(academicYear))
         {
             throw new ArgumentNullException(nameof(academicYear));
@@ -55,7 +61,8 @@ public class RolloverCandidate
         return new RolloverCandidate
         {
             Id = Guid.NewGuid(),
-            QualificationVersionId = qualificationVersionId,
+            SourceType = sourceType,
+            SourceQualificationId = sourceQualificationId,
             FundingOfferId = fundingOfferId,
             AcademicYear = academicYear,
             RolloverRound = 1,
@@ -65,5 +72,45 @@ public class RolloverCandidate
             UpdatedAt = createdAt,
             IsActive = true
         };
+    }
+    public static RolloverCandidate CreateInitialRound(
+        Guid qualificationVersionId,
+        Guid fundingOfferId,
+        string academicYear,
+        DateTime createdAt,
+        DateOnly? previousFundingEndDate)
+    {
+        return CreateInitialRound(
+            RolloverSourceTypes.Ofqual,
+            qualificationVersionId,
+            fundingOfferId,
+            academicYear,
+            createdAt,
+            previousFundingEndDate);
+    }
+
+    public void RefreshFunding(DateOnly? fundingEndDate, DateTime updatedAt)
+    {
+        PreviousFundingEndDate = fundingEndDate?.ToDateTime(TimeOnly.MinValue);
+        UpdatedAt = updatedAt;
+    }
+
+    public void Deactivate(DateTime updatedAt)
+    {
+        IsActive = false;
+        UpdatedAt = updatedAt;
+    }
+
+    public void Reactivate(DateOnly? fundingEndDate, DateTime updatedAt)
+    {
+        IsActive = true;
+        RolloverStatus = RolloverStatus.NeedsReview;
+        ExclusionReason = null;
+        PreviousFundingEndDate = fundingEndDate?.ToDateTime(TimeOnly.MinValue);
+        NewFundingEndDate = null;
+        RolloverDecisionRunId = null;
+        ReviewedAt = null;
+        ReviewedByUsername = null;
+        UpdatedAt = updatedAt;
     }
 }

@@ -93,21 +93,6 @@ public class RegulatedQaaQualification
     public DateOnly? DiscontinuedDate { get; private set; }
 
     /// <summary>
-    /// The last date that this qualification will be funded to for the Age 16-19 funding stream.
-    /// </summary>
-    public DateOnly? Age1619FundingApprovalEndDate { get; set; }
-
-    /// <summary>
-    /// The last date that this qualification will be funded to for the Advanced Learner Loans funding stream.
-    /// </summary>
-    public DateOnly? AdvancedLearnerLoansFundingApprovalEndDate { get; set; }
-
-    /// <summary>
-    /// The last date that this qualification will be funded to for the Legal entitlement L2-L3 funding stream.
-    /// </summary>
-    public DateOnly? LegalEntitlementL2L3FundingApprovalEndDate { get; set; }
-
-    /// <summary>
     /// The latest material QAA history row for the current imported state.
     /// </summary>
     public Guid? LatestQaaQualificationHistoryId { get; private set; }
@@ -116,6 +101,11 @@ public class RegulatedQaaQualification
     /// A value object representation for the sector subject area.
     /// </summary>
     public SectorSubjectArea SectorSubjectArea { get; private set; } = null!;
+
+    /// <summary>
+    /// Funding records held for this QAA qualification.
+    /// </summary>
+    public virtual ICollection<QaaQualificationFunding> Fundings { get; private set; } = new List<QaaQualificationFunding>();
 
     /// <summary>
     /// Creates a new entry.
@@ -169,9 +159,6 @@ public class RegulatedQaaQualification
         DateOnly registrationClosesOn,
         SectorSubjectArea sectorSubjectArea,
         DateOnly? discontinuedDate,
-        DateOnly age1619FundingApprovalEndDate,
-        DateOnly advancedLearnerLoansFundingApprovalEndDate,
-        DateOnly legalEntitlementL2L3FundingApprovalEndDate,
         DateTime? changedAt = null)
     {
         var isDiscontinued = discontinuedDate.HasValue;
@@ -194,10 +181,7 @@ public class RegulatedQaaQualification
             DiscontinuedDate = discontinuedDate,
             SectorSubjectArea = sectorSubjectArea,
             LatestImportComparisonOutcome = QaaImportComparisonOutcome.NotChanged,
-            LastDateForRegistrationChangeType = QaaLastDateForRegistrationChangeType.NotChanged,
-            Age1619FundingApprovalEndDate = age1619FundingApprovalEndDate,
-            AdvancedLearnerLoansFundingApprovalEndDate = advancedLearnerLoansFundingApprovalEndDate,
-            LegalEntitlementL2L3FundingApprovalEndDate = legalEntitlementL2L3FundingApprovalEndDate
+            LastDateForRegistrationChangeType = QaaLastDateForRegistrationChangeType.NotChanged
         };
     }
 

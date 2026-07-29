@@ -57,6 +57,8 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         
         public virtual DbSet<RolloverCandidate> RolloverCandidates { get; set; }
 
+        public virtual DbSet<RolloverWorkflowCandidate> RolloverWorkflowCandidates { get; set; }
+
         public virtual void StartingBulkInsert() => ChangeTracker.AutoDetectChangesEnabled = false;
 
         public virtual void FinishedBulkInsert() => ChangeTracker.AutoDetectChangesEnabled = true;
@@ -108,6 +110,21 @@ namespace SFA.DAS.AODP.Infrastructure.Context
                     .HasColumnType("nvarchar(50)");
             });
 
+            modelBuilder.Entity<QaaQualificationFunding>(entity =>
+            {
+                entity.HasIndex(funding => funding.QaaQualificationId);
+                entity.HasIndex(funding => new
+                    {
+                        funding.QaaQualificationId,
+                        funding.FundingOfferId
+                    })
+                    .IsUnique();
+
+                entity.HasOne(funding => funding.QaaQualification)
+                    .WithMany(qualification => qualification.Fundings)
+                    .HasForeignKey(funding => funding.QaaQualificationId);
+            });
+
             modelBuilder.Entity<RolloverCandidate>(b =>
             {
                 b.Property(x => x.RolloverStatus)
@@ -115,6 +132,12 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
                 b.HasIndex(x => new { x.QualificationVersionId, x.FundingOfferId, x.AcademicYear, x.RolloverRound })
                     .IsUnique();
+            });
+
+            modelBuilder.Entity<RolloverWorkflowCandidate>(b =>
+            {
+                b.Property(x => x.InvalidationReason)
+                    .HasMaxLength(255);
             });
 
         }
