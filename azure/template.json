@@ -105,7 +105,8 @@
         },
         "emptyObject": {},
         "privateLinkScopeName": "[toLower(concat('das-', parameters('resourceEnvironmentName'),'-shared-ampls'))]",
-        "storageAccount2Name": "[concat(replace(replace(variables('resourceNamePrefix'), 'wkr', ''), '-', ''), 'str2')]"
+        "storageAccount2Name": "[concat(replace(replace(variables('resourceNamePrefix'), 'wkr', ''), '-', ''), 'str2')]",
+        "storageAccountName": "[concat(replace(replace(variables('resourceNamePrefix'), 'wkr', ''), '-', ''), 'str')]"
     },
     "resources": [
         {
