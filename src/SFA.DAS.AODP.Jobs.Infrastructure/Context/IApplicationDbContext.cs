@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using SFA.DAS.AODP.Data.Entities;
+using SFA.DAS.AODP.Data.Entities.Rollover;
 
 namespace SFA.DAS.AODP.Infrastructure.Context
 {
@@ -28,6 +29,8 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         DbSet<DefundingList> DefundingLists { get; set; }
         DbSet<RegulatedQaaQualification> RegulatedQaaQualification { get; set; }
         DbSet<RegulatedQaaQualificationHistory> RegulatedQaaQualificationHistory { get; set; }
+        DbSet<RolloverCandidate> RolloverCandidates { get; set; }
+
         void StartingBulkInsert();
 
         void FinishedBulkInsert();

@@ -5,6 +5,7 @@ global using Microsoft.Extensions.Logging;
 global using Moq;
 
 global using RestEase;
+global using Shouldly;
 
 global using SFA.DAS.AODP.Common.Enum;
 global using SFA.DAS.AODP.Data.Entities;

@@ -1,5 +1,8 @@
 ﻿using SFA.DAS.AODP.Jobs.Functions.Abstractions;
-using SFA.DAS.AODP.Models.Config;
+using SFA.DAS.AODP.Infrastructure.Interfaces.Rollover;
+using SFA.DAS.AODP.Infrastructure.Repositories.Rollover;
+using SFA.DAS.AODP.Jobs.Interfaces.Rollover;
+using SFA.DAS.AODP.Jobs.Services.Rollover;
 
 namespace SFA.DAS.AODP.Jobs.StartupExtensions;
 
@@ -46,6 +49,8 @@ public static class AddServiceRegistrationsExtension
         services.AddScoped<IQualificationProcessor, QualificationProcessor>();
         services.AddScoped<IQaaSeedCsvBlobReader, QaaSeedCsvBlobReader>();
         services.AddScoped<IQaaQualificationSeedService, QaaQualificationSeedService>();
+        services.AddScoped<IRolloverCandidateRepository, RolloverCandidateRepository>();
+        services.AddScoped<IRolloverCandidateService, RolloverCandidateService>();
         services.AddAzureClients(clientBuilder =>
         {
             if (environment.IsDevelopment())

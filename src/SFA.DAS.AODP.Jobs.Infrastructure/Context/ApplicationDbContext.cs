@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SFA.DAS.AODP.Data.Entities;
+using SFA.DAS.AODP.Data.Entities.Rollover;
 
 
 namespace SFA.DAS.AODP.Infrastructure.Context
@@ -53,6 +54,9 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public virtual DbSet<RegulatedQaaQualificationHistory> RegulatedQaaQualificationHistory { get; set; }
 
+        
+        public virtual DbSet<RolloverCandidate> RolloverCandidates { get; set; }
+
         public virtual void StartingBulkInsert() => ChangeTracker.AutoDetectChangesEnabled = false;
 
         public virtual void FinishedBulkInsert() => ChangeTracker.AutoDetectChangesEnabled = true;
@@ -102,6 +106,15 @@ namespace SFA.DAS.AODP.Infrastructure.Context
                 entity.Property(q => q.LastDateForRegistrationChangeType)
                     .HasConversion<string>()
                     .HasColumnType("nvarchar(50)");
+            });
+
+            modelBuilder.Entity<RolloverCandidate>(b =>
+            {
+                b.Property(x => x.RolloverStatus)
+                    .HasConversion<string>();
+
+                b.HasIndex(x => new { x.QualificationVersionId, x.FundingOfferId, x.AcademicYear, x.RolloverRound })
+                    .IsUnique();
             });
 
         }
