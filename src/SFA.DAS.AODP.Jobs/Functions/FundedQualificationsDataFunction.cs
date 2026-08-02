@@ -1,5 +1,4 @@
 using Microsoft.Azure.Functions.Worker.Http;
-using SFA.DAS.AODP.Jobs.Interfaces.Rollover;
 using SFA.DAS.AODP.Models.Qualification;
 
 namespace SFA.DAS.AODP.Functions
@@ -13,7 +12,6 @@ namespace SFA.DAS.AODP.Functions
         private readonly IFundedQualificationWriter _fundedQualificationWriter;
         private readonly IQualificationsRepository _qualificationsRepository;
         private readonly IQualificationVersionRepository _qualificationVersionRepository;
-        private readonly IRolloverCandidateService _rolloverCandidateService;
 
         public FundedQualificationsDataFunction(ILogger<FundedQualificationsDataFunction> logger,            
             ICsvReaderService csvReaderService,
@@ -21,8 +19,7 @@ namespace SFA.DAS.AODP.Functions
             IJobConfigurationService jobConfigurationService, 
             IFundedQualificationWriter fundedQualificationWriter,
             IQualificationsRepository qualificationsRepository,
-            IQualificationVersionRepository qualificationVersionRepository,
-            IRolloverCandidateService rolloverCandidateService)
+            IQualificationVersionRepository qualificationVersionRepository)
         {
             _logger = logger;        
             _csvReaderService = csvReaderService;     
@@ -31,7 +28,6 @@ namespace SFA.DAS.AODP.Functions
             _fundedQualificationWriter = fundedQualificationWriter;
             _qualificationsRepository = qualificationsRepository;
             _qualificationVersionRepository = qualificationVersionRepository;
-            _rolloverCandidateService = rolloverCandidateService;
         }
 
         [Function("ApprovedQualificationsDataFunction")]
@@ -141,8 +137,6 @@ namespace SFA.DAS.AODP.Functions
                 {
                     _logger.LogInformation($"Seeding funded data into funding offers");
                     await _fundedQualificationWriter.SeedFundingData();
-                    await _rolloverCandidateService.GenerateRolloverCandidatesAsync(
-                        req.FunctionContext.CancellationToken);
                 }
 
                 await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, totalProcessedRecords, JobStatus.Completed);

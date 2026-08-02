@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SFA.DAS.AODP.Data.Entities.Rollover;
+using SFA.DAS.AODP.Data.Entities.Rollover.Enums;
 using SFA.DAS.AODP.Infrastructure.Context;
 using SFA.DAS.AODP.Infrastructure.Models;
 using SFA.DAS.AODP.Infrastructure.Repositories.Rollover;
@@ -52,7 +53,9 @@ public class RolloverCandidateRepositoryTests
         result.ShouldBe(2);
         var stored = await context.RolloverCandidates.ToListAsync();
         stored.Count.ShouldBe(2);
-        stored.ShouldAllBe(candidate => candidate.QualificationVersionId == latestVersionId);
+        stored.ShouldAllBe(candidate =>
+            candidate.SourceType == RolloverSourceTypes.Ofqual &&
+            candidate.SourceQualificationId == latestVersionId);
         stored.Select(candidate => candidate.FundingOfferId).ShouldBe([activeOfferId, openEndedOfferId], ignoreOrder: true);
         stored.ShouldAllBe(candidate => candidate.AcademicYear == "2025/26");
         stored.ShouldAllBe(candidate => candidate.RolloverRound == 1);
@@ -368,6 +371,72 @@ public class RolloverCandidateRepositoryTests
         candidate.RolloverRound.ShouldBe(1);
         candidate.PreviousFundingEndDate.ShouldBe(
             academicYear.EndDate.ToDateTime(TimeOnly.MinValue));
+    }
+
+    [Fact]
+    public async Task CreateInitialRolloverCandidatesAsync_WhenFundingMovedToLatestVersion_MovesActiveCandidateWithoutResettingDecision()
+    {
+        // Arrange
+        await using var context = CreateContext();
+        var repository = new RolloverCandidateRepository(
+            context,
+            new FakeSystemClockService());
+        var qualificationId = Guid.NewGuid();
+        var oldVersionId = Guid.NewGuid();
+        var newVersionId = Guid.NewGuid();
+        var fundingOfferId = Guid.NewGuid();
+        var academicYear = new AcademicYear(
+            "2025/26",
+            new DateOnly(2025, 8, 1),
+            new DateOnly(2026, 7, 31));
+        context.QualificationVersions.AddRange(
+            CreateQualificationVersion(oldVersionId, qualificationId, 1, true),
+            CreateQualificationVersion(newVersionId, qualificationId, 2, true));
+        context.QualificationFundings.Add(QualificationFunding.Create(
+            newVersionId,
+            fundingOfferId,
+            null,
+            academicYear.EndDate,
+            null));
+        var candidate = RolloverCandidate.CreateInitialRound(
+            RolloverSourceTypes.Ofqual,
+            oldVersionId,
+            fundingOfferId,
+            academicYear.Name,
+            new DateTime(2026, 6, 1),
+            academicYear.EndDate);
+        SetPrivateProperty(
+            candidate,
+            nameof(RolloverCandidate.RolloverStatus),
+            RolloverStatus.Extended);
+        SetPrivateProperty(
+            candidate,
+            nameof(RolloverCandidate.NewFundingEndDate),
+            new DateTime(2027, 7, 31));
+        var workflow = new RolloverWorkflowCandidate();
+        SetPrivateProperty(workflow, nameof(RolloverWorkflowCandidate.Id), Guid.NewGuid());
+        SetPrivateProperty(
+            workflow,
+            nameof(RolloverWorkflowCandidate.RolloverCandidatesId),
+            candidate.Id);
+        context.RolloverCandidates.Add(candidate);
+        context.RolloverWorkflowCandidates.Add(workflow);
+        await context.SaveChangesAsync();
+
+        // Act
+        var result = await repository.CreateInitialRolloverCandidatesAsync(
+            academicYear,
+            CancellationToken.None);
+
+        // Assert
+        result.ShouldBe(0);
+        context.RolloverCandidates.Count().ShouldBe(1);
+        candidate.SourceQualificationId.ShouldBe(newVersionId);
+        candidate.RolloverStatus.ShouldBe(RolloverStatus.Extended);
+        candidate.NewFundingEndDate.ShouldBe(new DateTime(2027, 7, 31));
+        candidate.IsActive.ShouldBeTrue();
+        workflow.InvalidatedAt.ShouldBe(new FakeSystemClockService().UtcNow);
+        workflow.InvalidationReason.ShouldContain("newer qualification version");
     }
 
     private static ApplicationDbContext CreateContext()

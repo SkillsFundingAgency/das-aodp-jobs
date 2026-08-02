@@ -355,7 +355,7 @@ namespace SFA.DAS.AODP.Jobs.Services
                             .ToListAsync();
             foreach (var funding in fundings)
             {
-                funding.QualificationVersionId = newQualificationVersionId;
+                funding.MoveToQualificationVersion(newQualificationVersionId);
             }
 
             return fundings;

@@ -113,4 +113,10 @@ public class RolloverCandidate
         ReviewedByUsername = null;
         UpdatedAt = updatedAt;
     }
+
+    public void MoveSourceQualification(Guid sourceQualificationId, DateTime updatedAt)
+    {
+        SourceQualificationId = sourceQualificationId;
+        UpdatedAt = updatedAt;
+    }
 }

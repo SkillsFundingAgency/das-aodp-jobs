@@ -3,8 +3,10 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace SFA.DAS.AODP.Data.Entities;
 
 [Table("QaaQualificationFundings", Schema = "funded")]
-public class QaaQualificationFunding
+public class QaaQualificationFunding : IFundingDomainEventSource
 {
+    private readonly List<FundingDomainEvent> _fundingDomainEvents = [];
+
     public Guid Id { get; private set; }
 
     public Guid QaaQualificationId { get; private set; }
@@ -24,6 +26,9 @@ public class QaaQualificationFunding
     public DateTime UpdatedAt { get; private set; }
 
     public virtual RegulatedQaaQualification QaaQualification { get; private set; } = null!;
+
+    [NotMapped]
+    public IReadOnlyCollection<FundingDomainEvent> FundingDomainEvents => _fundingDomainEvents;
 
     public static QaaQualificationFunding Create(
         Guid qaaQualificationId,
@@ -48,7 +53,7 @@ public class QaaQualificationFunding
                 nameof(fundingOfferId));
         }
 
-        return new QaaQualificationFunding
+        var funding = new QaaQualificationFunding
         {
             Id = Guid.NewGuid(),
             QaaQualificationId = qaaQualificationId,
@@ -60,6 +65,8 @@ public class QaaQualificationFunding
             CreatedAt = createdAt,
             UpdatedAt = createdAt
         };
+        funding.RecordChanged();
+        return funding;
     }
 
     public void Update(
@@ -74,5 +81,24 @@ public class QaaQualificationFunding
         FundingStatus = fundingStatus;
         Comments = comments;
         UpdatedAt = updatedAt;
+        RecordChanged();
+    }
+
+    public void Archive(DateOnly endDate, DateTime updatedAt, string? comments = null)
+    {
+        EndDate = endDate;
+        Comments = comments;
+        UpdatedAt = updatedAt;
+        RecordChanged();
+    }
+
+    public void ClearFundingDomainEvents() => _fundingDomainEvents.Clear();
+
+    private void RecordChanged()
+    {
+        _fundingDomainEvents.Add(new FundingChangedDomainEvent(
+            Rollover.RolloverSourceTypes.Qaa,
+            QaaQualificationId,
+            FundingOfferId));
     }
 }
