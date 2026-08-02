@@ -304,9 +304,7 @@ namespace SFA.DAS.AODP.Infrastructure.Services
                                         if (matchingUserOffer.StartDate.HasValue && matchingUserOffer.StartDate.Value != startDate
                                             || matchingUserOffer.EndDate.HasValue && matchingUserOffer.EndDate.Value != endDate)
                                         {
-                                            matchingUserOffer.StartDate = startDate;
-                                            matchingUserOffer.EndDate = endDate;
-                                            matchingUserOffer.Comments = $"{matchingUserOffer.Comments}, updated by import on {importRun.ToShortDateString()}";
+                                            matchingUserOffer.Update(startDate, endDate, matchingUserOffer.Comments);
                                             updatedOffers.Add(matchingUserOffer);
                                             updated++;
                                         }
