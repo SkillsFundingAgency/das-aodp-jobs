@@ -49,6 +49,7 @@ public static class AddServiceRegistrationsExtension
         services.AddScoped<IQualificationProcessor, QualificationProcessor>();
         services.AddScoped<IQaaSeedCsvBlobReader, QaaSeedCsvBlobReader>();
         services.AddScoped<IQaaQualificationSeedService, QaaQualificationSeedService>();
+        services.AddScoped<IFundingDomainEventDispatcher, FundingDomainEventDispatcher>();
         services.AddScoped<IRolloverCandidateRepository, RolloverCandidateRepository>();
         services.AddScoped<IRolloverCandidateService, RolloverCandidateService>();
         services.AddAzureClients(clientBuilder =>

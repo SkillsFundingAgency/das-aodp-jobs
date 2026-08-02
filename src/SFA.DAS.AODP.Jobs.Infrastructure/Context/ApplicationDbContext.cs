@@ -1,14 +1,26 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Data.Entities.Rollover;
+using SFA.DAS.AODP.Infrastructure.Interfaces.Rollover;
 
 
 namespace SFA.DAS.AODP.Infrastructure.Context
 {
     public class ApplicationDbContext : DbContext, IApplicationDbContext
     {
+        private readonly IFundingDomainEventDispatcher? _fundingDomainEventDispatcher;
+        private bool _dispatchingFundingDomainEvents;
+
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-            : base(options) { }
+            : this(options, null) { }
+
+        public ApplicationDbContext(
+            DbContextOptions<ApplicationDbContext> options,
+            IFundingDomainEventDispatcher? fundingDomainEventDispatcher)
+            : base(options)
+        {
+            _fundingDomainEventDispatcher = fundingDomainEventDispatcher;
+        }
 
         public virtual DbSet<Application> Applications { get; set; }
 
@@ -54,8 +66,12 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public virtual DbSet<RegulatedQaaQualificationHistory> RegulatedQaaQualificationHistory { get; set; }
 
+        public virtual DbSet<QaaQualificationFunding> QaaQualificationFundings { get; set; }
+
         
         public virtual DbSet<RolloverCandidate> RolloverCandidates { get; set; }
+
+        public virtual DbSet<RolloverWorkflowCandidate> RolloverWorkflowCandidates { get; set; }
 
         public virtual void StartingBulkInsert() => ChangeTracker.AutoDetectChangesEnabled = false;
 
@@ -108,20 +124,97 @@ namespace SFA.DAS.AODP.Infrastructure.Context
                     .HasColumnType("nvarchar(50)");
             });
 
+            modelBuilder.Entity<QaaQualificationFunding>(entity =>
+            {
+                entity.HasIndex(funding => funding.QaaQualificationId);
+                entity.HasIndex(funding => new
+                    {
+                        funding.QaaQualificationId,
+                        funding.FundingOfferId
+                    })
+                    .IsUnique();
+
+                entity.HasOne(funding => funding.QaaQualification)
+                    .WithMany(qualification => qualification.Fundings)
+                    .HasForeignKey(funding => funding.QaaQualificationId);
+            });
+
             modelBuilder.Entity<RolloverCandidate>(b =>
             {
                 b.Property(x => x.RolloverStatus)
                     .HasConversion<string>();
 
-                b.HasIndex(x => new { x.QualificationVersionId, x.FundingOfferId, x.AcademicYear, x.RolloverRound })
+                b.Property(x => x.SourceType)
+                    .HasMaxLength(50);
+
+                b.HasIndex(x => new
+                    {
+                        x.SourceType,
+                        x.SourceQualificationId,
+                        x.FundingOfferId,
+                        x.AcademicYear,
+                        x.RolloverRound
+                    })
                     .IsUnique();
+            });
+
+            modelBuilder.Entity<RolloverWorkflowCandidate>(b =>
+            {
+                b.Property(x => x.InvalidationReason)
+                    .HasMaxLength(255);
             });
 
         }
 
-        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
-            return base.SaveChangesAsync(cancellationToken);
+            if (_dispatchingFundingDomainEvents || _fundingDomainEventDispatcher is null)
+            {
+                return await base.SaveChangesAsync(cancellationToken);
+            }
+
+            var domainEvents = FundingDomainEventCollector.Collect(ChangeTracker);
+            if (domainEvents.Count == 0)
+            {
+                return await base.SaveChangesAsync(cancellationToken);
+            }
+
+            var ownsTransaction = Database.IsRelational() && Database.CurrentTransaction is null;
+            await using var transaction = ownsTransaction
+                ? await Database.BeginTransactionAsync(cancellationToken)
+                : null;
+
+            try
+            {
+                var affectedRows = await base.SaveChangesAsync(cancellationToken);
+                _dispatchingFundingDomainEvents = true;
+                await _fundingDomainEventDispatcher.DispatchAsync(
+                    this,
+                    domainEvents,
+                    cancellationToken);
+                affectedRows += await base.SaveChangesAsync(cancellationToken);
+
+                if (transaction is not null)
+                {
+                    await transaction.CommitAsync(cancellationToken);
+                }
+
+                FundingDomainEventCollector.Clear(ChangeTracker);
+                return affectedRows;
+            }
+            catch
+            {
+                if (transaction is not null)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                }
+
+                throw;
+            }
+            finally
+            {
+                _dispatchingFundingDomainEvents = false;
+            }
         }
 
         public async Task Truncate_FundedQualifications()
