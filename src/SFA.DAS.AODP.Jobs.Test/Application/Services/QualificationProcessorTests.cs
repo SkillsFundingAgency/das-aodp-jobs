@@ -29,10 +29,10 @@ public class QualificationProcessorTests
     }
 
     [Theory]
-    [InlineData(true, false, true, TestDisplayName = "Eligible -> Decision Required")]   // Eligible -> Decision Required
-    [InlineData(false, true, true, TestDisplayName = "Ineligible + Conflict -> Decision Required")]   // Ineligible + Conflict -> Decision Required
-    [InlineData(false, false, false, TestDisplayName = "Ineligible + No Conflict -> No Action Required")] // Ineligible + No Conflict -> No Action Required
-    public void Process_NewRecord_Paths(bool isEligible, bool hasActiveApps, bool expectDecisionRequired)
+    [InlineData(true, false, true, ConflictTypes.None, TestDisplayName = "Eligible -> Decision Required")]   // Eligible -> Decision Required
+    [InlineData(false, true, true, ConflictTypes.ActiveApplications, TestDisplayName = "Ineligible + Conflict -> Decision Required")]   // Ineligible + Conflict -> Decision Required
+    [InlineData(false, false, false, ConflictTypes.None, TestDisplayName = "Ineligible + No Conflict -> No Action Required")] // Ineligible + No Conflict -> No Action Required
+    public void Process_NewRecord_Paths(bool isEligible, bool hasActiveApps, bool expectDecisionRequired, string conflictType)
     {
         // Arrange
         var qualVersionId = Guid.NewGuid();
@@ -221,7 +221,8 @@ public class QualificationProcessorTests
             EligibleForFunding = isEligible,
             Name = dto.Title,
             IntentionToSeekFundingInEngland = dto.IntentionToSeekFundingInEngland,
-            VersionFieldChanges = result.NewVersion.VersionFieldChanges
+            VersionFieldChanges = result.NewVersion.VersionFieldChanges,
+            FundingEligibilityConflictType = conflictType,
         };
 
         // Assert
