@@ -50,13 +50,31 @@ namespace SFA.DAS.AODP.Jobs.Services
                 }
 
                 if (response.IsSuccessStatusCode)
-                {                    
-                    _logger.LogInformation($"[{nameof(ScheduledImportJobRunner)}] -> {functionName} called successfully: {responseBody}");
+                {
+                    _logger.LogInformation(
+                        $"[{nameof(ScheduledImportJobRunner)}] -> {functionName} called successfully: {responseBody}"
+                    );
                     success = true;
                 }
                 else
-                {                    
-                    _logger.LogError($"[{nameof(ScheduledImportJobRunner)}] -> Error calling {functionName}: {response.StatusCode}. {responseBody}");
+                {
+                    //404 means the URL is wrong (double /api, missing username, wrong route)
+                    if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    {
+                        _logger.LogError(
+                            $"[{nameof(ScheduledImportJobRunner)}] -> 404 Not Found calling {functionName}. " +
+                            $"This usually means the function URL is incorrect. Final URL: '{functionUrl}'. " +
+                            $"Response: {responseBody}"
+                        );
+                    }
+                    else
+                    {
+                        _logger.LogError(
+                            $"[{nameof(ScheduledImportJobRunner)}] -> Error calling {functionName}: " +
+                            $"Status={response.StatusCode}, Url='{functionUrl}', Body='{responseBody}'"
+                        );
+                    }
+
                     success = false;
                 }
             }
