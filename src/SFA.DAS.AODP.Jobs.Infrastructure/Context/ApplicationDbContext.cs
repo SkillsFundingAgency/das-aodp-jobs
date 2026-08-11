@@ -11,12 +11,9 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         private readonly IFundingDomainEventDispatcher? _fundingDomainEventDispatcher;
         private bool _dispatchingFundingDomainEvents;
 
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-            : this(options, null) { }
-
         public ApplicationDbContext(
             DbContextOptions<ApplicationDbContext> options,
-            IFundingDomainEventDispatcher? fundingDomainEventDispatcher)
+            IFundingDomainEventDispatcher? fundingDomainEventDispatcher = null)
             : base(options)
         {
             _fundingDomainEventDispatcher = fundingDomainEventDispatcher;
