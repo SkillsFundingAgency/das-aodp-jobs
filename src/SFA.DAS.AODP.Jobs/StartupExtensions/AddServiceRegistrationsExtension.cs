@@ -29,7 +29,8 @@ public static class AddServiceRegistrationsExtension
         services.Configure<StorageConfiguration>(configuration.GetSection(StorageConfiguration.SectionName));
 
         services.AddHttpClient("importPldns", clinet => clinet.Timeout = TimeSpan.FromMinutes(5));
-        services.AddScoped<IApplicationDbContext, ApplicationDbContext>();
+        services.AddScoped<IApplicationDbContext>(sp =>
+            sp.GetRequiredService<IDbContextFactory<ApplicationDbContext>>().CreateDbContext());
         services.AddScoped<IJobsRepository, JobsRepository>();
         services.AddScoped<IQualificationsService, QualificationsService>();
         services.AddTransient<IOfqualRegisterService, OfqualRegisterService>();
