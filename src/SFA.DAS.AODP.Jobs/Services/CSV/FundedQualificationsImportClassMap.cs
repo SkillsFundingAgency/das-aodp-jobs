@@ -75,15 +75,12 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
                     return offers;
                 }
 
-                if (!_qualificationLookupCache.TryGetValue(qan, out var lookup))
-                {
-                    return offers;
-                }
-
-                if (!lookup.qualificationId.HasValue)
-                {
-                    return offers;
-                }
+                // Qualifications not yet known to the Ofqual register (e.g. QAA/Access to Higher
+                // Education qualifications, which are never part of the Ofqual register import) won't
+                // be in this cache. Their funding offers are still needed downstream for QAA funding
+                // matching, so QualificationId falls back to Guid.Empty rather than dropping the offers.
+                _qualificationLookupCache.TryGetValue(qan, out var lookup);
+                var qualificationId = lookup.qualificationId ?? Guid.Empty;
 
                 foreach (var item in headers)
                 {
@@ -110,7 +107,7 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
                     offers.Add(new FundedQualificationOfferDTO
                     {
                         Id = Guid.NewGuid(),
-                        QualificationId = lookup.qualificationId.Value,
+                        QualificationId = qualificationId,
                         Name = offerName,
                         Notes = row.Row.GetField(notesKey),
                         FundingAvailable = row.Row.GetField(fundingKey),
