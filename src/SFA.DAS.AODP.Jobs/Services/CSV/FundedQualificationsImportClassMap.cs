@@ -56,6 +56,7 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
                     : null;
             });
 
+            Map(m => m.Qan).Name("QualificationNumber");
             Map(m => m.Level).Name("Level");
             Map(m => m.QualificationType).Name("QualificationType");
             Map(m => m.Subcategory).Name("Subcategory");
