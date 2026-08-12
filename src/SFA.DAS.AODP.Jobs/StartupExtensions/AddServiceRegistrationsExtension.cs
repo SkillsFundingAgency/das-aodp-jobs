@@ -23,9 +23,6 @@ public static class AddServiceRegistrationsExtension
         services.AddSingleton<AodpJobsConfiguration>(sp =>
             sp.GetRequiredService<IOptions<AodpJobsConfiguration>>().Value);
 
-        services.Configure<BlobStorageSettings>(configuration.GetSection("BlobStorageSettings"));
-        services.AddSingleton(cfg => cfg.GetRequiredService<IOptions<BlobStorageSettings>>().Value);
-        
         services.Configure<StorageConfiguration>(configuration.GetSection(StorageConfiguration.SectionName));
 
         services.AddHttpClient("importPldns", clinet => clinet.Timeout = TimeSpan.FromMinutes(5));
@@ -70,10 +67,6 @@ public static class AddServiceRegistrationsExtension
                 clientBuilder.AddBlobServiceClient(new Uri(configuration.GetValue<string>("Storage:ServiceUri")!)).WithName("Storage1");
                 clientBuilder.AddBlobServiceClient(new Uri(configuration.GetValue<string>("Storage:ServiceUri2")!)).WithName("Storage2");
             }
-
-            // This is the older approach to an extent where its not using ManagedIdentity but instead using a full connection string
-            // Which will either use SAS tokens or the account key, neither is the approach we want to keep.
-            clientBuilder.AddBlobServiceClient(configuration.GetValue<string>("BlobStorageSettings:ConnectionString"));
         });
 
         services.AddScoped<IBlobStorageFileService, BlobStorageFileService>();
