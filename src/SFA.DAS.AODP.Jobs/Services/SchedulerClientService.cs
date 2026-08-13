@@ -35,11 +35,11 @@ namespace SFA.DAS.AODP.Jobs.Services
                 if (!string.IsNullOrWhiteSpace(functionHostKey))
                 {
                     functionUrl = $"{functionUrl}?code={functionHostKey}";
-                    _logger.LogInformation($"[{nameof(ScheduledImportJobRunner)}] -> Calling function {functionName} job using host key");
+                    _logger.LogInformation("[{Caller}] -> Calling function {FunctionName} job using host key", nameof(ScheduledImportJobRunner), functionName);
                 }
                 else
                 {
-                    _logger.LogInformation($"[{nameof(ScheduledImportJobRunner)}] -> Calling function {functionName} job");
+                    _logger.LogInformation("[{Caller}] -> Calling function {FunctionName} job", nameof(ScheduledImportJobRunner), functionName);
                 }
 
                 HttpResponseMessage response = await client.GetAsync(functionUrl);
@@ -52,8 +52,8 @@ namespace SFA.DAS.AODP.Jobs.Services
                 if (response.IsSuccessStatusCode)
                 {
                     _logger.LogInformation(
-                        $"[{nameof(ScheduledImportJobRunner)}] -> {functionName} called successfully: {responseBody}"
-                    );
+                        "[{Caller}] -> {FunctionName} called successfully: {ResponseBody}",
+                        nameof(ScheduledImportJobRunner), functionName, responseBody);
                     success = true;
                 }
                 else
@@ -62,17 +62,14 @@ namespace SFA.DAS.AODP.Jobs.Services
                     if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                     {
                         _logger.LogError(
-                            $"[{nameof(ScheduledImportJobRunner)}] -> 404 Not Found calling {functionName}. " +
-                            $"This usually means the function URL is incorrect. Final URL: '{functionUrl}'. " +
-                            $"Response: {responseBody}"
-                        );
+                            "[{Caller}] -> 404 Not Found calling {FunctionName}. This usually means the function URL is incorrect. Final URL: '{FunctionUrl}'. Response: {ResponseBody}",
+                            nameof(ScheduledImportJobRunner), functionName, functionUrl, responseBody);
                     }
                     else
                     {
                         _logger.LogError(
-                            $"[{nameof(ScheduledImportJobRunner)}] -> Error calling {functionName}: " +
-                            $"Status={response.StatusCode}, Url='{functionUrl}', Body='{responseBody}'"
-                        );
+                            "[{Caller}] -> Error calling {FunctionName}: Status={StatusCode}, Url='{FunctionUrl}', Body='{ResponseBody}'",
+                            nameof(ScheduledImportJobRunner), functionName, response.StatusCode, functionUrl, responseBody);
                     }
 
                     success = false;
