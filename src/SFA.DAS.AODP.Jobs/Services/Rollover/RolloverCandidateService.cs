@@ -12,7 +12,7 @@ public class RolloverCandidateService(
     public Task<int> GenerateRolloverCandidatesAsync(CancellationToken cancellationToken)
     {
         var now = systemClockService.UtcNow;
-        var academicYear = AcademicYear.FromDate(now);
+        var academicYear = AcademicYear.NextAcademicYear(AcademicYear.FromDate(now));
 
         return repository.CreateInitialRolloverCandidatesAsync(
             academicYear,
