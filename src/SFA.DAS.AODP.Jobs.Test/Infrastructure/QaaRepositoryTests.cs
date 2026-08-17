@@ -96,6 +96,41 @@ public class QaaRepositoryTests
     }
 
     [Fact]
+    public async Task ImportQaaQualificationsAsync_WhenAimCodeIsNew_PersistsLastDateForCertifications()
+    {
+        var (context, repository) = CreateRepository();
+
+        await repository.ImportQaaQualificationsAsync(
+            [CreateResponse("Z1234567", lastDateForCertifications: new DateOnly(2029, 12, 31))],
+            _snapshotDate,
+            CancellationToken.None);
+
+        context.ChangeTracker.Clear();
+        var stored = await context.RegulatedQaaQualification.SingleAsync();
+
+        Assert.Equal(new DateOnly(2029, 12, 31), stored.LastDateForCertifications);
+    }
+
+    [Fact]
+    public async Task ImportQaaQualificationsAsync_WhenAimCodeExists_UpdatesLastDateForCertifications()
+    {
+        var (context, repository) = CreateRepository();
+        var existing = CreateExistingQualification("Z1234567");
+        context.RegulatedQaaQualification.Add(existing);
+        await context.SaveChangesAsync();
+
+        await repository.ImportQaaQualificationsAsync(
+            [CreateResponse("Z1234567", lastDateForCertifications: new DateOnly(2030, 06, 30))],
+            _snapshotDate,
+            CancellationToken.None);
+
+        context.ChangeTracker.Clear();
+        var stored = await context.RegulatedQaaQualification.SingleAsync();
+
+        Assert.Equal(new DateOnly(2030, 06, 30), stored.LastDateForCertifications);
+    }
+
+    [Fact]
     public async Task ImportQaaQualificationsAsync_WhenExistingRowsAreEmpty_CreatesHistoryForEachNewQualification()
     {
         var (context, repository) = CreateRepository();
@@ -230,7 +265,8 @@ public class QaaRepositoryTests
         string aimCode,
         string title = "Access to Higher Education Diploma (Science)",
         DateOnly? lastDateForRegistration = null,
-        DateOnly? discontinuedDate = null)
+        DateOnly? discontinuedDate = null,
+        DateOnly? lastDateForCertifications = null)
     {
         return new QaaQualificationResponse
         {
@@ -241,7 +277,8 @@ public class QaaRepositoryTests
             SsaTier2 = "1",
             StartDateOfQualification = new DateOnly(2023, 09, 01),
             LastDateForRegistrations = lastDateForRegistration ?? new DateOnly(2025, 08, 31),
-            DiscontinuedDate = discontinuedDate
+            DiscontinuedDate = discontinuedDate,
+            LastDateForCertifications = lastDateForCertifications ?? new DateOnly(2027, 12, 31)
         };
     }
 
