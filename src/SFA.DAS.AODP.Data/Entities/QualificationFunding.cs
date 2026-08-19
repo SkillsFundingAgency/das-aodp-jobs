@@ -25,5 +25,14 @@ namespace SFA.DAS.AODP.Data.Entities
                 EndDate = endDate,
                 Comments = comments
             };
+
+        public QualificationFunding Update(DateOnly? startDate, DateOnly? endDate, string? comments)
+        {
+            StartDate = startDate;
+            EndDate = endDate;
+            Comments = comments;
+
+            return this;
+        }
     }
 }
