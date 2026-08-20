@@ -182,8 +182,11 @@ Q1,01/01/1700,not-a-date,Note1,Yes";
         }
 
         [Fact]
-        public void Should_Return_No_Offers_When_QualificationId_Is_Null()
+        public void Should_Return_Offers_With_Empty_QualificationId_When_QualificationId_Is_Null()
         {
+            // Qualifications not yet known to the Ofqual register (e.g. QAA/Access to Higher Education
+            // qualifications) still need their funding offers parsed, so downstream QAA funding matching
+            // has data to work with - only the QualificationId falls back to Guid.Empty in this case.
             var logger = Mock.Of<ILogger>();
 
             var lookup = new List<QualificationLookupItem>
@@ -206,7 +209,8 @@ Q1,01/01/2024";
 
             var item = result.Single();
 
-            Assert.Empty(item.Offers);
+            Assert.NotEmpty(item.Offers);
+            Assert.All(item.Offers, offer => Assert.Equal(Guid.Empty, offer.QualificationId));
         }
 
     }

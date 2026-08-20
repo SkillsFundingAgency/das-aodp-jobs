@@ -101,7 +101,6 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
             _fundedQualificationWriter.Setup(s => s.WriteQualifications(fundedImport)).ReturnsAsync(true).Verifiable();
             _fundedQualificationWriter.Setup(s => s.WriteQualifications(archivedImport)).ReturnsAsync(true).Verifiable();
             _fundedQualificationWriter.Setup(s => s.SeedFundingData()).ReturnsAsync(true).Verifiable();
-
             var httpRequestData = new MockHttpRequestData(_functionContext);           
 
             // Act
