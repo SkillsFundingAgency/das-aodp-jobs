@@ -158,49 +158,64 @@ namespace SFA.DAS.AODP.Infrastructure.Services
                     continue;
                 }
 
-                foreach (var offer in qualification.Offers.Where(offer =>
-                             IsFundingAvailable(offer.FundingAvailable)))
+                UpsertQaaFundingOffersForQualification(
+                    qualification,
+                    qaaQualification,
+                    fundingOfferIdsByName,
+                    fundingsByKey,
+                    now);
+            }
+        }
+
+        private void UpsertQaaFundingOffersForQualification(
+            FundedQualificationDTO qualification,
+            RegulatedQaaQualification qaaQualification,
+            IReadOnlyDictionary<string, Guid> fundingOfferIdsByName,
+            Dictionary<(Guid, Guid), QaaQualificationFunding> fundingsByKey,
+            DateTime now)
+        {
+            foreach (var offer in qualification.Offers.Where(offer =>
+                         IsFundingAvailable(offer.FundingAvailable)))
+            {
+                if (offer.Name is null ||
+                    !fundingOfferIdsByName.TryGetValue(offer.Name, out var fundingOfferId))
                 {
-                    if (offer.Name is null ||
-                        !fundingOfferIdsByName.TryGetValue(offer.Name, out var fundingOfferId))
-                    {
-                        _logger.LogWarning(
-                            "Unable to map QAA funding offer {FundingOffer} for qualification {AimCode}",
-                            offer.Name,
-                            qualification.Qan);
-                        continue;
-                    }
+                    _logger.LogWarning(
+                        "Unable to map QAA funding offer {FundingOffer} for qualification {AimCode}",
+                        offer.Name,
+                        qualification.Qan);
+                    continue;
+                }
 
-                    DateOnly? startDate = offer.FundingApprovalStartDate.HasValue
-                        ? DateOnly.FromDateTime(offer.FundingApprovalStartDate.Value)
-                        : null;
-                    DateOnly? endDate = offer.FundingApprovalEndDate.HasValue
-                        ? DateOnly.FromDateTime(offer.FundingApprovalEndDate.Value)
-                        : null;
-                    var key = (qaaQualification.Id, fundingOfferId);
+                DateOnly? startDate = offer.FundingApprovalStartDate.HasValue
+                    ? DateOnly.FromDateTime(offer.FundingApprovalStartDate.Value)
+                    : null;
+                DateOnly? endDate = offer.FundingApprovalEndDate.HasValue
+                    ? DateOnly.FromDateTime(offer.FundingApprovalEndDate.Value)
+                    : null;
+                var key = (qaaQualification.Id, fundingOfferId);
 
-                    if (fundingsByKey.TryGetValue(key, out var existingFunding))
-                    {
-                        existingFunding.Update(
-                            startDate,
-                            endDate,
-                            qualification.Status,
-                            now,
-                            offer.Notes);
-                        continue;
-                    }
-
-                    var funding = QaaQualificationFunding.Create(
-                        qaaQualification.Id,
-                        fundingOfferId,
+                if (fundingsByKey.TryGetValue(key, out var existingFunding))
+                {
+                    existingFunding.Update(
                         startDate,
                         endDate,
                         qualification.Status,
                         now,
                         offer.Notes);
-                    _applicationDbContext.QaaQualificationFundings.Add(funding);
-                    fundingsByKey.Add(key, funding);
+                    continue;
                 }
+
+                var funding = QaaQualificationFunding.Create(
+                    qaaQualification.Id,
+                    fundingOfferId,
+                    startDate,
+                    endDate,
+                    qualification.Status,
+                    now,
+                    offer.Notes);
+                _applicationDbContext.QaaQualificationFundings.Add(funding);
+                fundingsByKey.Add(key, funding);
             }
         }
 

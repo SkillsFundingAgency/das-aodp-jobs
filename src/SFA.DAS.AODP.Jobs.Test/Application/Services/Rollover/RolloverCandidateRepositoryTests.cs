@@ -436,7 +436,7 @@ public class RolloverCandidateRepositoryTests
         candidate.NewFundingEndDate.ShouldBe(new DateTime(2027, 7, 31));
         candidate.IsActive.ShouldBeTrue();
         workflow.InvalidatedAt.ShouldBe(new FakeSystemClockService().UtcNow);
-        workflow.InvalidationReason.ShouldContain("newer qualification version");
+        workflow.InvalidationReason.ShouldNotBeNull().ShouldContain("newer qualification version");
     }
 
     private static ApplicationDbContext CreateContext()
@@ -446,6 +446,46 @@ public class RolloverCandidateRepositoryTests
             .Options;
 
         return new ApplicationDbContext(options);
+    }
+
+    [Fact]
+    public async Task CreateInitialRolloverCandidatesAsync_WhenTargetVersionAlreadyHasACandidate_DeactivatesStaleCandidateInsteadOfMoving()
+    {
+        // Arrange - two active Ofqual candidates for the same qualification end up in the same
+        // group once mapped to qualification id: one already sits on the funded (target) version,
+        // the other is stale on an older version. The stale one should be deactivated rather than
+        // moved, since the target slot is already taken.
+        await using var context = CreateContext();
+        var repository = new RolloverCandidateRepository(context, new FakeSystemClockService());
+        var qualificationId = Guid.NewGuid();
+        var staleVersionId = Guid.NewGuid();
+        var targetVersionId = Guid.NewGuid();
+        var fundingOfferId = Guid.NewGuid();
+        var academicYear = new AcademicYear("2025/26", new DateOnly(2025, 8, 1), new DateOnly(2026, 7, 31));
+
+        context.QualificationVersions.AddRange(
+            CreateQualificationVersion(staleVersionId, qualificationId, 1, true),
+            CreateQualificationVersion(targetVersionId, qualificationId, 2, true));
+        context.QualificationFundings.Add(QualificationFunding.Create(
+            targetVersionId, fundingOfferId, null, new DateOnly(2026, 7, 31), null));
+
+        var staleCandidate = RolloverCandidate.CreateInitialRound(
+            RolloverSourceTypes.Ofqual, staleVersionId, fundingOfferId, academicYear.Name,
+            new DateTime(2026, 6, 1), academicYear.EndDate);
+        var targetCandidate = RolloverCandidate.CreateInitialRound(
+            RolloverSourceTypes.Ofqual, targetVersionId, fundingOfferId, academicYear.Name,
+            new DateTime(2026, 6, 1), academicYear.EndDate);
+        context.RolloverCandidates.AddRange(staleCandidate, targetCandidate);
+        await context.SaveChangesAsync();
+
+        // Act
+        await repository.CreateInitialRolloverCandidatesAsync(academicYear, CancellationToken.None);
+
+        // Assert
+        staleCandidate.IsActive.ShouldBeFalse();
+        staleCandidate.SourceQualificationId.ShouldBe(staleVersionId);
+        targetCandidate.IsActive.ShouldBeTrue();
+        targetCandidate.SourceQualificationId.ShouldBe(targetVersionId);
     }
 
     private static QualificationVersions CreateQualificationVersion(Guid id, Guid qualificationId, int version, bool eligibleForFunding)
