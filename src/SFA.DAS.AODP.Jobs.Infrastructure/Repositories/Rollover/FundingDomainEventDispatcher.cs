@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Data.Entities.Rollover;
 using SFA.DAS.AODP.Infrastructure.Context;
+using SFA.DAS.AODP.Infrastructure.Extensions.Rollover;
 using SFA.DAS.AODP.Infrastructure.Interfaces.Rollover;
 using SFA.DAS.AODP.Infrastructure.Models;
 using SFA.DAS.AODP.Infrastructure.Services;
@@ -172,6 +173,14 @@ public sealed class FundingDomainEventDispatcher(
             .Select(key => key.FundingOfferId)
             .Distinct()
             .ToList();
+
+        var latestEligibleVersionIds = await context.QualificationVersions
+            .Where(version => sourceQualificationIds.Contains(version.Id))
+            .WhereLatestVersionPerQualification(context.QualificationVersions)
+            .WhereEligibleForFunding()
+            .Select(version => version.Id)
+            .ToHashSetAsync(cancellationToken);
+
         var ofqualFundings = await context.QualificationFundings
             .AsNoTracking()
             .Where(item =>
@@ -181,11 +190,7 @@ public sealed class FundingDomainEventDispatcher(
             {
                 item.QualificationVersionId,
                 item.FundingOfferId,
-                item.EndDate,
-                IsEligible = item.QualificationVersion.EligibleForFunding == true &&
-                             !context.QualificationVersions.Any(other =>
-                                 other.QualificationId == item.QualificationVersion.QualificationId &&
-                                 (other.Version ?? 0) > (item.QualificationVersion.Version ?? 0))
+                item.EndDate
             })
             .ToListAsync(cancellationToken);
         var qaaFundings = await context.QaaQualificationFundings
@@ -207,7 +212,8 @@ public sealed class FundingDomainEventDispatcher(
                 funding.QualificationVersionId,
                 funding.FundingOfferId),
             funding => new FundingEligibility(
-                funding.IsEligible && IsActiveForAcademicYear(funding.EndDate, academicYear),
+                latestEligibleVersionIds.Contains(funding.QualificationVersionId) &&
+                    IsActiveForAcademicYear(funding.EndDate, academicYear),
                 funding.EndDate));
         foreach (var funding in qaaFundings)
         {

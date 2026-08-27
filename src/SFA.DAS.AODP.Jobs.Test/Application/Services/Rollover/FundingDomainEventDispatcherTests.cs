@@ -128,6 +128,41 @@ public class FundingDomainEventDispatcherTests
     }
 
     [Fact]
+    public async Task DispatchAsync_WhenVersionSharesNumberWithANewerUpdate_TreatsOlderVersionAsNotLatestAndIneligible()
+    {
+        // Two QualificationVersions rows can share the same Version number (e.g. a corrected
+        // import) - "latest" then falls to a LastUpdatedDate tiebreak (see
+        // WhereLatestVersionPerQualification, reused here to match the rest of the rollover
+        // pipeline). A naive "Version >" comparison alone would treat both rows as latest and
+        // both as eligible, incorrectly reconciling funding changes on the superseded row.
+        await using var context = CreateContext();
+        var qualificationId = Guid.NewGuid();
+        var staleVersionId = Guid.NewGuid();
+        var latestVersionId = Guid.NewGuid();
+        var fundingOfferId = Guid.NewGuid();
+
+        var staleVersion = CreateQualificationVersion(staleVersionId, qualificationId, 1, true);
+        staleVersion.LastUpdatedDate = Now.AddDays(-2);
+        var latestVersion = CreateQualificationVersion(latestVersionId, qualificationId, 1, true);
+        latestVersion.LastUpdatedDate = Now.AddDays(-1);
+        context.QualificationVersions.AddRange(staleVersion, latestVersion);
+        context.QualificationFundings.Add(QualificationFunding.Create(
+            staleVersionId, fundingOfferId, null, new DateOnly(2026, 7, 31), null));
+        await context.SaveChangesAsync();
+        var sut = CreateDispatcher();
+
+        // Act - a funding change event fires for the stale (superseded) version
+        await sut.DispatchAsync(
+            context,
+            [new FundingChangedDomainEvent(RolloverSourceTypes.Ofqual, staleVersionId, fundingOfferId)],
+            CancellationToken.None);
+
+        // Assert - no candidate should be created, since the stale version is not the true latest
+        await context.SaveChangesAsync();
+        context.RolloverCandidates.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task DispatchAsync_WhenNoMatchingFundingRowExists_DeactivatesActiveCandidateAndInvalidatesWorkflow()
     {
         // Arrange - ineligibility here comes from there being no funding row at all for this key.
