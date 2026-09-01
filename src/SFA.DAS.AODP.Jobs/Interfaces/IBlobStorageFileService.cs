@@ -1,6 +1,6 @@
-﻿namespace SFA.DAS.AODP.Jobs.Interfaces;
+namespace SFA.DAS.AODP.Jobs.Interfaces;
 
 public interface IBlobStorageFileService
 {
-    Task<Stream> DownloadFileAsync(string filename, CancellationToken cancellationToken = default);
+    Task<Stream> DownloadFileAsync(string containerName, string blobName, CancellationToken cancellationToken = default);
 }

@@ -9,7 +9,7 @@ namespace SFA.DAS.AODP.Jobs.StartupExtensions;
 [ExcludeFromCodeCoverage]
 public static class AddServiceRegistrationsExtension
 {
-    public static IServiceCollection AddServiceRegistrations(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
+    public static IServiceCollection AddServiceRegistrations(this IServiceCollection services, IConfiguration configuration)
     {
 
         if (!configuration.GetSection(nameof(AodpJobsConfiguration)).GetChildren().Any())
@@ -24,6 +24,8 @@ public static class AddServiceRegistrationsExtension
             sp.GetRequiredService<IOptions<AodpJobsConfiguration>>().Value);
 
         services.Configure<StorageConfiguration>(configuration.GetSection(StorageConfiguration.SectionName));
+        services.AddSingleton<StorageConfiguration>(sp =>
+            sp.GetRequiredService<IOptions<StorageConfiguration>>().Value);
 
         services.AddHttpClient("importPldns", clinet => clinet.Timeout = TimeSpan.FromMinutes(5));
         services.AddScoped<IApplicationDbContext, ApplicationDbContext>();
@@ -49,24 +51,15 @@ public static class AddServiceRegistrationsExtension
         services.AddScoped<IFundingDomainEventDispatcher, FundingDomainEventDispatcher>();
         services.AddScoped<IRolloverCandidateRepository, RolloverCandidateRepository>();
         services.AddScoped<IRolloverCandidateService, RolloverCandidateService>();
+        var storageConfiguration = configuration.GetSection(StorageConfiguration.SectionName).Get<StorageConfiguration>();
+
         services.AddAzureClients(clientBuilder =>
         {
-            if (environment.IsDevelopment())
-            {
-                clientBuilder.AddBlobServiceClient("UseDevelopmentStorage=true").WithName("Local");
-            }
-            else
-            {
-                // Need to modify the structure of the settings as its perhaps not entirely correct, but it works for now.
-                // Ideally I would make it such that it reads as Storage:Blob:Primary:ServiceUri and Storage:Blob:Secondary:ServiceUri as we have 2 storage accounts currently.
-                // So the new structure would suit our infrastructure.
+            clientBuilder.AddBlobServiceClient(new Uri(storageConfiguration!.ServiceUri));
 
-                // Adds in a BlobServiceClient for the two storage accounts into the DI container with a Keyed name to distinguish the two.
-                // Use the IAzureClientFactory interface to access a named BlobServiceClient.
-                // This approach natively uses ManagedIdentity under the hood by using DefaultAzureCredential.
-                clientBuilder.AddBlobServiceClient(new Uri(configuration.GetValue<string>("Storage:ServiceUri")!)).WithName("Storage1");
-                clientBuilder.AddBlobServiceClient(new Uri(configuration.GetValue<string>("Storage:ServiceUri2")!)).WithName("Storage2");
-            }
+            // This is the older approach to an extent where its not using ManagedIdentity but instead using a full connection string
+            // Which will either use SAS tokens or the account key, neither is the approach we want to keep.
+            clientBuilder.AddBlobServiceClient(configuration.GetValue<string>("BlobStorageSettings:ConnectionString"));
         });
 
         services.AddScoped<IBlobStorageFileService, BlobStorageFileService>();
