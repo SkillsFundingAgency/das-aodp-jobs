@@ -24,9 +24,10 @@ public class ImportDefundingListDataFunctionTests
     private readonly Mock<IJobConfigurationService> _jobConfigurationServiceMock;
     private readonly Mock<IImportRepository> _importRepositoryMock;
     private readonly Mock<IBlobStorageFileService> _blobServiceMock;
-    private readonly AodpJobsConfiguration _config;
     private readonly ImportDefundingListDataFunction _function;
     private readonly FunctionContext _functionContext;
+    private const string ImportContainerName = "importfilescontainer";
+    private const string ImportBlobName = "DefundingList/DefundingList.xlsx";
     private static readonly string[] stringArray =
                     // row values: QAN, Title, InScope, Comments
                     ["QAN-001", " Title one ", "0", "comment 1"];
@@ -37,14 +38,9 @@ public class ImportDefundingListDataFunctionTests
         _jobConfigurationServiceMock = new Mock<IJobConfigurationService>();
         _importRepositoryMock = new Mock<IImportRepository>();
         _blobServiceMock = new Mock<IBlobStorageFileService>();
-        _config = new AodpJobsConfiguration
-        {
-            DefundingListImportUrl = "https://somewhere/defunding.xlsx"
-        };
 
         _function = new ImportDefundingListDataFunction(
             _loggerMock.Object,
-            _config,
             _jobConfigurationServiceMock.Object,
             _importRepositoryMock.Object,
             _blobServiceMock.Object);
@@ -70,7 +66,7 @@ public class ImportDefundingListDataFunctionTests
         downloadedStream.Position = 0;
 
         _blobServiceMock
-            .Setup(s => s.DownloadFileAsync(_config.DefundingListImportUrl!, It.IsAny<CancellationToken>()))
+            .Setup(s => s.DownloadFileAsync(ImportContainerName, ImportBlobName, It.IsAny<CancellationToken>()))
             .ReturnsAsync(downloadedStream);
 
         var captured = new List<DefundingList>();
@@ -154,7 +150,7 @@ public class ImportDefundingListDataFunctionTests
         downloadedStream.Position = 0;
 
         _blobServiceMock
-            .Setup(s => s.DownloadFileAsync(_config.DefundingListImportUrl!, It.IsAny<CancellationToken>()))
+            .Setup(s => s.DownloadFileAsync(ImportContainerName, ImportBlobName, It.IsAny<CancellationToken>()))
             .ReturnsAsync(downloadedStream);
 
         var control = new DefundingListImportControl
@@ -197,7 +193,7 @@ public class ImportDefundingListDataFunctionTests
         downloadedStream.Position = 0;
 
         _blobServiceMock
-            .Setup(s => s.DownloadFileAsync(_config.DefundingListImportUrl!, It.IsAny<CancellationToken>()))
+            .Setup(s => s.DownloadFileAsync(ImportContainerName, ImportBlobName, It.IsAny<CancellationToken>()))
             .ReturnsAsync(downloadedStream);
 
         var control = new DefundingListImportControl

@@ -19,20 +19,19 @@ namespace SFA.DAS.AODP.Jobs.Functions;
 public class ImportPldnsDataFunction
 {
     private readonly ILogger<ImportPldnsDataFunction> _logger;
-    private readonly AodpJobsConfiguration _config;
     private readonly IJobConfigurationService _jobConfigurationService;
     private readonly IImportRepository _repository;
     private readonly IBlobStorageFileService _blobStorageFileService;
     private const int BatchSize = 3000;
+    private const string ImportContainerName = "importfilescontainer";
+    private const string ImportBlobName = "Pldns/Pldns.xlsx";
 
     public ImportPldnsDataFunction(ILogger<ImportPldnsDataFunction> logger,
-            AodpJobsConfiguration config,
             IJobConfigurationService jobConfigurationService,
             IImportRepository repository,
             IBlobStorageFileService blobStorageFileService)
     {
         _logger = logger;
-        _config = config;
         _jobConfigurationService = jobConfigurationService;
         _repository = repository;
         _blobStorageFileService = blobStorageFileService;
@@ -77,8 +76,7 @@ public class ImportPldnsDataFunction
 
     private async Task<int> ImportPldns(CancellationToken cancellationToken)
     {
-        string? importFileUrl = _config.PldnsImportUrl;
-        await using var ms = await _blobStorageFileService.DownloadFileAsync(importFileUrl!, cancellationToken);
+        await using var ms = await _blobStorageFileService.DownloadFileAsync(ImportContainerName, ImportBlobName, cancellationToken);
         ms.Position = 0;
 
         using var document = SpreadsheetDocument.Open(ms, false);
