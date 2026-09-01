@@ -1,12 +1,16 @@
 ﻿using Azure.Storage.Blobs;
 using SFA.DAS.AODP.Jobs.Functions.Abstractions;
+using SFA.DAS.AODP.Infrastructure.Interfaces.Rollover;
+using SFA.DAS.AODP.Infrastructure.Repositories.Rollover;
+using SFA.DAS.AODP.Jobs.Interfaces.Rollover;
+using SFA.DAS.AODP.Jobs.Services.Rollover;
 
 namespace SFA.DAS.AODP.Jobs.StartupExtensions;
 
 [ExcludeFromCodeCoverage]
 public static class AddServiceRegistrationsExtension
 {
-    public static IServiceCollection AddServiceRegistrations(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddServiceRegistrations(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
 
         if (!configuration.GetSection(nameof(AodpJobsConfiguration)).GetChildren().Any())
@@ -22,6 +26,8 @@ public static class AddServiceRegistrationsExtension
 
         services.Configure<BlobStorageSettings>(configuration.GetSection("BlobStorageSettings"));
         services.AddSingleton(cfg => cfg.GetRequiredService<IOptions<BlobStorageSettings>>().Value);
+        
+        services.Configure<StorageConfiguration>(configuration.GetSection(StorageConfiguration.SectionName));
 
         services.AddHttpClient("importPldns", clinet => clinet.Timeout = TimeSpan.FromMinutes(5));
         services.AddScoped<IApplicationDbContext, ApplicationDbContext>();
@@ -34,6 +40,7 @@ public static class AddServiceRegistrationsExtension
         services.AddScoped<IFileProcessingService, FileProcessingService>();
         services.AddScoped<ICsvReaderService, CsvReaderService>();
         services.AddScoped<ISystemClockService, SystemClockService>();
+        services.AddScoped<IGuidProvider, GuidProvider>();
         services.AddScoped<IJobConfigurationService, JobConfigurationService>();
         services.AddScoped<IChangeDetectionService, ChangeDetectionService>();
         services.AddScoped<ISchedulerClientService, SchedulerClientService>();
@@ -42,6 +49,30 @@ public static class AddServiceRegistrationsExtension
         services.AddScoped<IQualificationVersionRepository, QualificationVersionRepository>();
         services.AddScoped<IImportRepository, ImportRepository>();
         services.AddScoped<IFileRecordRepository, FileRecordRepository>();
+        services.AddScoped<IQualificationProcessor, QualificationProcessor>();
+        services.AddScoped<IQaaSeedCsvBlobReader, QaaSeedCsvBlobReader>();
+        services.AddScoped<IQaaQualificationSeedService, QaaQualificationSeedService>();
+        services.AddScoped<IRolloverCandidateRepository, RolloverCandidateRepository>();
+        services.AddScoped<IRolloverCandidateService, RolloverCandidateService>();
+        services.AddAzureClients(clientBuilder =>
+        {
+            if (environment.IsDevelopment())
+            {
+                clientBuilder.AddBlobServiceClient("UseDevelopmentStorage=true").WithName("Local");
+            }
+            else
+            {
+                // Need to modify the structure of the settings as its perhaps not entirely correct, but it works for now.
+                // Ideally I would make it such that it reads as Storage:Blob:Primary:ServiceUri and Storage:Blob:Secondary:ServiceUri as we have 2 storage accounts currently.
+                // So the new structure would suit our infrastructure.
+
+                // Adds in a BlobServiceClient for the two storage accounts into the DI container with a Keyed name to distinguish the two.
+                // Use the IAzureClientFactory interface to access a named BlobServiceClient.
+                // This approach natively uses ManagedIdentity under the hood by using DefaultAzureCredential.
+                clientBuilder.AddBlobServiceClient(new Uri(configuration.GetValue<string>("Storage:ServiceUri")!)).WithName("Storage1");
+                clientBuilder.AddBlobServiceClient(new Uri(configuration.GetValue<string>("Storage:ServiceUri2")!)).WithName("Storage2");
+            }
+        });
 
         services.AddSingleton(sp =>
         {

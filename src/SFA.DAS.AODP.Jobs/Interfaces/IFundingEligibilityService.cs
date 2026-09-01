@@ -1,11 +1,13 @@
-﻿using SFA.DAS.AODP.Models.Qualification;
+﻿using SFA.DAS.AODP.Jobs.Models.Jobs.FundingEligibility;
+using SFA.DAS.AODP.Jobs.Services;
+using SFA.DAS.AODP.Models.Qualification;
 
 namespace SFA.DAS.AODP.Jobs.Interfaces
 {
     public interface IFundingEligibilityService
     {
-        public bool EligibleForFunding(QualificationDTO qualification);
+        public FundingEligibilityEvaluation EvaluateFundingEligibilityRules(
+            QualificationDTO qualification);
 
-        public string DetermineFailureReason(QualificationDTO qualification);
     }
 }

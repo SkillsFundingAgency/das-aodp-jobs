@@ -33,6 +33,7 @@
                 JobNames.Pldns => await ReadPldnsImportConfiguration(),
                 JobNames.DefundingList => await ReadDefundingListImportConfiguration(),
                 JobNames.QaaQualifications => await ReadQaaQualificationJobConfiguration(),
+                JobNames.RolloverCandidates => await ReadSimpleJobConfiguration(jobName),
                 _ => throw new ArgumentOutOfRangeException(nameof(jobName), jobName, null)
             };
 
@@ -156,6 +157,18 @@
                 var runApiImport = jobRecord!.JobConfigurations.FirstOrDefault(o => o.Name == nameof(JobConfiguration.ImportQaaQualifications))?.Value ?? "false";
                 jobControl.RunApiImport = bool.Parse(runApiImport);
             }
+
+            return jobControl;
+        }
+
+        private async Task<JobControl> ReadSimpleJobConfiguration(JobNames jobName)
+        {
+            var jobControl = new JobControl();
+            var jobRecord = await _jobsRepository.GetJobByNameAsync(jobName.ToString());
+
+            jobControl.JobEnabled = jobRecord?.Enabled ?? false;
+            jobControl.JobId = jobRecord?.Id ?? Guid.Empty;
+            jobControl.Status = jobRecord?.Status ?? string.Empty;
 
             return jobControl;
         }

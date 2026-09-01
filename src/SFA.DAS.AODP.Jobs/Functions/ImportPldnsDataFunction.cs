@@ -96,10 +96,10 @@ public class ImportPldnsDataFunction
         var workbookPart = document.WorkbookPart ?? throw new InvalidOperationException("Workbook part missing.");
         var sharedStrings = workbookPart.SharedStringTablePart?.SharedStringTable;
 
-        var sheet = FindSheet(workbookPart, "PLDNS V12F");
+        var sheet = FindSheet(workbookPart, "PLDNS V");
         if (sheet == null)
         {
-            _logger.LogWarning("[{Function}] -> ImportPldns - Sheet {SheetName} not found", nameof(ImportPldnsDataFunction), "PLDNS V12F");
+            _logger.LogWarning("[{Function}] -> ImportPldns - No sheet found starting with {SheetName}", nameof(ImportPldnsDataFunction), "PLDNS V");
             return 0;
         }
 
@@ -107,7 +107,7 @@ public class ImportPldnsDataFunction
         var sheetData = worksheetPart.Worksheet.Elements<SheetData>().FirstOrDefault();
         if (sheetData == null)
         {
-            _logger.LogWarning("[{Function}] -> ImportPldns - Sheet data is null for sheet {SheetName}", nameof(ImportPldnsDataFunction), "PLDNS V12F");
+            _logger.LogWarning("[{Function}] -> ImportPldns - Sheet data is null for sheet starting with {SheetName}", nameof(ImportPldnsDataFunction), "PLDNS V");
             return 0;
         }
 
@@ -148,11 +148,15 @@ public class ImportPldnsDataFunction
         return totalImported;
     }
 
-    private static Sheet? FindSheet(WorkbookPart workbookPart, string targetSheetName)
+    private static Sheet? FindSheet(WorkbookPart workbookPart, string targetPrefix)
     {
         return workbookPart.Workbook.Sheets!
             .Cast<Sheet?>()
-            .FirstOrDefault(s => string.Equals((s?.Name!.Value ?? string.Empty).Trim(), targetSheetName, StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(s =>
+            {
+                var name = (s?.Name?.Value ?? string.Empty).Trim();
+                return name.StartsWith(targetPrefix, StringComparison.OrdinalIgnoreCase);
+            });
     }
 
     private sealed record ColumnNames(

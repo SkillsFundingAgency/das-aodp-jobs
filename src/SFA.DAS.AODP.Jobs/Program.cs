@@ -38,7 +38,7 @@ public class Program
         builder.Services
             .AddApplicationInsightsTelemetryWorkerService()    
             .ConfigureFunctionsApplicationInsights();
-        builder.Services.AddServiceRegistrations(configuration);
+        builder.Services.AddServiceRegistrations(configuration, builder.Environment);
 
         var app = builder.Build();
         

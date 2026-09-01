@@ -5,6 +5,7 @@ global using Microsoft.Extensions.Logging;
 global using Moq;
 
 global using RestEase;
+global using Shouldly;
 
 global using SFA.DAS.AODP.Common.Enum;
 global using SFA.DAS.AODP.Data.Entities;
@@ -16,6 +17,4 @@ global using SFA.DAS.AODP.Jobs.Models.Jobs;
 global using SFA.DAS.AODP.Jobs.Services;
 global using SFA.DAS.AODP.Jobs.UnitTests.Testing;
 global using SFA.DAS.AODP.Models.QaaQualification;
-global using SFA.DAS.Funding.ApprenticeshipEarnings.Domain.Services;
-
 global using System.Net;

@@ -92,6 +92,24 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
             }
         }
 
+        public Task<List<T>> ReadCsvFileFromStreamAsync<T, TMap>(Stream stream, params object[] additionalParameters) where TMap : ClassMap<T>
+        {
+            var records = new List<T>();
+
+            try
+            {
+                records = ReadCsv<T, TMap>(stream, additionalParameters);
+
+                _logger.LogInformation("Total Records Read: {fundedCsvRecords}", records.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error reading stream");
+            }
+
+            return Task.FromResult(records);
+        }
+
         private async Task<HttpResponseMessage> GetDataFromUrl(string approvedUrlFilePath)
         {
             var _httpClient = _httpClientFactory.CreateClient("CsvReaderServiceClient");

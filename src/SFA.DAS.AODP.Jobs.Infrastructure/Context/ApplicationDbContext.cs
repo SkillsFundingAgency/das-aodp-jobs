@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SFA.DAS.AODP.Data.Entities;
 using SFA.DAS.AODP.Data.Entities.Files;
+using SFA.DAS.AODP.Data.Entities.Rollover;
 
 
 namespace SFA.DAS.AODP.Infrastructure.Context
@@ -9,6 +10,8 @@ namespace SFA.DAS.AODP.Infrastructure.Context
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options) { }
+
+        public virtual DbSet<Application> Applications { get; set; }
 
         public virtual DbSet<ActionType> ActionType { get; set; }
 
@@ -52,6 +55,11 @@ namespace SFA.DAS.AODP.Infrastructure.Context
 
         public virtual DbSet<FileRecord> FileRecords { get; set; }
 
+        public virtual DbSet<RegulatedQaaQualificationHistory> RegulatedQaaQualificationHistory { get; set; }
+
+
+        public virtual DbSet<RolloverCandidate> RolloverCandidates { get; set; }
+
         public virtual void StartingBulkInsert() => ChangeTracker.AutoDetectChangesEnabled = false;
 
         public virtual void FinishedBulkInsert() => ChangeTracker.AutoDetectChangesEnabled = true;
@@ -60,11 +68,57 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         {
             base.OnModelCreating(modelBuilder);
 
-            modelBuilder.Entity<RegulatedQaaQualification>()
-                .Property(q => q.SectorSubjectArea)
-                .HasConversion(
-                    ssaTier => ssaTier.Name,
-                    ssaName => SectorSubjectArea.FromName(ssaName));
+            modelBuilder.Entity<RegulatedQaaQualification>(entity =>
+            {
+                entity.HasIndex(q => q.AimCode).IsUnique();
+                entity.HasIndex(q => q.DateOfDataSnapshot);
+                entity.HasIndex(q => q.FirstSeenAt);
+                entity.HasIndex(q => q.LastDateForRegistration);
+                entity.HasIndex(q => q.IsDiscontinued);
+                entity.HasIndex(q => q.LatestImportComparisonOutcome);
+                entity.HasIndex(q => q.LastDateForRegistrationChangeType);
+                entity.HasIndex(q => q.DiscontinuedDate);
+                entity.HasIndex(q => q.LatestQaaQualificationHistoryId);
+
+                entity.Property(q => q.SectorSubjectArea)
+                    .HasConversion(
+                        ssaTier => ssaTier.Name,
+                        ssaName => SectorSubjectArea.FromName(ssaName));
+
+                entity.Property(q => q.LatestImportComparisonOutcome)
+                    .HasConversion<string>()
+                    .HasColumnType("nvarchar(50)");
+
+                entity.Property(q => q.LastDateForRegistrationChangeType)
+                    .HasConversion<string>()
+                    .HasColumnType("nvarchar(50)");
+            });
+
+            modelBuilder.Entity<RegulatedQaaQualificationHistory>(entity =>
+            {
+                entity.HasIndex(q => q.QaaQualificationId);
+                entity.HasIndex(q => q.AimCode);
+                entity.HasIndex(q => q.ChangedAt);
+                entity.HasIndex(q => q.LastDateForRegistrationChangeType);
+
+                entity.Property(q => q.SectorSubjectArea)
+                    .HasConversion(
+                        ssaTier => ssaTier.Name,
+                        ssaName => SectorSubjectArea.FromName(ssaName));
+
+                entity.Property(q => q.LastDateForRegistrationChangeType)
+                    .HasConversion<string>()
+                    .HasColumnType("nvarchar(50)");
+            });
+
+            modelBuilder.Entity<RolloverCandidate>(b =>
+            {
+                b.Property(x => x.RolloverStatus)
+                    .HasConversion<string>();
+
+                b.HasIndex(x => new { x.QualificationVersionId, x.FundingOfferId, x.AcademicYear, x.RolloverRound })
+                    .IsUnique();
+            });
 
             modelBuilder.Entity<FileRecord>()
                .Property(e => e.FileCategory)

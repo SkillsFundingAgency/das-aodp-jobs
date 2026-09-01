@@ -121,6 +121,8 @@ public partial class QualificationVersions
 
     public bool? EligibleForFunding { get; set; }
 
+    public string? FundingEligibilityFailedFields { get; set; }
+
     public string? Name { get; set; }
 
     public bool? IntentionToSeekFundingInEngland { get; set; }
@@ -134,4 +136,6 @@ public partial class QualificationVersions
     public virtual Qualification Qualification { get; set; } = null!;
 
     public virtual VersionFieldChanges VersionFieldChanges { get; set; } = null!;
+
+    public string? FundingEligibilityConflictType { get; set; }
 }
