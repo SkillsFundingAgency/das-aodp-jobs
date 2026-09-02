@@ -2,6 +2,7 @@
 using Azure.Storage.Blobs;
 using SFA.DAS.AODP.Common.Storage;
 using SFA.DAS.AODP.Data.Entities.Files;
+using SFA.DAS.AODP.Jobs.Helpers;
 
 /**
  * Handles Event Grid notifications to check file scan status in blob storage. Untested.
@@ -136,15 +137,7 @@ public class DefenderScanResultFunction
 
     private MalwareScanStatus MapScanResult(string? scanResult)
     {
-        return scanResult?.ToLowerInvariant() switch
-        {
-            "no threats found" => MalwareScanStatus.Clean,
-            "malicious" => MalwareScanStatus.Malicious,
-            "error" => MalwareScanStatus.Error,
-            "unsupported" => MalwareScanStatus.Error,
-            "scan timed out" => MalwareScanStatus.Error,
-            _ => MalwareScanStatus.NotScanned
-        };
+        return MalwareScanResultMapper.Map(scanResult) ?? MalwareScanStatus.NotScanned;
     }
 
     public static (FileCategory Category, Guid? ApplicationId, Guid? MessageId, Guid? QuestionId) ParseBlobPath(string containerName, string blobPath)
@@ -185,7 +178,7 @@ public class DefenderScanResultFunction
                 questionId = Guid.Parse(segments[1]);
             }
         }
-        // funded-qualifiations-import/approved.csv or archived.csv
+        // funded-qualifications-import/approved.csv or archived.csv
         else if (containerName.Equals(BlobStoragePaths.ContainerFundingImport, StringComparison.OrdinalIgnoreCase))
         {
             if (segments[0].Equals(BlobStoragePaths.ApprovedFundingFileName, StringComparison.OrdinalIgnoreCase))

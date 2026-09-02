@@ -6,7 +6,7 @@
         // Containers
         public const string ContainerFiles = "files";
         public const string ContainerImportFiles = "importfilescontainer";
-        public const string ContainerFundingImport = "funded-qualifiations-import";
+        public const string ContainerFundingImport = "funded-qualifications-import";
         public const string ContainerFundingOutput = "funded-qualifications-output";
 
         // Folders inside importfilescontainer

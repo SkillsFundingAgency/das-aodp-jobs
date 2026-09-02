@@ -1,6 +1,7 @@
 ﻿using Azure;
 using Azure.Storage.Blobs;
 using SFA.DAS.AODP.Data.Entities.Files;
+using SFA.DAS.AODP.Jobs.Helpers;
 using FeatureManagementOptions = SFA.DAS.AODP.Jobs.FeatureManagement.FeatureManagementOptions;
 
 namespace SFA.DAS.AODP.Jobs.Functions;
@@ -62,7 +63,7 @@ public class DefenderScanPollingFunction
             var tagResponse = await blob.GetTagsAsync();
             var tags = tagResponse.Value.Tags;
 
-            if (!tags.TryGetValue("Malware Scanning scan result", out var scanResult))
+            if (!tags.TryGetValue(MalwareScanResultMapper.ScanResultTagKey, out var scanResult))
             {
                 _logger.LogInformation("Blob {Path} has no ms-scan-result tag yet", file.BlobPath);
                 return;
@@ -114,14 +115,6 @@ public class DefenderScanPollingFunction
 
     private MalwareScanStatus MapScanResult(string scanResult)
     {
-        return scanResult?.ToLowerInvariant() switch
-        {
-            "no threats found" => MalwareScanStatus.Clean,
-            "malicious" => MalwareScanStatus.Malicious,
-            "error" => MalwareScanStatus.Error,
-            "unsupported" => MalwareScanStatus.Error,
-            "scan timed out" => MalwareScanStatus.Error,
-            _ => MalwareScanStatus.NotScanned
-        };
+        return MalwareScanResultMapper.Map(scanResult) ?? MalwareScanStatus.NotScanned;
     }
 }
