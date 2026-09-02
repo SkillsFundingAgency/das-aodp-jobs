@@ -1,6 +1,5 @@
 ﻿using Azure.Messaging.EventGrid;
 using Azure.Storage.Blobs;
-using CsvHelper;
 using SFA.DAS.AODP.Common.Storage;
 using SFA.DAS.AODP.Data.Entities.Files;
 
@@ -43,35 +42,52 @@ public class DefenderScanResultFunction
 
         _logger.LogInformation("Processing blob: {Container}/{Path}", containerName, blobPath);
 
+        var container = _blobServiceClient.GetBlobContainerClient(containerName);
+
+        if (!await container.ExistsAsync())
+        {
+            _logger.LogWarning(
+                "Blob container '{Container}' does not exist — cannot process Defender event.",
+                containerName);
+
+            return;
+        }
+
+        var blob = container.GetBlobClient(blobPath);
+
+        if (!await blob.ExistsAsync())
+        {
+            _logger.LogWarning(
+                "Blob does not exist — cannot process Defender event. " +
+                "Event may have arrived after blob deletion."
+            );
+            return;
+        }
+
+        var blobProperties = await blob.GetPropertiesAsync();
+        var currentETag = blobProperties.Value.ETag.ToString();
+
+        // Categories such as Pldns/DefundingList overwrite the same blob path on every import,
+        // so a scan event can arrive after the blob it describes has already been superseded by
+        // a newer upload. Comparing the event's eTag against the blob's current eTag lets us
+        // discard that stale result rather than misapplying it to the newer file.
+        if (!string.IsNullOrEmpty(data.ETag) &&
+            !string.Equals(NormaliseETag(currentETag), NormaliseETag(data.ETag), StringComparison.Ordinal))
+        {
+            _logger.LogWarning(
+                "Scan result eTag {EventETag} does not match current blob eTag {CurrentETag} for {Container}/{Path} — " +
+                "blob has been overwritten since this scan started; discarding stale result.",
+                data.ETag, currentETag, containerName, blobPath);
+            return;
+        }
+
+        var status = MapScanResult(data.ScanResultType);
+
         var fileRecord = await _fileRepository.GetByPathAsync(containerName, blobPath);
 
         if (fileRecord == null)
         {
-            _logger.LogWarning("FileRecord missing — loading blob metadata");
-
-            var container = _blobServiceClient.GetBlobContainerClient(containerName);
-
-            if (!await container.ExistsAsync())
-            {
-                _logger.LogWarning(
-                    "Blob container '{Container}' does not exist — cannot process Defender event.",
-                    containerName);
-
-                return;
-            }
-
-            var blob = container.GetBlobClient(blobPath);
-
-            if (!await blob.ExistsAsync())
-            {
-                _logger.LogWarning(
-                    "Blob does not exist — cannot create FileRecord. " +
-                    "Event may have arrived after blob deletion."
-                );
-                return; 
-            }
-
-            var blobProperties = await blob.GetPropertiesAsync();
+            _logger.LogWarning("FileRecord missing — creating from blob metadata");
 
             var parsedBlobPath = ParseBlobPath(containerName, blobPath);
 
@@ -88,29 +104,26 @@ public class DefenderScanResultFunction
                 QuestionId = parsedBlobPath.QuestionId,
                 UploadedAt = blobProperties.Value.CreatedOn.UtcDateTime,
                 UploadedByDisplayName = "DfEStaffUser",
-                ScanResult = MalwareScanStatus.NotScanned,
-                LastScanAt = null
+                ScanResult = status,
+                LastScanAt = DateTime.UtcNow
             };
 
             await _fileRepository.InsertAsync(fileRecord);
         }
+        else
+        {
+            fileRecord.ScanResult = status;
+            fileRecord.LastScanAt = DateTime.UtcNow;
 
-        var status = MapScanResult(data.ScanResultType);
-
-        fileRecord.ScanResult = status;
-        fileRecord.LastScanAt = DateTime.UtcNow;
+            await _fileRepository.UpdateAsync(fileRecord);
+        }
 
         if (status == MalwareScanStatus.Malicious)
         {
             _logger.LogWarning("Malware detected — deleting blob");
 
-            var container = _blobServiceClient.GetBlobContainerClient(containerName);
-            var blob = container.GetBlobClient(blobPath);
-
             await blob.DeleteIfExistsAsync();
         }
-
-        await _fileRepository.UpdateAsync(fileRecord);
 
         _logger.LogInformation(
             "Updated file status to {Status} (raw metadata = {Raw})",
@@ -118,6 +131,8 @@ public class DefenderScanResultFunction
             data.ScanResultType
         );
     }
+
+    private static string NormaliseETag(string eTag) => eTag.Trim('"');
 
     private MalwareScanStatus MapScanResult(string? scanResult)
     {
