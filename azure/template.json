@@ -315,6 +315,14 @@
                                 {
                                     "name": "WEBSITE_RUN_FROM_PACKAGE",
                                     "value": "1"
+                                },
+                                {
+                                    "name": "Storage__credential",
+                                    "value": "managedidentity"
+                                },
+                                {
+                                    "name": "Storage__blobServiceUri",
+                                    "value": "[concat('https://', variables('storageAccountName'), '.blob.core.windows.net')]"
                                 }
                             ]
                         }

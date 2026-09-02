@@ -77,7 +77,7 @@ public static class AddServiceRegistrationsExtension
                 return new BlobServiceClient("UseDevelopmentStorage=true", options);
             }
 
-            var serviceUri = new Uri(configuration.GetValue<string>("Storage:ServiceUri2")!);
+            var serviceUri = new Uri(configuration.GetValue<string>("Storage:ServiceUri")!);
             return new BlobServiceClient(serviceUri, new DefaultAzureCredential());
         });
 

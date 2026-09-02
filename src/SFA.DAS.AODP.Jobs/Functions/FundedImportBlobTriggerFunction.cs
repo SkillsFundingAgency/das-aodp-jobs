@@ -40,7 +40,7 @@ public class FundedImportBlobTriggerFunction
 
     [Function("FundedImportBlobTriggerFunction")]
     public async Task Run(
-        [BlobTrigger(BlobStoragePaths.ContainerFundingImport + "/{name}", Connection = "AzureWebJobsStorage")] string blob,
+        [BlobTrigger(BlobStoragePaths.ContainerFundingImport + "/{name}", Connection = "Storage")] string blob,
         string name)
     {
         var category = MapFileNameToCategory(name);
