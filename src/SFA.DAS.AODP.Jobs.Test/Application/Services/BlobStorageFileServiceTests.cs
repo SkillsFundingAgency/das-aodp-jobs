@@ -1,6 +1,5 @@
 ﻿using Azure;
 using Azure.Storage.Blobs;
-using SFA.DAS.AODP.Models.Config;
 using System.Text;
 using Xunit;
 
@@ -8,12 +7,6 @@ namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Services;
 
 public class BlobStorageFileServiceTests
 {
-    private static BlobStorageSettings CreateSettings() =>
-        new()
-        {
-            ConnectionString = "UseDevelopmentStorage=true"
-        };
-
     [Fact]
     public async Task DownloadFileAsync_ThrowsArgumentException_WhenContainerNameIsNull()
     {
@@ -44,8 +37,6 @@ public class BlobStorageFileServiceTests
     {
         // Arrange
         var blobServiceClient = new Mock<BlobServiceClient>();
-        var settings = CreateSettings();
-
         var service = new BlobStorageFileService(blobServiceClient.Object);
 
         // Act & Assert
