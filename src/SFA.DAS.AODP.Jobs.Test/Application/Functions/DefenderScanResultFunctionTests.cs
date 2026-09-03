@@ -184,52 +184,24 @@ public class DefenderScanResultFunctionTests
 
 
     [Fact]
-    public async Task Run_ShouldInsertFileRecord_WhenMissing_And_MetadataAvailable()
+    public async Task Run_ShouldDiscardScanResult_WhenNoFileRecordTracksTheBlob()
     {
         var evt = CreateEvent("No threats found");
 
-        // FileRecord missing
+        // FileRecord missing — nothing upstream (upload flow, funded-import trigger, sync
+        // function) has created a record for this blob yet.
         _fileRepository
             .Setup(r => r.GetByPathAsync("container", "file.csv"))
             .ReturnsAsync((FileRecord?)null);
 
-        // Container exists
-        var containerClient = new Mock<BlobContainerClient>();
-        containerClient
-            .Setup(c => c.ExistsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Response.FromValue(true, Mock.Of<Response>()));
+        SetupBlobExists("container", "file.csv", out var blobClient, out _);
+        SetupBlobProperties(blobClient, eTag: null);
 
-        // Blob exists
-        var blobClient = new Mock<BlobClient>();
-        blobClient
-            .Setup(b => b.ExistsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Response.FromValue(true, Mock.Of<Response>()));
-
-        // Blob metadata
-        var blobProps = BlobsModelFactory.BlobProperties(
-            contentType: "application/pdf",
-            createdOn: DateTimeOffset.UtcNow);
-
-        blobClient
-            .Setup(b => b.GetPropertiesAsync())
-            .ReturnsAsync(Response.FromValue(blobProps, Mock.Of<Response>()));
-
-        containerClient
-            .Setup(c => c.GetBlobClient("file.csv"))
-            .Returns(blobClient.Object);
-
-        _blobServiceClient
-            .Setup(s => s.GetBlobContainerClient("container"))
-            .Returns(containerClient.Object);
-
-        // Act
         await _function.Run(evt);
 
-        // Assert — the new record is inserted once, already carrying the scan result from this
-        // event; there is no separate update call for a record that didn't exist a moment ago.
-        _fileRepository.Verify(r =>
-            r.InsertAsync(It.Is<FileRecord>(f => f.ScanResult == MalwareScanStatus.Clean)),
-            Times.Once);
+        // The event is discarded, not used to create a record — every category already has a
+        // deliberate creator elsewhere, so this function is update-only.
+        _fileRepository.Verify(r => r.InsertAsync(It.IsAny<FileRecord>()), Times.Never);
         _fileRepository.Verify(r => r.UpdateAsync(It.IsAny<FileRecord>()), Times.Never);
     }
 

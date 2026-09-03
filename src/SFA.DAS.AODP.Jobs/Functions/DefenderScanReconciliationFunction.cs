@@ -1,4 +1,4 @@
-﻿using Azure;
+using Azure;
 using Azure.Storage.Blobs;
 using SFA.DAS.AODP.Data.Entities.Files;
 using SFA.DAS.AODP.Jobs.Helpers;
@@ -7,20 +7,26 @@ using FeatureManagementOptions = SFA.DAS.AODP.Jobs.FeatureManagement.FeatureMana
 namespace SFA.DAS.AODP.Jobs.Functions;
 
 /**
- * Retrieves unscanned file records from the database , checks their current scan status in blob storage
- * and updates status in the database. If a file is found to be malicious, it is deleted from blob storage
- * but the file remains in the database.
+ * Reconciliation safety net for scan results, not the primary update path — DefenderScanResultFunction
+ * (Event Grid) is. This exists because Event Grid delivery isn't guaranteed: a dropped or dead-lettered
+ * event currently has no other recovery path, and would otherwise leave a record stuck at NotScanned
+ * permanently, with nothing left to ever re-check it.
+ *
+ * Runs nightly rather than near-real-time, checking blob tags directly (a channel independent of
+ * Event Grid) for anything still pending. The lookback window is deliberately wider than the run
+ * interval so a late or occasionally-skipped run doesn't create a permanent gap — the cutoff only
+ * ever looks backward from "now," not forward from the last successful run.
  * */
-public class DefenderScanPollingFunction
+public class DefenderScanReconciliationFunction
 {
 
-    private readonly ILogger<DefenderScanPollingFunction> _logger;
+    private readonly ILogger<DefenderScanReconciliationFunction> _logger;
     private readonly IFileRecordRepository _fileRepository;
     private readonly BlobServiceClient _blobServiceClient;
     private readonly FeatureManagementOptions _features;
 
-    public DefenderScanPollingFunction(
-        ILogger<DefenderScanPollingFunction> logger,
+    public DefenderScanReconciliationFunction(
+        ILogger<DefenderScanReconciliationFunction> logger,
         IFileRecordRepository fileRepository,
         BlobServiceClient blobServiceClient,
         IOptionsSnapshot<FeatureManagementOptions> features)
@@ -31,17 +37,17 @@ public class DefenderScanPollingFunction
         _features = features.Value;
     }
 
-    [Function("DefenderScanPollingFunction")]
-    public async Task Run([TimerTrigger("0 */3 * * * *")] TimerInfo timer)
+    [Function("DefenderScanReconciliationFunction")]
+    public async Task Run([TimerTrigger("0 0 2 * * *")] TimerInfo timer)
     {
         if(_features.DefenderPollingEnabled)
         {
-            _logger.LogInformation("Scan polling started at {Time}", DateTime.UtcNow);
+            _logger.LogInformation("Scan reconciliation started at {Time}", DateTime.UtcNow);
 
-            var cutoff = DateTime.UtcNow.AddHours(-24);
+            var cutoff = DateTime.UtcNow.AddDays(-7);
 
             //Get files from db where scan result is still pending and
-            //uploaded within the last 24 hours 
+            //uploaded within the last 7 days
             var pendingFiles = await _fileRepository.GetPendingScanAsync(cutoff);
 
             foreach (var file in pendingFiles)
@@ -49,7 +55,7 @@ public class DefenderScanPollingFunction
                 await ProcessFile(file);
             }
 
-            _logger.LogInformation("Scan polling completed at {Time}", DateTime.UtcNow);
+            _logger.LogInformation("Scan reconciliation completed at {Time}", DateTime.UtcNow);
         }
     }
 
@@ -65,7 +71,7 @@ public class DefenderScanPollingFunction
 
             if (!tags.TryGetValue(MalwareScanResultMapper.ScanResultTagKey, out var scanResult))
             {
-                _logger.LogInformation("Blob {Path} has no ms-scan-result tag yet", file.BlobPath);
+                _logger.LogInformation("Blob {Path} has no {ScanResultTag} tag yet", file.BlobPath, MalwareScanResultMapper.ScanResultTagKey);
                 return;
             }
 

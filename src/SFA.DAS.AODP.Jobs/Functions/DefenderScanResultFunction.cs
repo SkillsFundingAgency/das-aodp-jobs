@@ -1,11 +1,17 @@
 ﻿using Azure.Messaging.EventGrid;
 using Azure.Storage.Blobs;
-using SFA.DAS.AODP.Common.Storage;
 using SFA.DAS.AODP.Data.Entities.Files;
 using SFA.DAS.AODP.Jobs.Helpers;
 
 /**
- * Handles Event Grid notifications to check file scan status in blob storage. Untested.
+ * Handles Event Grid notifications to check file scan status in blob storage.
+ *
+ * Never creates a FileRecord — every category already has a deliberate creator elsewhere
+ * (the upload flow for QuestionUpload/MessageAttachment and Pldns/DefundingList,
+ * FundedImportBlobTriggerFunction's first-run capture for ApprovedFunding/ArchivedFunding,
+ * the sync/backfill function for historical files). A scan event arriving with no tracked
+ * record means something upstream didn't create it as expected — worth logging loudly, not
+ * papering over with a record built from partial event metadata.
  * */
 public class DefenderScanResultFunction
 {
@@ -88,36 +94,18 @@ public class DefenderScanResultFunction
 
         if (fileRecord == null)
         {
-            _logger.LogWarning("FileRecord missing — creating from blob metadata");
-
-            var parsedBlobPath = ParseBlobPath(containerName, blobPath);
-
-            fileRecord = new FileRecord
-            {
-                Id = Guid.NewGuid(),
-                FileName = Path.GetFileName(blobPath),
-                ContentType = blobProperties.Value.ContentType,
-                BlobPath = blobPath,
-                BlobContainer = containerName,
-                FileCategory = parsedBlobPath.Category,
-                ApplicationId = parsedBlobPath.ApplicationId,
-                MessageId = parsedBlobPath.MessageId,
-                QuestionId = parsedBlobPath.QuestionId,
-                UploadedAt = blobProperties.Value.CreatedOn.UtcDateTime,
-                UploadedByDisplayName = "DfEStaffUser",
-                ScanResult = status,
-                LastScanAt = DateTime.UtcNow
-            };
-
-            await _fileRepository.InsertAsync(fileRecord);
+            _logger.LogWarning(
+                "No FileRecord found for {Container}/{Path} — scan result discarded. " +
+                "Expected the upload flow, the funded-import trigger, or the sync function to " +
+                "have created this record already.",
+                containerName, blobPath);
+            return;
         }
-        else
-        {
-            fileRecord.ScanResult = status;
-            fileRecord.LastScanAt = DateTime.UtcNow;
 
-            await _fileRepository.UpdateAsync(fileRecord);
-        }
+        fileRecord.ScanResult = status;
+        fileRecord.LastScanAt = DateTime.UtcNow;
+
+        await _fileRepository.UpdateAsync(fileRecord);
 
         if (status == MalwareScanStatus.Malicious)
         {
@@ -139,65 +127,4 @@ public class DefenderScanResultFunction
     {
         return MalwareScanResultMapper.Map(scanResult) ?? MalwareScanStatus.NotScanned;
     }
-
-    public static (FileCategory Category, Guid? ApplicationId, Guid? MessageId, Guid? QuestionId) ParseBlobPath(string containerName, string blobPath)
-    {
-        var segments = blobPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-
-        FileCategory category = FileCategory.Unknown;
-        Guid? applicationId = null;
-        Guid? messageId = null;
-        Guid? questionId = null;
-
-        // importfilescontainer/DefundingList/{fileId}
-        if (containerName.Equals(BlobStoragePaths.ContainerImportFiles, StringComparison.OrdinalIgnoreCase))
-        {
-            if (segments[0].Equals(BlobStoragePaths.FolderDefundingList, StringComparison.OrdinalIgnoreCase))
-            {
-                category = FileCategory.DefundingList;
-            }
-            else if (segments[0].Equals(BlobStoragePaths.FolderPldns, StringComparison.OrdinalIgnoreCase))
-            {
-                category = FileCategory.Pldns;
-            }
-        }
-        // files/messages/{appId}/{messageId}/{fileId}
-        else if (containerName.Equals(BlobStoragePaths.ContainerFiles, StringComparison.OrdinalIgnoreCase))
-        {
-            if (segments[0].Equals(BlobStoragePaths.FolderMessages, StringComparison.OrdinalIgnoreCase))
-            {
-                category = FileCategory.MessageAttachment;
-                applicationId = Guid.Parse(segments[1]);
-                messageId = Guid.Parse(segments[2]);
-            }
-            else
-            {
-                // files/{applicationId}/{questionId}/{fileId}
-                category = FileCategory.QuestionUpload;
-                applicationId = Guid.Parse(segments[0]);
-                questionId = Guid.Parse(segments[1]);
-            }
-        }
-        // funded-qualifications-import/approved.csv or archived.csv
-        else if (containerName.Equals(BlobStoragePaths.ContainerFundingImport, StringComparison.OrdinalIgnoreCase))
-        {
-            if (segments[0].Equals(BlobStoragePaths.ApprovedFundingFileName, StringComparison.OrdinalIgnoreCase))
-            {
-                category = FileCategory.ApprovedFunding;
-            }
-            else if (segments[0].Equals(BlobStoragePaths.ArchivedFundingFileName, StringComparison.OrdinalIgnoreCase))
-            {
-                category = FileCategory.ArchivedFunding;
-            }
-        }
-        // funded-qualifications-output/{date}-AOdPApprovedOutputFile.csv
-        else if (containerName.Equals(BlobStoragePaths.ContainerFundingOutput, StringComparison.OrdinalIgnoreCase))
-        {
-            category = FileCategory.FundingOutput;
-        }
-
-        return (category, applicationId, messageId, questionId);
-    }
-
-
 }

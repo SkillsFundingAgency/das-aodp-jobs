@@ -11,18 +11,18 @@ using Xunit;
 
 namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Functions
 {
-    public class DefenderScanPollingFunctionTests
+    public class DefenderScanReconciliationFunctionTests
     {
-        private readonly Mock<ILogger<DefenderScanPollingFunction>> _logger;
+        private readonly Mock<ILogger<DefenderScanReconciliationFunction>> _logger;
         private readonly Mock<IFileRecordRepository> _fileRepository;
         private readonly Mock<BlobServiceClient> _blobServiceClient;
         private readonly Mock<IOptionsSnapshot<FeatureManagementOptions>> _features;
 
-        private readonly DefenderScanPollingFunction _function;
+        private readonly DefenderScanReconciliationFunction _function;
 
-        public DefenderScanPollingFunctionTests()
+        public DefenderScanReconciliationFunctionTests()
         {
-            _logger = new Mock<ILogger<DefenderScanPollingFunction>>();
+            _logger = new Mock<ILogger<DefenderScanReconciliationFunction>>();
             _fileRepository = new Mock<IFileRecordRepository>();
             _blobServiceClient = new Mock<BlobServiceClient>();
             _features = new Mock<IOptionsSnapshot<FeatureManagementOptions>>();
@@ -30,7 +30,7 @@ namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Functions
             _features.Setup(f => f.Value)
                 .Returns(new FeatureManagementOptions { DefenderPollingEnabled = true });
 
-            _function = new DefenderScanPollingFunction(
+            _function = new DefenderScanReconciliationFunction(
                 _logger.Object,
                 _fileRepository.Object,
                 _blobServiceClient.Object,
@@ -38,12 +38,12 @@ namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Functions
         }
 
         [Fact]
-        public async Task Run_ShouldNotPoll_WhenFeatureDisabled()
+        public async Task Run_ShouldNotReconcile_WhenFeatureDisabled()
         {
             _features.Setup(f => f.Value)
                 .Returns(new FeatureManagementOptions { DefenderPollingEnabled = false });
 
-            var function = new DefenderScanPollingFunction(
+            var function = new DefenderScanReconciliationFunction(
                 _logger.Object,
                 _fileRepository.Object,
                 _blobServiceClient.Object,

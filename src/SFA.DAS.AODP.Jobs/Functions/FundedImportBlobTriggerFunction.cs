@@ -20,7 +20,7 @@ namespace SFA.DAS.AODP.Jobs.Functions;
  * happened, so the blob may simply be an already-scanned file our tracking has never seen before
  * (e.g. this trigger's first run against a pre-existing blob). In that case we read the current
  * tag and trust it, since forcing NotScanned would strand a genuinely clean file outside
- * DefenderScanPollingFunction's 24-hour lookback with nothing left to ever re-scan it.
+ * DefenderScanReconciliationFunction's 7-day lookback with nothing left to ever re-scan it.
  * */
 public class FundedImportBlobTriggerFunction
 {
