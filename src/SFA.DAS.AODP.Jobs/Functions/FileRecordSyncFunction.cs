@@ -32,8 +32,14 @@ namespace SFA.DAS.AODP.Jobs.Functions;
  * Every created record starts as NotScanned — this deliberately does not read the blob's
  * existing scan tag, since reading tags needs a permission (blobs/tags/read) this function's
  * identity doesn't currently have. Getting a real result for a backfilled record relies on
- * triggering a fresh scan afterwards (a re-upload, or an on-demand scan) so Defender's result
- * arrives via the Event Grid path instead.
+ * triggering a fresh scan afterwards so Defender's result arrives via the Event Grid path
+ * instead.
+ *
+ * That fresh scan is opt-in (?triggerRescan=true, default false), not automatic — copying a
+ * newly-created record's blob onto itself is enough to make Defender rescan it, but doing that
+ * for every blob a large first-ever backfill finds would fire off an unpredictable volume of
+ * scans (real cost, real IOPS) as a side effect of what's otherwise just a cheap DB-record
+ * operation. Left as a deliberate choice made per run instead.
  * */
 public class FileRecordSyncFunction
 {
@@ -74,6 +80,7 @@ public class FileRecordSyncFunction
         [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "gov/file-records/sync")] HttpRequestData req)
     {
         var categories = ParseCategories(req);
+        var triggerRescan = string.Equals(req.Query["triggerRescan"], "true", StringComparison.OrdinalIgnoreCase);
 
         if (categories.Count == 0)
         {
@@ -90,8 +97,8 @@ public class FileRecordSyncFunction
             try
             {
                 var result = SingleRecordCategories.Contains(category)
-                    ? await SyncSingleRecordCategoryAsync(category)
-                    : await SyncMultiRecordCategoryAsync(category);
+                    ? await SyncSingleRecordCategoryAsync(category, triggerRescan)
+                    : await SyncMultiRecordCategoryAsync(category, triggerRescan);
 
                 created += result.Created;
                 skipped += result.Skipped;
@@ -137,7 +144,7 @@ public class FileRecordSyncFunction
         return categories;
     }
 
-    private async Task<(int Created, int Skipped)> SyncSingleRecordCategoryAsync(FileCategory category)
+    private async Task<(int Created, int Skipped)> SyncSingleRecordCategoryAsync(FileCategory category, bool triggerRescan)
     {
         var existing = await _fileRepository.GetByCategoryAsync(category);
 
@@ -188,7 +195,7 @@ public class FileRecordSyncFunction
             return (0, 0);
         }
 
-        await CreateRecordAsync(category, container, blobName, blobClient);
+        await CreateRecordAsync(category, container, blobName, blobClient, triggerRescan);
         return (1, 0);
     }
 
@@ -212,7 +219,7 @@ public class FileRecordSyncFunction
         return latestName;
     }
 
-    private async Task<(int Created, int Skipped)> SyncMultiRecordCategoryAsync(FileCategory category)
+    private async Task<(int Created, int Skipped)> SyncMultiRecordCategoryAsync(FileCategory category, bool triggerRescan)
     {
         var container = BlobStoragePaths.ContainerFiles;
         var containerClient = _blobServiceClient.GetBlobContainerClient(container);
@@ -237,14 +244,14 @@ public class FileRecordSyncFunction
                 continue;
             }
 
-            await CreateRecordAsync(category, container, blob.Name, containerClient.GetBlobClient(blob.Name));
+            await CreateRecordAsync(category, container, blob.Name, containerClient.GetBlobClient(blob.Name), triggerRescan);
             created++;
         }
 
         return (created, skipped);
     }
 
-    private async Task CreateRecordAsync(FileCategory category, string container, string blobPath, BlobClient blobClient)
+    private async Task CreateRecordAsync(FileCategory category, string container, string blobPath, BlobClient blobClient, bool triggerRescan)
     {
         var properties = await blobClient.GetPropertiesAsync();
 
@@ -264,8 +271,19 @@ public class FileRecordSyncFunction
 
         await _fileRepository.InsertAsync(record);
 
-        _logger.LogInformation(
-            "[FileRecordSyncFunction] -> Created record for {Container}/{Path} as NotScanned — a fresh scan needs to be triggered separately for it to progress.",
-            container, blobPath);
+        if (triggerRescan)
+        {
+            await blobClient.StartCopyFromUriAsync(blobClient.Uri);
+
+            _logger.LogInformation(
+                "[FileRecordSyncFunction] -> Created record for {Container}/{Path} as NotScanned and triggered a fresh scan.",
+                container, blobPath);
+        }
+        else
+        {
+            _logger.LogInformation(
+                "[FileRecordSyncFunction] -> Created record for {Container}/{Path} as NotScanned — a fresh scan needs to be triggered separately for it to progress.",
+                container, blobPath);
+        }
     }
 }

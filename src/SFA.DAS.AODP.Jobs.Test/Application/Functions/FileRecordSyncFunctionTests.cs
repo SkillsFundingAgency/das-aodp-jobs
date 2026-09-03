@@ -87,6 +87,38 @@ public class FileRecordSyncFunctionTests
             f.LastScanAt == null)),
             Times.Once);
         blobClient.Verify(b => b.GetTagsAsync(null, default), Times.Never);
+        blobClient.Verify(b => b.StartCopyFromUriAsync(It.IsAny<Uri>(), null, null, null, null, default), Times.Never);
+    }
+
+    [Fact]
+    public async Task Run_ShouldTriggerRescan_WhenTriggerRescanFlagIsSet()
+    {
+        _fileRepository
+            .Setup(r => r.GetByCategoryAsync(FileCategory.ApprovedFunding))
+            .ReturnsAsync((FileRecord?)null);
+
+        var blobUri = new Uri("https://teststorage.blob.core.windows.net/funded-qualifications-import/approved.csv");
+
+        var blobClient = new Mock<BlobClient>();
+        blobClient.Setup(b => b.ExistsAsync(default)).ReturnsAsync(Response.FromValue(true, Mock.Of<Response>()));
+        blobClient.Setup(b => b.Uri).Returns(blobUri);
+        blobClient
+            .Setup(b => b.GetPropertiesAsync(null, default))
+            .ReturnsAsync(Response.FromValue(
+                BlobsModelFactory.BlobProperties(contentType: "text/csv"), Mock.Of<Response>()));
+
+        var containerClient = new Mock<BlobContainerClient>();
+        containerClient.Setup(c => c.GetBlobClient("approved.csv")).Returns(blobClient.Object);
+
+        _blobServiceClient
+            .Setup(s => s.GetBlobContainerClient("funded-qualifications-import"))
+            .Returns(containerClient.Object);
+
+        var request = CreateRequestWithRescan("ApprovedFunding", triggerRescan: true);
+
+        await _function.Run(request);
+
+        blobClient.Verify(b => b.StartCopyFromUriAsync(blobUri, null, null, null, null, default), Times.Once);
     }
 
     [Fact]
@@ -270,6 +302,16 @@ public class FileRecordSyncFunctionTests
     private MockHttpRequestData CreateRequest(string key, string value)
     {
         var query = new NameValueCollection { { key, value } };
+        return new MockHttpRequestData(_functionContext.Object, query);
+    }
+
+    private MockHttpRequestData CreateRequestWithRescan(string categories, bool triggerRescan)
+    {
+        var query = new NameValueCollection
+        {
+            { "categories", categories },
+            { "triggerRescan", triggerRescan.ToString() }
+        };
         return new MockHttpRequestData(_functionContext.Object, query);
     }
 
