@@ -380,7 +380,7 @@
                         "value": "[reference(concat(variables('functionAppName'), '-', parameters('utcValue'))).outputs.managedServiceIdentityId.value]"
                     },
                     "assignmentType": {
-                        "value": "StorageBlobDataOwner"
+                        "value": "StorageBlobDataContributor"
                     },
                     "resourceName": {
                         "value": "[variables('storageAccountName')]"

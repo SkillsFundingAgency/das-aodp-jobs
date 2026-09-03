@@ -29,6 +29,11 @@ namespace SFA.DAS.AODP.Jobs.Functions;
  * of how many blob objects a container actually holds (an old, superseded upload left behind
  * in storage must not spawn a second record for the same category).
  *
+ * Every created record starts as NotScanned — this deliberately does not read the blob's
+ * existing scan tag, since reading tags needs a permission (blobs/tags/read) this function's
+ * identity doesn't currently have. Getting a real result for a backfilled record relies on
+ * triggering a fresh scan afterwards (a re-upload, or an on-demand scan) so Defender's result
+ * arrives via the Event Grid path instead.
  * */
 public class FileRecordSyncFunction
 {
@@ -227,7 +232,6 @@ public class FileRecordSyncFunction
     private async Task CreateRecordAsync(FileCategory category, string container, string blobPath, BlobClient blobClient)
     {
         var properties = await blobClient.GetPropertiesAsync();
-        var existingScanResult = await TryGetExistingScanResultAsync(blobClient);
 
         var record = new FileRecord
         {
@@ -239,32 +243,14 @@ public class FileRecordSyncFunction
             BlobPath = blobPath,
             UploadedByDisplayName = "FileRecordSync",
             UploadedAt = DateTime.UtcNow,
-            ScanResult = existingScanResult ?? MalwareScanStatus.NotScanned,
-            LastScanAt = existingScanResult != null ? DateTime.UtcNow : null
+            ScanResult = MalwareScanStatus.NotScanned,
+            LastScanAt = null
         };
 
         await _fileRepository.InsertAsync(record);
 
-        if (existingScanResult == null)
-        {
-            _logger.LogWarning(
-                "[FileRecordSyncFunction] -> Created record for {Container}/{Path} with no existing scan tag — remains NotScanned until a scan is triggered.",
-                container, blobPath);
-        }
-        else
-        {
-            _logger.LogInformation(
-                "[FileRecordSyncFunction] -> Created record for {Container}/{Path} from existing tag: {ScanResult}.",
-                container, blobPath, existingScanResult);
-        }
-    }
-
-    private static async Task<MalwareScanStatus?> TryGetExistingScanResultAsync(BlobClient blobClient)
-    {
-        var tagResponse = await blobClient.GetTagsAsync();
-
-        return tagResponse.Value.Tags.TryGetValue(MalwareScanResultMapper.ScanResultTagKey, out var scanResult)
-            ? MalwareScanResultMapper.Map(scanResult)
-            : null;
+        _logger.LogInformation(
+            "[FileRecordSyncFunction] -> Created record for {Container}/{Path} as NotScanned — a fresh scan needs to be triggered separately for it to progress.",
+            container, blobPath);
     }
 }

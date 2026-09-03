@@ -54,7 +54,7 @@ public class FileRecordSyncFunctionTests
     }
 
     [Fact]
-    public async Task Run_ApprovedFunding_ShouldCreateRecord_FromExistingTag_WhenBlobExistsAndUntracked()
+    public async Task Run_ApprovedFunding_ShouldCreateRecordAsNotScanned_WhenBlobExistsAndUntracked()
     {
         _fileRepository
             .Setup(r => r.GetByCategoryAsync(FileCategory.ApprovedFunding))
@@ -66,13 +66,6 @@ public class FileRecordSyncFunctionTests
             .Setup(b => b.GetPropertiesAsync(null, default))
             .ReturnsAsync(Response.FromValue(
                 BlobsModelFactory.BlobProperties(contentType: "text/csv"), Mock.Of<Response>()));
-        blobClient
-            .Setup(b => b.GetTagsAsync(null, default))
-            .ReturnsAsync(Response.FromValue(
-                BlobsModelFactory.GetBlobTagResult(new Dictionary<string, string>
-                {
-                    { "Malware Scanning scan result", "No threats found" }
-                }), Mock.Of<Response>()));
 
         var containerClient = new Mock<BlobContainerClient>();
         containerClient.Setup(c => c.GetBlobClient("approved.csv")).Returns(blobClient.Object);
@@ -90,43 +83,10 @@ public class FileRecordSyncFunctionTests
             f.FileCategory == FileCategory.ApprovedFunding &&
             f.BlobContainer == "funded-qualifications-import" &&
             f.BlobPath == "approved.csv" &&
-            f.ScanResult == MalwareScanStatus.Clean)),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task Run_ApprovedFunding_ShouldCreateRecordAsNotScanned_WhenBlobHasNoTag()
-    {
-        _fileRepository
-            .Setup(r => r.GetByCategoryAsync(FileCategory.ApprovedFunding))
-            .ReturnsAsync((FileRecord?)null);
-
-        var blobClient = new Mock<BlobClient>();
-        blobClient.Setup(b => b.ExistsAsync(default)).ReturnsAsync(Response.FromValue(true, Mock.Of<Response>()));
-        blobClient
-            .Setup(b => b.GetPropertiesAsync(null, default))
-            .ReturnsAsync(Response.FromValue(
-                BlobsModelFactory.BlobProperties(contentType: "text/csv"), Mock.Of<Response>()));
-        blobClient
-            .Setup(b => b.GetTagsAsync(null, default))
-            .ReturnsAsync(Response.FromValue(
-                BlobsModelFactory.GetBlobTagResult(new Dictionary<string, string>()), Mock.Of<Response>()));
-
-        var containerClient = new Mock<BlobContainerClient>();
-        containerClient.Setup(c => c.GetBlobClient("approved.csv")).Returns(blobClient.Object);
-
-        _blobServiceClient
-            .Setup(s => s.GetBlobContainerClient("funded-qualifications-import"))
-            .Returns(containerClient.Object);
-
-        var request = CreateRequest("categories", "ApprovedFunding");
-
-        await _function.Run(request);
-
-        _fileRepository.Verify(r => r.InsertAsync(It.Is<FileRecord>(f =>
             f.ScanResult == MalwareScanStatus.NotScanned &&
             f.LastScanAt == null)),
             Times.Once);
+        blobClient.Verify(b => b.GetTagsAsync(null, default), Times.Never);
     }
 
     [Fact]
@@ -178,10 +138,6 @@ public class FileRecordSyncFunctionTests
             .Setup(b => b.GetPropertiesAsync(null, default))
             .ReturnsAsync(Response.FromValue(
                 BlobsModelFactory.BlobProperties(contentType: "application/vnd.ms-excel"), Mock.Of<Response>()));
-        blobClient
-            .Setup(b => b.GetTagsAsync(null, default))
-            .ReturnsAsync(Response.FromValue(
-                BlobsModelFactory.GetBlobTagResult(new Dictionary<string, string>()), Mock.Of<Response>()));
 
         containerClient.Setup(c => c.GetBlobClient("Pldns/new-upload.xlsx")).Returns(blobClient.Object);
 
@@ -233,10 +189,6 @@ public class FileRecordSyncFunctionTests
             .Setup(b => b.GetPropertiesAsync(null, default))
             .ReturnsAsync(Response.FromValue(
                 BlobsModelFactory.BlobProperties(contentType: "application/pdf"), Mock.Of<Response>()));
-        blobClient
-            .Setup(b => b.GetTagsAsync(null, default))
-            .ReturnsAsync(Response.FromValue(
-                BlobsModelFactory.GetBlobTagResult(new Dictionary<string, string>()), Mock.Of<Response>()));
 
         containerClient
             .Setup(c => c.GetBlobClient(untrackedPath))

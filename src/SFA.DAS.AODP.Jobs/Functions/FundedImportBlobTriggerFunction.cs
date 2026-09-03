@@ -15,12 +15,6 @@ namespace SFA.DAS.AODP.Jobs.Functions;
  * When a record already exists for the category, ScanResult is always reset to NotScanned rather
  * than read from the blob's scan-result tag: tags are not cleared on content overwrite, so any tag
  * present at this point describes the previous version of the file, not the one that just landed.
- *
- * When no record exists yet, that reasoning doesn't hold — there's no prior write we know just
- * happened, so the blob may simply be an already-scanned file our tracking has never seen before
- * (e.g. this trigger's first run against a pre-existing blob). In that case we read the current
- * tag and trust it, since forcing NotScanned would strand a genuinely clean file outside
- * DefenderScanReconciliationFunction's 7-day lookback with nothing left to ever re-scan it.
  * */
 public class FundedImportBlobTriggerFunction
 {
