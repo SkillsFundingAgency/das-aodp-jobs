@@ -83,18 +83,33 @@ public class FileRecordSyncFunction
 
         var created = 0;
         var skipped = 0;
+        var failedCategories = new List<FileCategory>();
 
         foreach (var category in categories)
         {
-            var result = SingleRecordCategories.Contains(category)
-                ? await SyncSingleRecordCategoryAsync(category)
-                : await SyncMultiRecordCategoryAsync(category);
+            try
+            {
+                var result = SingleRecordCategories.Contains(category)
+                    ? await SyncSingleRecordCategoryAsync(category)
+                    : await SyncMultiRecordCategoryAsync(category);
 
-            created += result.Created;
-            skipped += result.Skipped;
+                created += result.Created;
+                skipped += result.Skipped;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[FileRecordSyncFunction] -> {Category} failed — continuing with the remaining categories.", category);
+                failedCategories.Add(category);
+            }
         }
 
         var message = $"[FileRecordSyncFunction] -> {created} FileRecord(s) created, {skipped} blob(s) already tracked (categories: {string.Join(", ", categories)}).";
+
+        if (failedCategories.Count > 0)
+        {
+            message += $" FAILED: {string.Join(", ", failedCategories)} — see logs for details.";
+        }
+
         _logger.LogInformation("{Message}", message);
         return new OkObjectResult(message);
     }

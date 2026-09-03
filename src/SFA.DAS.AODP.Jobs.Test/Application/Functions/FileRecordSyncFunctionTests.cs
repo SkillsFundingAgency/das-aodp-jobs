@@ -209,6 +209,64 @@ public class FileRecordSyncFunctionTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task Run_MultiRecordCategory_ShouldSkipBlobsThatDoNotMatchExpectedPathShape_AndStillProcessTheRest()
+    {
+        var applicationId = Guid.NewGuid();
+        var questionId = Guid.NewGuid();
+        var validPath = $"{applicationId}/{questionId}/evidence.pdf";
+
+        // A stray file sitting at the container root, outside the {applicationId}/{questionId}/{fileId}
+        // or messages/{applicationId}/{messageId}/{fileId} shape every other path in this container follows.
+        var rogueRootFile = BlobsModelFactory.BlobItem(
+            name: "file7.docx",
+            properties: BlobsModelFactory.BlobItemProperties(true));
+
+        var valid = BlobsModelFactory.BlobItem(
+            name: validPath,
+            properties: BlobsModelFactory.BlobItemProperties(true));
+
+        var containerClient = new Mock<BlobContainerClient>();
+        containerClient
+            .Setup(c => c.GetBlobsAsync(BlobTraits.None, BlobStates.None, null, It.IsAny<CancellationToken>()))
+            .Returns(ToAsyncPageable(new[] { rogueRootFile, valid }));
+
+        _fileRepository
+            .Setup(r => r.GetByPathAsync("files", validPath))
+            .ReturnsAsync((FileRecord?)null);
+
+        var blobClient = new Mock<BlobClient>();
+        blobClient.Setup(b => b.ExistsAsync(default)).ReturnsAsync(Response.FromValue(true, Mock.Of<Response>()));
+        blobClient
+            .Setup(b => b.GetPropertiesAsync(null, default))
+            .ReturnsAsync(Response.FromValue(
+                BlobsModelFactory.BlobProperties(contentType: "application/pdf"), Mock.Of<Response>()));
+
+        containerClient
+            .Setup(c => c.GetBlobClient(validPath))
+            .Returns(blobClient.Object);
+
+        _blobServiceClient
+            .Setup(s => s.GetBlobContainerClient("files"))
+            .Returns(containerClient.Object);
+
+        var request = CreateRequest("categories", "QuestionUpload");
+
+        var result = await _function.Run(request);
+
+        // The rogue file must not crash the run — the valid blob still gets created, and the
+        // response reports success with no failed categories, not a partial/failed result.
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Contains("1 FileRecord(s) created", ok.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("FAILED", ok.Value?.ToString() ?? string.Empty);
+        _fileRepository.Verify(r => r.InsertAsync(It.Is<FileRecord>(f =>
+            f.BlobPath == validPath)),
+            Times.Once);
+        _fileRepository.Verify(r => r.InsertAsync(It.Is<FileRecord>(f =>
+            f.BlobPath == "file7.docx")),
+            Times.Never);
+    }
+
     private MockHttpRequestData CreateRequest(string key, string value)
     {
         var query = new NameValueCollection { { key, value } };

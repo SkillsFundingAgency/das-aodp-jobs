@@ -5,6 +5,13 @@ namespace SFA.DAS.AODP.Jobs.Helpers;
 
 public static class BlobPathParser
 {
+    /**
+     * Never throws — a path that doesn't fit any known shape (wrong segment count, a segment
+     * that isn't a real GUID where one's expected, an unrecognised container) just comes back
+     * as FileCategory.Unknown, the same as any other unrecognised container. Blob storage holds
+     * whatever gets dropped into it, so a caller enumerating a container has to expect stray,
+     * malformed, or hand-placed files alongside the ones the app itself wrote.
+     * */
     public static (FileCategory Category, Guid? ApplicationId, Guid? MessageId, Guid? QuestionId) ParseBlobPath(string containerName, string blobPath)
     {
         var segments = blobPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
@@ -13,6 +20,11 @@ public static class BlobPathParser
         Guid? applicationId = null;
         Guid? messageId = null;
         Guid? questionId = null;
+
+        if (segments.Length == 0)
+        {
+            return (category, applicationId, messageId, questionId);
+        }
 
         // importfilescontainer/DefundingList/{fileId}
         if (containerName.Equals(BlobStoragePaths.ContainerImportFiles, StringComparison.OrdinalIgnoreCase))
@@ -31,16 +43,26 @@ public static class BlobPathParser
         {
             if (segments[0].Equals(BlobStoragePaths.FolderMessages, StringComparison.OrdinalIgnoreCase))
             {
-                category = FileCategory.MessageAttachment;
-                applicationId = Guid.Parse(segments[1]);
-                messageId = Guid.Parse(segments[2]);
+                if (segments.Length >= 3
+                    && Guid.TryParse(segments[1], out var parsedAppId)
+                    && Guid.TryParse(segments[2], out var parsedMessageId))
+                {
+                    category = FileCategory.MessageAttachment;
+                    applicationId = parsedAppId;
+                    messageId = parsedMessageId;
+                }
             }
             else
             {
                 // files/{applicationId}/{questionId}/{fileId}
-                category = FileCategory.QuestionUpload;
-                applicationId = Guid.Parse(segments[0]);
-                questionId = Guid.Parse(segments[1]);
+                if (segments.Length >= 2
+                    && Guid.TryParse(segments[0], out var parsedAppId)
+                    && Guid.TryParse(segments[1], out var parsedQuestionId))
+                {
+                    category = FileCategory.QuestionUpload;
+                    applicationId = parsedAppId;
+                    questionId = parsedQuestionId;
+                }
             }
         }
         // funded-qualifications-import/approved.csv or archived.csv
