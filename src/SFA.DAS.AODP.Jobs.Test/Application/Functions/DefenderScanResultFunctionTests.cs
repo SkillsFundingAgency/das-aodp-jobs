@@ -184,12 +184,15 @@ public class DefenderScanResultFunctionTests
 
 
     [Fact]
-    public async Task Run_ShouldDiscardScanResult_WhenNoFileRecordTracksTheBlob()
+    public async Task Run_ShouldThrow_WhenNoFileRecordTracksTheBlob()
     {
         var evt = CreateEvent("No threats found");
 
-        // FileRecord missing — nothing upstream (upload flow, funded-import trigger, sync
-        // function) has created a record for this blob yet.
+        // FileRecord missing — could mean nothing upstream (upload flow, funded-import trigger,
+        // sync function) has created a record for this blob yet, or it could just not have
+        // caught up yet (a scan can complete before the upload flow's own record-creation call
+        // finishes). Throwing lets Event Grid retry the delivery later rather than discarding
+        // a result that might resolve itself given a moment longer.
         _fileRepository
             .Setup(r => r.GetByPathAsync("container", "file.csv"))
             .ReturnsAsync((FileRecord?)null);
@@ -197,10 +200,8 @@ public class DefenderScanResultFunctionTests
         SetupBlobExists("container", "file.csv", out var blobClient, out _);
         SetupBlobProperties(blobClient, eTag: null);
 
-        await _function.Run(evt);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _function.Run(evt));
 
-        // The event is discarded, not used to create a record — every category already has a
-        // deliberate creator elsewhere, so this function is update-only.
         _fileRepository.Verify(r => r.InsertAsync(It.IsAny<FileRecord>()), Times.Never);
         _fileRepository.Verify(r => r.UpdateAsync(It.IsAny<FileRecord>()), Times.Never);
     }

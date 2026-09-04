@@ -10,8 +10,14 @@ using SFA.DAS.AODP.Jobs.Helpers;
  * (the upload flow for QuestionUpload/MessageAttachment and Pldns/DefundingList,
  * FundedImportBlobTriggerFunction's first-run capture for ApprovedFunding/ArchivedFunding,
  * the sync/backfill function for historical files). A scan event arriving with no tracked
- * record means something upstream didn't create it as expected — worth logging loudly, not
- * papering over with a record built from partial event metadata.
+ * record means something upstream hasn't created it yet, not necessarily that it never will —
+ * confirmed in practice: a scan can complete and its event arrive before the upload flow's own
+ * record-creation call has finished, since the two aren't sequenced against each other.
+ *
+ * Throwing here (rather than logging and returning) is deliberate: it makes Event Grid treat
+ * the delivery as failed and retry it later with backoff, which naturally resolves the race
+ * once the record catches up, without this function needing any hand-rolled wait or retry
+ * logic of its own.
  * */
 public class DefenderScanResultFunction
 {
@@ -95,11 +101,13 @@ public class DefenderScanResultFunction
         if (fileRecord == null)
         {
             _logger.LogWarning(
-                "No FileRecord found for {Container}/{Path} — scan result discarded. " +
-                "Expected the upload flow, the funded-import trigger, or the sync function to " +
-                "have created this record already.",
+                "No FileRecord found for {Container}/{Path} — the upload flow, the funded-import " +
+                "trigger, or the sync function may not have created it yet. Throwing so Event Grid " +
+                "retries this delivery rather than discarding it.",
                 containerName, blobPath);
-            return;
+
+            throw new InvalidOperationException(
+                $"No FileRecord found for {containerName}/{blobPath} — retry expected to resolve this once the record exists.");
         }
 
         fileRecord.ScanResult = status;
