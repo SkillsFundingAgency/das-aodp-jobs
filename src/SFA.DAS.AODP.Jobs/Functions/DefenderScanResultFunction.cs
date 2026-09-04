@@ -7,18 +7,21 @@ using SFA.DAS.AODP.Jobs.Helpers;
 /**
  * Handles Event Grid notifications to check file scan status in blob storage.
  *
- * Never creates a FileRecord — every category already has a deliberate creator elsewhere
- * (the upload flow for QuestionUpload/MessageAttachment and Pldns/DefundingList,
- * FundedImportBlobTriggerFunction's first-run capture for ApprovedFunding/ArchivedFunding,
- * the sync/backfill function for historical files). A scan event arriving with no tracked
- * record means something upstream hasn't created it yet, not necessarily that it never will —
- * confirmed in practice: a scan can complete and its event arrive before the upload flow's own
- * record-creation call has finished, since the two aren't sequenced against each other.
+ * Parses the scan event for the blob it describes, discards it if that blob has since been
+ * overwritten (eTag mismatch) or no longer exists, then looks up the matching FileRecord and
+ * updates its scan result — deleting the blob if the result is Malicious. 
+ * 
+ * Never creates a FileRecord; every category already has a deliberate creator elsewhere (the upload flow
+ * for QuestionUpload/MessageAttachment/Pldns/DefundingList, and the sync/backfill function for
+ * ApprovedFunding/ArchivedFunding and historical files generally).
  *
- * A missing record gets a few quick retries first (500ms, 1s, 2s — ~3.5s total), since that
- * resolves the common case — the record showing up a moment later — without waiting on Event
- * Grid's own redelivery at all. If it's still missing after that, throwing lets Event Grid
- * retry the delivery later with backoff, which covers anything slower than a few seconds.
+ * A missing record doesn't necessarily mean nothing ever will create it — confirmed in practice,
+ * a scan can complete and its event arrive before the upload flow's own record-creation call has
+ * finished, since the two aren't sequenced against each other. So a missing record gets a few
+ * quick retries first, which resolves that common case — the record showing up a moment later —
+ * without waiting on Event Grid's own redelivery at all. If it's still missing after that,
+ * throwing lets Event Grid retry the delivery later with backoff, which covers anything slower
+ * than a few seconds.
  * The retry delays stay well under Event Grid's own 30-second per-attempt response window, so
  * this and Event Grid's redelivery never end up racing each other over the same event.
  * */
@@ -115,8 +118,8 @@ public class DefenderScanResultFunction
         {
             _logger.LogWarning(
                 "No FileRecord found for {Container}/{Path} after {Attempts} quick retries — the " +
-                "upload flow, the funded-import trigger, or the sync function may not have created " +
-                "it yet. Throwing so Event Grid retries this delivery rather than discarding it.",
+                "upload flow or the sync function may not have created it yet. Throwing so Event " +
+                "Grid retries this delivery rather than discarding it.",
                 containerName, blobPath, RecordLookupRetryDelays.Length + 1);
 
             throw new InvalidOperationException(
