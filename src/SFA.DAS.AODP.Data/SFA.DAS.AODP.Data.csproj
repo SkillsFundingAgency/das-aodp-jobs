@@ -9,4 +9,8 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SFA.DAS.AODP.Jobs.Common\SFA.DAS.AODP.Common.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -1,18 +1,9 @@
 ﻿using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.Extensions.Logging;
-using RestEase;
-using SFA.DAS.AODP.Common.Enum;
 using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Infrastructure.Interfaces;
 using SFA.DAS.AODP.Jobs.Helpers;
-using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Models.Config;
 using System.Globalization;
-using System.Text;
 
 namespace SFA.DAS.AODP.Jobs.Functions;
 
@@ -22,20 +13,20 @@ public class ImportPldnsDataFunction
     private readonly AodpJobsConfiguration _config;
     private readonly IJobConfigurationService _jobConfigurationService;
     private readonly IImportRepository _repository;
-    private readonly IBlobStorageFileService _blobStorageFileService;
+    private readonly IFileProcessingService _fileProcessingService;
     private const int BatchSize = 3000;
 
     public ImportPldnsDataFunction(ILogger<ImportPldnsDataFunction> logger,
             AodpJobsConfiguration config,
             IJobConfigurationService jobConfigurationService,
             IImportRepository repository,
-            IBlobStorageFileService blobStorageFileService)
+            IFileProcessingService fileProcessingService)
     {
         _logger = logger;
         _config = config;
         _jobConfigurationService = jobConfigurationService;
         _repository = repository;
-        _blobStorageFileService = blobStorageFileService;
+        _fileProcessingService = fileProcessingService;
     }
 
     // Todo : Merge with ImportDefundingListDataFunction as they are almost identical apart from the data being imported
@@ -46,11 +37,28 @@ public class ImportPldnsDataFunction
         _logger.LogInformation("[{Function}] -> ImportPldns triggered by {Username}", nameof(ImportPldnsDataFunction), username);
         try
         {
-            var totalImported = await ImportPldns(cancellationToken);
-
             var jobControl = await _jobConfigurationService.ReadPldnsImportConfiguration();
 
             var lastJobRun = await _jobConfigurationService.GetLastJobRunAsync(JobNames.Pldns.ToString());
+
+
+            var fileResult = await _fileProcessingService.GetReadyFileAsync(
+                   FileCategory.Pldns, 
+                   username,
+                   jobControl.JobId,
+                   lastJobRun.Id,
+                   lastJobRun.StartTime,
+                   cancellationToken);
+
+
+            if (!fileResult.IsReady)
+            {
+                return new OkObjectResult("PLDNS file not ready");
+            }
+
+            await using var stream = fileResult.Stream!;
+
+            var totalImported = await ImportPldns(stream, cancellationToken);
 
             await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, lastJobRun.Id, totalImported, JobStatus.Completed);
 
@@ -75,13 +83,16 @@ public class ImportPldnsDataFunction
         }
     }
 
-    private async Task<int> ImportPldns(CancellationToken cancellationToken)
+    private async Task<int> ImportPldns(Stream stream, CancellationToken cancellationToken)
     {
-        string? importFileUrl = _config.PldnsImportUrl;
-        await using var ms = await _blobStorageFileService.DownloadFileAsync(importFileUrl!, cancellationToken);
-        ms.Position = 0;
+        if (stream.CanSeek)
+        {
+            stream.Position = 0;
+        }
 
-        using var document = SpreadsheetDocument.Open(ms, false);
+        stream.Position = 0;
+
+        using var document = SpreadsheetDocument.Open(stream, false);
         var workbookPart = document.WorkbookPart ?? throw new InvalidOperationException("Workbook part missing.");
         var sharedStrings = workbookPart.SharedStringTablePart?.SharedStringTable;
 

@@ -1,16 +1,8 @@
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.Extensions.Logging;
-using SFA.DAS.AODP.Common.Enum;
 using SFA.DAS.AODP.Data.Entities;
-using SFA.DAS.AODP.Infrastructure.Interfaces;
 using SFA.DAS.AODP.Jobs.Helpers;
-using SFA.DAS.AODP.Jobs.Interfaces;
-using SFA.DAS.AODP.Models.Config;
-using System.Text;
 
 namespace SFA.DAS.AODP.Jobs.Functions;
 
@@ -20,49 +12,75 @@ public class ImportDefundingListDataFunction
     private readonly AodpJobsConfiguration _config;
     private readonly IJobConfigurationService _jobConfigurationService;
     private readonly IImportRepository _repository;
-    private readonly IBlobStorageFileService _blobStorageFileService;
+    private readonly IFileProcessingService _fileProcessingService;
 
     public ImportDefundingListDataFunction(ILogger<ImportDefundingListDataFunction> logger,
             AodpJobsConfiguration config,
             IJobConfigurationService jobConfigurationService,
             IImportRepository repository,
-            IBlobStorageFileService blobStorageFileService)
+            IFileProcessingService fileProcessingService)
     {
         _logger = logger;
         _config = config;
         _jobConfigurationService = jobConfigurationService;
         _repository = repository;
-        _blobStorageFileService = blobStorageFileService;
+        _fileProcessingService = fileProcessingService;
     }
 
     // Todo - Merge with ImportPldnDataFunction as they are almost identical apart from the data being imported
     [Function("ImportDefundingListDataFunction")]
     public async Task<IActionResult> ImportDefundingList(
-        [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "api/importDefundingList/{username}")] HttpRequestData req, string username = "", CancellationToken cancellationToken = default)
+         [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "api/importDefundingList/{username}")]
+        HttpRequestData req,
+         string username = "",
+         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("[{Function}] -> ImportDefundingList triggered by {Username}", nameof(ImportDefundingListDataFunction), username);
-
-        var totalImported = await ImportDefundingList(cancellationToken);
+        _logger.LogInformation("[{Function}] -> ImportDefundingList triggered by {Username}",
+            nameof(ImportDefundingListDataFunction), username);
 
         var jobControl = await _jobConfigurationService.ReadDefundingListImportConfiguration();
-
         var lastJobRun = await _jobConfigurationService.GetLastJobRunAsync(JobNames.DefundingList.ToString());
 
-        await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, lastJobRun.Id, totalImported, JobStatus.Completed);
+        var fileResult = await _fileProcessingService.GetReadyFileAsync(
+            FileCategory.DefundingList,
+            username,
+            jobControl.JobId,
+            lastJobRun.Id,
+            lastJobRun.StartTime,
+            cancellationToken);
+
+        if (!fileResult.IsReady)
+        {
+            return new OkObjectResult("Defunding List File not ready");
+        }
+
+        await using var stream = fileResult.Stream!;
+
+        var totalImported = await ImportDefundingList(stream, cancellationToken);
+
+        await _jobConfigurationService.UpdateJobRun(
+            username,
+            jobControl.JobId,
+            lastJobRun.Id,
+            totalImported,
+            JobStatus.Completed);
 
         var msg = $"[{nameof(ImportDefundingListDataFunction)}] -> {totalImported} records imported.";
-        _logger.LogInformation("[{Function}] -> {TotalImported} records imported.", nameof(ImportDefundingListDataFunction), totalImported);
+        _logger.LogInformation(msg);
+
         return new OkObjectResult(msg);
     }
 
-    private async Task<int> ImportDefundingList(CancellationToken cancellationToken)
+    private async Task<int> ImportDefundingList(Stream stream, CancellationToken cancellationToken)
     {
-        string? importFileUrl = _config.DefundingListImportUrl;
-        await using var ms = await _blobStorageFileService.DownloadFileAsync(importFileUrl!, cancellationToken);
 
-        ms.Position = 0;
+        if (stream.CanSeek)
+        {
+            stream.Position = 0;
+        }
 
-        using var document = SpreadsheetDocument.Open(ms, false);
+
+        using var document = SpreadsheetDocument.Open(stream, false);
         var workbookPart = document.WorkbookPart ?? throw new InvalidOperationException("Workbook part missing.");
         var sharedStrings = workbookPart.SharedStringTablePart?.SharedStringTable;
 

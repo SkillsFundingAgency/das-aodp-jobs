@@ -10,9 +10,10 @@ namespace SFA.DAS.AODP.Jobs.Test.Mocks
     {
         private readonly FunctionContext _context;
 
-        public MockHttpRequestData(FunctionContext context) : base(context)
+        public MockHttpRequestData(FunctionContext context, NameValueCollection? query = null) : base(context)
         {
             _context = context;
+            Query = query ?? new NameValueCollection();
         }
 
         public override HttpResponseData CreateResponse()

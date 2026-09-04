@@ -1,7 +1,5 @@
 ﻿using CsvHelper;
 using CsvHelper.Configuration;
-using Microsoft.Extensions.Logging;
-using SFA.DAS.AODP.Jobs.Interfaces;
 using System.Globalization;
 
 namespace SFA.DAS.AODP.Jobs.Services.CSV
@@ -60,6 +58,38 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
                 _logger.LogError(ex, "Error downloading CSV file from url: {UrlFilePath}", urlFilePath);
             }
             return records;
+        }
+
+        public async Task<List<T>> ReadCsvFromStreamAsync<T, TMap>(
+            Stream stream,
+            params object[] additionalParameters)
+            where TMap : ClassMap<T>
+        {
+            if (stream == null)
+                throw new ArgumentNullException(nameof(stream));
+
+            _logger.LogInformation("Reading CSV from stream");
+
+            try
+            {
+                if (stream.CanSeek)
+                {
+                    stream.Position = 0;
+                }
+
+                var records = ReadCsv<T, TMap>(stream, additionalParameters);
+
+                _logger.LogInformation(
+                    "Total Records Read: {RecordCount}",
+                    records.Count);
+
+                return records;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error reading CSV from stream");
+                throw;
+            }
         }
 
         public Task<List<T>> ReadCsvFileFromStreamAsync<T, TMap>(Stream stream, params object[] additionalParameters) where TMap : ClassMap<T>

@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SFA.DAS.AODP.Data.Entities;
+using SFA.DAS.AODP.Data.Entities.Files;
 using SFA.DAS.AODP.Data.Entities.Rollover;
 
 
@@ -52,9 +53,11 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         
         public virtual DbSet<RegulatedQaaQualification> RegulatedQaaQualification { get; set; }
 
+        public virtual DbSet<FileRecord> FileRecords { get; set; }
+
         public virtual DbSet<RegulatedQaaQualificationHistory> RegulatedQaaQualificationHistory { get; set; }
 
-        
+
         public virtual DbSet<RolloverCandidate> RolloverCandidates { get; set; }
 
         public virtual void StartingBulkInsert() => ChangeTracker.AutoDetectChangesEnabled = false;
@@ -116,6 +119,14 @@ namespace SFA.DAS.AODP.Infrastructure.Context
                 b.HasIndex(x => new { x.QualificationVersionId, x.FundingOfferId, x.AcademicYear, x.RolloverRound })
                     .IsUnique();
             });
+
+            modelBuilder.Entity<FileRecord>()
+               .Property(e => e.FileCategory)
+               .HasConversion<string>();
+
+            modelBuilder.Entity<FileRecord>()
+                .Property(e => e.ScanResult)
+                .HasConversion<string>();
 
         }
 

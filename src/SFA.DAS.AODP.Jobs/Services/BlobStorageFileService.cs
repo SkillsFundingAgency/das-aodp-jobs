@@ -1,31 +1,63 @@
-﻿using SFA.DAS.AODP.Jobs.Interfaces;
+﻿using Azure.Storage.Blobs;
 
 namespace SFA.DAS.AODP.Jobs.Services;
 
-public class BlobStorageFileService : IBlobStorageFileService
+public sealed class BlobStorageFileService : IBlobStorageFileService
 {
-    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly BlobServiceClient _blobServiceClient;
 
-    public BlobStorageFileService(IHttpClientFactory httpClientFactory)
+    //Retry settings for accessing blob storage
+    //May be waiting for scan to complete, or transient issue with blob storage
+    private const int MaxAttempts = 7;//Maximum of 126 seconds delay
+    private static readonly TimeSpan InitialDelay = TimeSpan.FromSeconds(2);
+
+
+    public BlobStorageFileService(
+        BlobServiceClient blobServiceClient)
     {
-        _httpClientFactory = httpClientFactory;
+        _blobServiceClient = blobServiceClient;
     }
 
-    public async Task<Stream> DownloadFileAsync(string filename, CancellationToken cancellationToken = default)
+    public async Task<Stream> DownloadFileAsync(
+    string containerName,
+    string blobPath,
+    CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(filename))
-            throw new ArgumentException("Filename must be provided.", nameof(filename));
+        if (string.IsNullOrWhiteSpace(containerName))
+            throw new ArgumentException("Container name must be provided.", nameof(containerName));
 
-        var response = await GetDataFromUrl(filename);
-        var approvedResponseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        return approvedResponseStream;
-    }
+        if (string.IsNullOrWhiteSpace(blobPath))
+            throw new ArgumentException("Blob path must be provided.", nameof(blobPath));
 
-    private async Task<HttpResponseMessage> GetDataFromUrl(string approvedUrlFilePath)
-    {
-        var _httpClient = _httpClientFactory.CreateClient("xlsx");
-        var response = await _httpClient.GetAsync(approvedUrlFilePath);
-        response.EnsureSuccessStatusCode();
-        return response;
+        var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+        var blobClient = containerClient.GetBlobClient(blobPath);
+
+        var delay = InitialDelay;
+
+        for (var attempt = 1; attempt <= MaxAttempts; attempt++)
+        {
+            try
+            {
+                return await blobClient.OpenReadAsync(cancellationToken: cancellationToken);
+            }
+            catch (Azure.RequestFailedException ex)
+                when (ex.ErrorCode == "BlobNotFound")
+            {
+                if (attempt == MaxAttempts)
+                {
+                    throw new InvalidOperationException(
+                        $"File did not appear in storage after {MaxAttempts} attempts. Path: {containerName}/{blobPath}",
+                        ex);
+                }
+
+                await Task.Delay(delay, cancellationToken);
+
+                // Exponential backoff
+                delay = TimeSpan.FromSeconds(delay.TotalSeconds * 2);
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"Failed to download file from storage. Path: {containerName}/{blobPath}");
     }
 }
