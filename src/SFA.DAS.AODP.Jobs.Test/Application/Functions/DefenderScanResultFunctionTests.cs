@@ -4,6 +4,7 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using SFA.DAS.AODP.Data.Entities.Files;
 using SFA.DAS.AODP.Data.Repositories.Jobs;
+using SFA.DAS.AODP.Infrastructure.Services;
 namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Functions;
 
 public class DefenderScanResultFunctionTests
@@ -11,6 +12,7 @@ public class DefenderScanResultFunctionTests
     private readonly Mock<ILogger<DefenderScanResultFunction>> _logger;
     private readonly Mock<IFileRecordRepository> _fileRepository;
     private readonly Mock<BlobServiceClient> _blobServiceClient;
+    private readonly Mock<IDelayService> _delayService;
 
     private readonly DefenderScanResultFunction _function;
 
@@ -19,11 +21,14 @@ public class DefenderScanResultFunctionTests
         _logger = new Mock<ILogger<DefenderScanResultFunction>>();
         _fileRepository = new Mock<IFileRecordRepository>();
         _blobServiceClient = new Mock<BlobServiceClient>();
+        _delayService = new Mock<IDelayService>();
+        _delayService.Setup(d => d.DelayAsync(It.IsAny<TimeSpan>(), default)).Returns(Task.CompletedTask);
 
         _function = new DefenderScanResultFunction(
             _logger.Object,
             _fileRepository.Object,
-            _blobServiceClient.Object);
+            _blobServiceClient.Object,
+            _delayService.Object);
     }
 
     [Fact]
@@ -202,8 +207,41 @@ public class DefenderScanResultFunctionTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => _function.Run(evt));
 
+        // Initial lookup plus one retry per configured delay.
+        _fileRepository.Verify(r => r.GetByPathAsync("container", "file.csv"), Times.Exactly(4));
+        _delayService.Verify(d => d.DelayAsync(It.IsAny<TimeSpan>(), default), Times.Exactly(3));
         _fileRepository.Verify(r => r.InsertAsync(It.IsAny<FileRecord>()), Times.Never);
         _fileRepository.Verify(r => r.UpdateAsync(It.IsAny<FileRecord>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Run_ShouldRecoverAndUpdate_WhenFileRecordAppearsPartwayThroughShortRetries()
+    {
+        var evt = CreateEvent("No threats found");
+
+        var file = new FileRecord
+        {
+            BlobContainer = "container",
+            BlobPath = "file.csv"
+        };
+
+        // Missing on the first two lookups, present by the third — proves the retry loop
+        // actually recovers a record that shows up a moment late, not just that it exists.
+        _fileRepository
+            .SetupSequence(r => r.GetByPathAsync("container", "file.csv"))
+            .ReturnsAsync((FileRecord?)null)
+            .ReturnsAsync((FileRecord?)null)
+            .ReturnsAsync(file);
+
+        SetupBlobExists("container", "file.csv", out var blobClient, out _);
+        SetupBlobProperties(blobClient, eTag: null);
+
+        await _function.Run(evt);
+
+        Assert.Equal(MalwareScanStatus.Clean, file.ScanResult);
+        _fileRepository.Verify(r => r.GetByPathAsync("container", "file.csv"), Times.Exactly(3));
+        _delayService.Verify(d => d.DelayAsync(It.IsAny<TimeSpan>(), default), Times.Exactly(2));
+        _fileRepository.Verify(r => r.UpdateAsync(file), Times.Once);
     }
 
 

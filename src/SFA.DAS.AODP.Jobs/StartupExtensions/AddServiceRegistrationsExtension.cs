@@ -37,6 +37,7 @@ public static class AddServiceRegistrationsExtension
         services.AddScoped<IFileProcessingService, FileProcessingService>();
         services.AddScoped<ICsvReaderService, CsvReaderService>();
         services.AddScoped<ISystemClockService, SystemClockService>();
+        services.AddScoped<IDelayService, DelayService>();
         services.AddScoped<IGuidProvider, GuidProvider>();
         services.AddScoped<IJobConfigurationService, JobConfigurationService>();
         services.AddScoped<IChangeDetectionService, ChangeDetectionService>();

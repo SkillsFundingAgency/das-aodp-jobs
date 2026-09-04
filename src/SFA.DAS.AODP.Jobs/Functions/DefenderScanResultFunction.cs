@@ -1,6 +1,7 @@
 ﻿using Azure.Messaging.EventGrid;
 using Azure.Storage.Blobs;
 using SFA.DAS.AODP.Data.Entities.Files;
+using SFA.DAS.AODP.Infrastructure.Services;
 using SFA.DAS.AODP.Jobs.Helpers;
 
 /**
@@ -14,25 +15,37 @@ using SFA.DAS.AODP.Jobs.Helpers;
  * confirmed in practice: a scan can complete and its event arrive before the upload flow's own
  * record-creation call has finished, since the two aren't sequenced against each other.
  *
- * Throwing here (rather than logging and returning) is deliberate: it makes Event Grid treat
- * the delivery as failed and retry it later with backoff, which naturally resolves the race
- * once the record catches up, without this function needing any hand-rolled wait or retry
- * logic of its own.
+ * A missing record gets a few quick retries first (500ms, 1s, 2s — ~3.5s total), since that
+ * resolves the common case — the record showing up a moment later — without waiting on Event
+ * Grid's own redelivery at all. If it's still missing after that, throwing lets Event Grid
+ * retry the delivery later with backoff, which covers anything slower than a few seconds.
+ * The retry delays stay well under Event Grid's own 30-second per-attempt response window, so
+ * this and Event Grid's redelivery never end up racing each other over the same event.
  * */
 public class DefenderScanResultFunction
 {
+    private static readonly TimeSpan[] RecordLookupRetryDelays =
+    [
+        TimeSpan.FromMilliseconds(500),
+        TimeSpan.FromSeconds(1),
+        TimeSpan.FromSeconds(2)
+    ];
+
     private readonly ILogger<DefenderScanResultFunction> _logger;
     private readonly IFileRecordRepository _fileRepository;
     private readonly BlobServiceClient _blobServiceClient;
+    private readonly IDelayService _delayService;
 
     public DefenderScanResultFunction(
         ILogger<DefenderScanResultFunction> logger,
         IFileRecordRepository fileRepository,
-        BlobServiceClient blobServiceClient)
+        BlobServiceClient blobServiceClient,
+        IDelayService delayService)
     {
         _logger = logger;
         _fileRepository = fileRepository;
         _blobServiceClient = blobServiceClient;
+        _delayService = delayService;
     }
 
     [Function("DefenderScanResultFunction")]
@@ -96,15 +109,15 @@ public class DefenderScanResultFunction
 
         var status = MapScanResult(data.ScanResultType);
 
-        var fileRecord = await _fileRepository.GetByPathAsync(containerName, blobPath);
+        var fileRecord = await GetRecordWithShortRetryAsync(containerName, blobPath);
 
         if (fileRecord == null)
         {
             _logger.LogWarning(
-                "No FileRecord found for {Container}/{Path} — the upload flow, the funded-import " +
-                "trigger, or the sync function may not have created it yet. Throwing so Event Grid " +
-                "retries this delivery rather than discarding it.",
-                containerName, blobPath);
+                "No FileRecord found for {Container}/{Path} after {Attempts} quick retries — the " +
+                "upload flow, the funded-import trigger, or the sync function may not have created " +
+                "it yet. Throwing so Event Grid retries this delivery rather than discarding it.",
+                containerName, blobPath, RecordLookupRetryDelays.Length + 1);
 
             throw new InvalidOperationException(
                 $"No FileRecord found for {containerName}/{blobPath} — retry expected to resolve this once the record exists.");
@@ -127,6 +140,24 @@ public class DefenderScanResultFunction
             status,
             data.ScanResultType
         );
+    }
+
+    private async Task<FileRecord?> GetRecordWithShortRetryAsync(string containerName, string blobPath)
+    {
+        var fileRecord = await _fileRepository.GetByPathAsync(containerName, blobPath);
+
+        foreach (var delay in RecordLookupRetryDelays)
+        {
+            if (fileRecord != null)
+            {
+                break;
+            }
+
+            await _delayService.DelayAsync(delay);
+            fileRecord = await _fileRepository.GetByPathAsync(containerName, blobPath);
+        }
+
+        return fileRecord;
     }
 
     private static string NormaliseETag(string eTag) => eTag.Trim('"');
