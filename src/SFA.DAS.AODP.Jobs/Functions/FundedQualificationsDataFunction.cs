@@ -8,7 +8,6 @@ namespace SFA.DAS.AODP.Functions
     {
         private readonly ILogger<FundedQualificationsDataFunction> _logger;
         private readonly ICsvReaderService _csvReaderService;
-        private readonly AodpJobsConfiguration _config;
         private readonly IJobConfigurationService _jobConfigurationService;
         private readonly IFundedQualificationWriter _fundedQualificationWriter;
         private readonly IQualificationsRepository _qualificationsRepository;
@@ -17,7 +16,6 @@ namespace SFA.DAS.AODP.Functions
 
         public FundedQualificationsDataFunction(ILogger<FundedQualificationsDataFunction> logger,
             ICsvReaderService csvReaderService,
-            AodpJobsConfiguration config,
             IJobConfigurationService jobConfigurationService,
             IFundedQualificationWriter fundedQualificationWriter,
             IQualificationsRepository qualificationsRepository,
@@ -26,7 +24,6 @@ namespace SFA.DAS.AODP.Functions
         {
             _logger = logger;
             _csvReaderService = csvReaderService;
-            _config = config;
             _jobConfigurationService = jobConfigurationService;
             _fundedQualificationWriter = fundedQualificationWriter;
             _qualificationsRepository = qualificationsRepository;

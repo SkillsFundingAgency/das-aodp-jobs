@@ -10,20 +10,17 @@ namespace SFA.DAS.AODP.Jobs.Functions;
 public class ImportPldnsDataFunction
 {
     private readonly ILogger<ImportPldnsDataFunction> _logger;
-    private readonly AodpJobsConfiguration _config;
     private readonly IJobConfigurationService _jobConfigurationService;
     private readonly IImportRepository _repository;
     private readonly IFileProcessingService _fileProcessingService;
     private const int BatchSize = 3000;
 
     public ImportPldnsDataFunction(ILogger<ImportPldnsDataFunction> logger,
-            AodpJobsConfiguration config,
             IJobConfigurationService jobConfigurationService,
             IImportRepository repository,
             IFileProcessingService fileProcessingService)
     {
         _logger = logger;
-        _config = config;
         _jobConfigurationService = jobConfigurationService;
         _repository = repository;
         _fileProcessingService = fileProcessingService;

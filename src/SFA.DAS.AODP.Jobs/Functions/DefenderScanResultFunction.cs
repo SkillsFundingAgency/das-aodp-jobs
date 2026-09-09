@@ -4,6 +4,8 @@ using SFA.DAS.AODP.Data.Entities.Files;
 using SFA.DAS.AODP.Infrastructure.Services;
 using SFA.DAS.AODP.Jobs.Helpers;
 
+namespace SFA.DAS.AODP.Jobs.Functions;
+
 /**
  * Handles Event Grid notifications to check file scan status in blob storage.
  *
@@ -54,8 +56,6 @@ public class DefenderScanResultFunction
     [Function("DefenderScanResultFunction")]
     public async Task Run([EventGridTrigger] EventGridEvent eventGridEvent)
     {
-        _logger.LogInformation("Received Defender scan event");
-
         var data = eventGridEvent.Data.ToObjectFromJson<DefenderScanEvent>();
 
         if (data?.BlobUri == null)
@@ -165,7 +165,7 @@ public class DefenderScanResultFunction
 
     private static string NormaliseETag(string eTag) => eTag.Trim('"');
 
-    private MalwareScanStatus MapScanResult(string? scanResult)
+    private static MalwareScanStatus MapScanResult(string? scanResult)
     {
         return MalwareScanResultMapper.Map(scanResult) ?? MalwareScanStatus.NotScanned;
     }

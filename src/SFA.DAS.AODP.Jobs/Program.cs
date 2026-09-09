@@ -1,5 +1,3 @@
-using Microsoft.FeatureManagement;
-using FeatureManagementOptions = SFA.DAS.AODP.Jobs.FeatureManagement.FeatureManagementOptions;
 using System.Globalization;
 
 namespace SFA.DAS.AODP.Jobs;
@@ -17,10 +15,6 @@ public class Program
 
         var configuration = builder.Configuration
             .LoadConfiguration(builder.Services, builder.Environment.IsDevelopment());
-
-        builder.Services.Configure<FeatureManagementOptions>(
-            builder.Configuration.GetSection(FeatureManagementOptions.SectionName));
-
 
         builder.Services.AddLogging(builder =>
         {

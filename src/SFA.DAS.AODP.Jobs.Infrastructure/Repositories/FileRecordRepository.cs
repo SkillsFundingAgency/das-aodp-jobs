@@ -54,8 +54,7 @@ namespace SFA.DAS.AODP.Data.Repositories.Jobs
 
         public async Task InsertAsync(FileRecord file)
         {
-            if (file == null)
-                throw new ArgumentNullException(nameof(file));
+            ArgumentNullException.ThrowIfNull(file);
 
             await _context.FileRecords.AddAsync(file);
             await _context.SaveChangesAsync();

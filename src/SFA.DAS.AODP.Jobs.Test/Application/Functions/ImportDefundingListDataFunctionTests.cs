@@ -25,7 +25,6 @@ public class ImportDefundingListDataFunctionTests
     private readonly Mock<IJobConfigurationService> _jobConfigurationServiceMock;
     private readonly Mock<IImportRepository> _importRepositoryMock;
     private readonly Mock<IFileProcessingService> _fileProcessingService;
-    private readonly AodpJobsConfiguration _config;
     private readonly ImportDefundingListDataFunction _function;
     private readonly FunctionContext _functionContext;
 
@@ -38,11 +37,9 @@ public class ImportDefundingListDataFunctionTests
         _jobConfigurationServiceMock = new Mock<IJobConfigurationService>();
         _importRepositoryMock = new Mock<IImportRepository>();
         _fileProcessingService = new Mock<IFileProcessingService>();
-        _config = new AodpJobsConfiguration();
 
         _function = new ImportDefundingListDataFunction(
             _loggerMock.Object,
-            _config,
             _jobConfigurationServiceMock.Object,
             _importRepositoryMock.Object,
             _fileProcessingService.Object);

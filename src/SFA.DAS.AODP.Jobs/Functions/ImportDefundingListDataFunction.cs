@@ -9,19 +9,16 @@ namespace SFA.DAS.AODP.Jobs.Functions;
 public class ImportDefundingListDataFunction
 {
     private readonly ILogger<ImportDefundingListDataFunction> _logger;
-    private readonly AodpJobsConfiguration _config;
     private readonly IJobConfigurationService _jobConfigurationService;
     private readonly IImportRepository _repository;
     private readonly IFileProcessingService _fileProcessingService;
 
     public ImportDefundingListDataFunction(ILogger<ImportDefundingListDataFunction> logger,
-            AodpJobsConfiguration config,
             IJobConfigurationService jobConfigurationService,
             IImportRepository repository,
             IFileProcessingService fileProcessingService)
     {
         _logger = logger;
-        _config = config;
         _jobConfigurationService = jobConfigurationService;
         _repository = repository;
         _fileProcessingService = fileProcessingService;
@@ -65,10 +62,10 @@ public class ImportDefundingListDataFunction
             totalImported,
             JobStatus.Completed);
 
-        var msg = $"[{nameof(ImportDefundingListDataFunction)}] -> {totalImported} records imported.";
-        _logger.LogInformation(msg);
+        _logger.LogInformation("[{Function}] -> {TotalImported} records imported.",
+            nameof(ImportDefundingListDataFunction), totalImported);
 
-        return new OkObjectResult(msg);
+        return new OkObjectResult($"[{nameof(ImportDefundingListDataFunction)}] -> {totalImported} records imported.");
     }
 
     private async Task<int> ImportDefundingList(Stream stream, CancellationToken cancellationToken)

@@ -65,31 +65,22 @@ namespace SFA.DAS.AODP.Jobs.Services.CSV
             params object[] additionalParameters)
             where TMap : ClassMap<T>
         {
-            if (stream == null)
-                throw new ArgumentNullException(nameof(stream));
+            ArgumentNullException.ThrowIfNull(stream);
 
             _logger.LogInformation("Reading CSV from stream");
 
-            try
+            if (stream.CanSeek)
             {
-                if (stream.CanSeek)
-                {
-                    stream.Position = 0;
-                }
-
-                var records = ReadCsv<T, TMap>(stream, additionalParameters);
-
-                _logger.LogInformation(
-                    "Total Records Read: {RecordCount}",
-                    records.Count);
-
-                return records;
+                stream.Position = 0;
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error reading CSV from stream");
-                throw;
-            }
+
+            var records = ReadCsv<T, TMap>(stream, additionalParameters);
+
+            _logger.LogInformation(
+                "Total Records Read: {RecordCount}",
+                records.Count);
+
+            return records;
         }
 
         public Task<List<T>> ReadCsvFileFromStreamAsync<T, TMap>(Stream stream, params object[] additionalParameters) where TMap : ClassMap<T>

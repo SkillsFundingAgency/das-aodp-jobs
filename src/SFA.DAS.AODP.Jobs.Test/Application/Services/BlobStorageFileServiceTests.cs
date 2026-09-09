@@ -1,5 +1,6 @@
 ﻿using Azure;
 using Azure.Storage.Blobs;
+using SFA.DAS.AODP.Infrastructure.Services;
 using System.Text;
 using Xunit;
 
@@ -11,19 +12,19 @@ public class BlobStorageFileServiceTests
     public async Task DownloadFileAsync_ThrowsArgumentException_WhenContainerNameIsNull()
     {
         var blobServiceClient = new Mock<BlobServiceClient>();
-        var service = new BlobStorageFileService(blobServiceClient.Object);
+        var service = new BlobStorageFileService(blobServiceClient.Object, new Mock<IDelayService>().Object);
 
         var ex = await Assert.ThrowsAsync<ArgumentException>(
             () => service.DownloadFileAsync(null!, "file.xlsx", CancellationToken.None));
 
-        Assert.Equal("containerName", ex.ParamName);
+        Assert.Equal("container", ex.ParamName);
     }
 
     [Fact]
     public async Task DownloadFileAsync_ThrowsArgumentException_WhenBlobPathIsNull()
     {
         var blobServiceClient = new Mock<BlobServiceClient>();
-        var service = new BlobStorageFileService(blobServiceClient.Object);
+        var service = new BlobStorageFileService(blobServiceClient.Object, new Mock<IDelayService>().Object);
 
         var ex = await Assert.ThrowsAsync<ArgumentException>(
             () => service.DownloadFileAsync("container", null!, CancellationToken.None));
@@ -37,13 +38,13 @@ public class BlobStorageFileServiceTests
     {
         // Arrange
         var blobServiceClient = new Mock<BlobServiceClient>();
-        var service = new BlobStorageFileService(blobServiceClient.Object);
+        var service = new BlobStorageFileService(blobServiceClient.Object, new Mock<IDelayService>().Object);
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<ArgumentException>(
             () => service.DownloadFileAsync("   ", " ", CancellationToken.None));
 
-        Assert.Equal("containerName", ex.ParamName);
+        Assert.Equal("container", ex.ParamName);
     }
 
     [Fact]
@@ -68,7 +69,7 @@ public class BlobStorageFileServiceTests
             .Setup(s => s.GetBlobContainerClient("imports"))
             .Returns(containerClient.Object);
 
-        var service = new BlobStorageFileService(blobServiceClient.Object);
+        var service = new BlobStorageFileService(blobServiceClient.Object, new Mock<IDelayService>().Object);
 
         using var result = await service.DownloadFileAsync(
             "imports",
@@ -83,7 +84,7 @@ public class BlobStorageFileServiceTests
 
 
 
-    [Fact(Skip = "Long-running retry test")]
+    [Fact]
     public async Task DownloadFileAsync_RetriesAndThrows_WhenBlobNeverAppears()
     {
         var blobClient = new Mock<BlobClient>();
@@ -101,7 +102,12 @@ public class BlobStorageFileServiceTests
             .Setup(s => s.GetBlobContainerClient("imports"))
             .Returns(containerClient.Object);
 
-        var service = new BlobStorageFileService(blobServiceClient.Object);
+        var delayServiceMock = new Mock<IDelayService>();
+        delayServiceMock
+            .Setup(d => d.DelayAsync(It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var service = new BlobStorageFileService(blobServiceClient.Object, delayServiceMock.Object);
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.DownloadFileAsync("imports", "missing.xlsx", CancellationToken.None));

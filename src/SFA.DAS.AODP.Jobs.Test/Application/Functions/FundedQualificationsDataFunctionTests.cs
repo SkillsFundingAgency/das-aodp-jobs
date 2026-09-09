@@ -20,7 +20,6 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
         private readonly Mock<IFileProcessingService> _fileProcessingService;
         private readonly FunctionContext _functionContext;
         private readonly FundedQualificationsDataFunction _function;
-        private readonly AodpJobsConfiguration _config;
         private FundedJobControl _control;
         private JobRunControl _jobRunControl;
         private Fixture _fixture;
@@ -34,11 +33,6 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
             _loggerMock = new Mock<ILogger<FundedQualificationsDataFunction>>();
             _csvReaderServiceMock = new Mock<ICsvReaderService>();
             _functionContext = new Mock<FunctionContext>().Object;
-            _config = new AodpJobsConfiguration()
-            {
-                FunctionAppBaseUrl = "https://localhost:7001",
-                FunctionHostKey = "???"
-            };
             _control = new FundedJobControl()
             {
                 ImportArchivedCsv = true,
@@ -62,7 +56,6 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Functions
             _function = new FundedQualificationsDataFunction(
                 _loggerMock.Object,
                 _csvReaderServiceMock.Object,
-                _config,
                 _jobConfigurationService.Object,
                 _fundedQualificationWriter.Object,
                 _qualificationsRepository.Object,

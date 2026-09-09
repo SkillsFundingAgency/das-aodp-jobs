@@ -259,7 +259,7 @@ public class FileRecordSyncFunction
         {
             Id = Guid.NewGuid(),
             FileCategory = category,
-            FileName = blobPath.Split('/').Last(),
+            FileName = blobPath.Split('/')[^1],
             ContentType = properties.Value.ContentType,
             BlobContainer = container,
             BlobPath = blobPath,
