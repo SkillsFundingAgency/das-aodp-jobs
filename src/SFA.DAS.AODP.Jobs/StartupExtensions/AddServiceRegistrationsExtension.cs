@@ -56,10 +56,6 @@ public static class AddServiceRegistrationsExtension
         services.AddAzureClients(clientBuilder =>
         {
             clientBuilder.AddBlobServiceClient(new Uri(storageConfiguration!.ServiceUri));
-
-            // This is the older approach to an extent where its not using ManagedIdentity but instead using a full connection string
-            // Which will either use SAS tokens or the account key, neither is the approach we want to keep.
-            clientBuilder.AddBlobServiceClient(configuration.GetValue<string>("BlobStorageSettings:ConnectionString"));
         });
 
         services.AddScoped<IBlobStorageFileService, BlobStorageFileService>();
