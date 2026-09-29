@@ -454,7 +454,6 @@ namespace SFA.DAS.AODP.Infrastructure.Services
                                                 startDate,
                                                 endDate,
                                                 matchingUserOffer.Comments);
-                                            matchingUserOffer.Comments = $"{matchingUserOffer.Comments}, updated by import on {importRun.ToShortDateString()}";
                                             updatedOffers.Add(matchingUserOffer);
                                             updated++;
                                         }

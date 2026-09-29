@@ -79,4 +79,25 @@ public class QualificationFundingTests : UnitTest
 
         Assert.Empty(qualificationFunding.FundingDomainEvents);
     }
+
+    [Fact]
+    public void QualificationFunding_UpdateFunding_UpdatesDatesAndComments()
+    {
+        // Arrange
+        var qualificationVersion = Guid.NewGuid();
+        var fundingOfferId = Guid.NewGuid();
+        var startDate = new DateOnly(2025, 01, 20);
+        var endDate = new DateOnly(2027, 01, 20);
+        var qualificationFunding = QualificationFunding.Create(qualificationVersion, fundingOfferId, startDate, endDate, "comments");
+
+        // Act
+        qualificationFunding.UpdateFunding(startDate.AddYears(1), endDate.AddYears(2), "updated comments");
+
+        // Assert
+        qualificationFunding.StartDate.ShouldBe(startDate.AddYears(1));
+        qualificationFunding.EndDate.ShouldBe(endDate.AddYears(2));
+        qualificationFunding.Comments.ShouldBe("updated comments");
+        qualificationFunding.QualificationVersionId.ShouldBe(qualificationVersion);
+        qualificationFunding.FundingOfferId.ShouldBe(fundingOfferId);
+    }
 }
