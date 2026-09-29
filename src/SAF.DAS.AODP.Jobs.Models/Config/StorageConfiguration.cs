@@ -14,13 +14,7 @@ public record StorageConfiguration
     public const string SectionName = "Storage";
 
     /// <summary>
-    /// The Uri is essentially the endpoint for the storage account.
+    /// The Uri is the endpoint for the storage account.
     /// </summary>
     public required string ServiceUri { get; set; }
-
-    /// <summary>
-    /// The Uri is essentially the endpoint for the storage account.
-    /// We have 2 ServiceUri properties due to having two storage accounts so these two properties represent the two accounts.
-    /// </summary>
-    public required string ServiceUri2 { get; set; }
 }

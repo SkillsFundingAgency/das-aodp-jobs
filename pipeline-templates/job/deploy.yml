@@ -43,10 +43,6 @@ jobs:
             ConfigurationSecrets:
               OfqualApiSecret: $(OfqualApiSecret)
               FunctionHostKey: $(FunctionHostKey)
-              PldnsImportStorageBlobKey: $(PldnsImportStorageBlobKey)
-              DefundingListStorageBlobKey: $(DefundingListStorageBlobKey)
-              ArchivedFundedQualificationsImportUrl: $(ArchivedFundedQualificationsImportUrl)
-              FundedQualificationsImportUrl: $(FundedQualificationsImportUrl)
               QaaApiAuthenticationClientSecret: $(QaaApiAuthenticationClientSecret)
         - template: azure-pipelines-templates/deploy/step/function-deploy.yml@das-platform-building-blocks
           parameters:

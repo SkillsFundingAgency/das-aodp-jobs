@@ -7,23 +7,26 @@ namespace SFA.DAS.AODP.Functions
     {
         private readonly ILogger<FundedQualificationsDataFunction> _logger;
         private readonly ICsvReaderService _csvReaderService;
-		private readonly AodpJobsConfiguration _config;
+        private readonly IBlobStorageFileService _blobStorageFileService;
         private readonly IJobConfigurationService _jobConfigurationService;
         private readonly IFundedQualificationWriter _fundedQualificationWriter;
         private readonly IQualificationsRepository _qualificationsRepository;
         private readonly IQualificationVersionRepository _qualificationVersionRepository;
+        private const string ImportContainerName = "funded-qualifications-import";
+        private const string ApprovedBlobName = "approved.csv";
+        private const string ArchivedBlobName = "archived.csv";
 
-        public FundedQualificationsDataFunction(ILogger<FundedQualificationsDataFunction> logger,            
+        public FundedQualificationsDataFunction(ILogger<FundedQualificationsDataFunction> logger,
             ICsvReaderService csvReaderService,
-            AodpJobsConfiguration config, 
-            IJobConfigurationService jobConfigurationService, 
+            IBlobStorageFileService blobStorageFileService,
+            IJobConfigurationService jobConfigurationService,
             IFundedQualificationWriter fundedQualificationWriter,
             IQualificationsRepository qualificationsRepository,
             IQualificationVersionRepository qualificationVersionRepository)
         {
-            _logger = logger;        
-            _csvReaderService = csvReaderService;     
-            _config = config;
+            _logger = logger;
+            _csvReaderService = csvReaderService;
+            _blobStorageFileService = blobStorageFileService;
             _jobConfigurationService = jobConfigurationService;
             _fundedQualificationWriter = fundedQualificationWriter;
             _qualificationsRepository = qualificationsRepository;
@@ -34,23 +37,6 @@ namespace SFA.DAS.AODP.Functions
         public async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "api/approvedQualificationsImport/{username}")] HttpRequestData req, string username = "")
         {
-			string? fundedUrlFilePath = _config.FundedQualificationsImportUrl;
-			string? archivedUrlFilePath = _config.ArchivedFundedQualificationsImportUrl;      
-
-            if (string.IsNullOrEmpty(fundedUrlFilePath))
-            {
-                var errorMsg = "Config for 'FundedQualificationsImportUrl' is not set or empty.";
-                _logger.LogError(errorMsg);
-                return new BadRequestObjectResult($"[{nameof(FundedQualificationsDataFunction)}] -> {errorMsg}");
-            }
-
-            if (string.IsNullOrEmpty(archivedUrlFilePath))
-            {
-                var errorMsg = "Config for 'ArchivedFundedQualificationsImportUrl' is not set or empty.";
-                _logger.LogError(errorMsg);
-                return new BadRequestObjectResult($"[{nameof(FundedQualificationsDataFunction)}] -> {errorMsg}");
-            }
-            
             _logger.LogInformation($"[{nameof(FundedQualificationsDataFunction)}] -> Reading Configuration");
             var jobControl = await _jobConfigurationService.ReadFundedJobConfiguration();
 
@@ -87,7 +73,8 @@ namespace SFA.DAS.AODP.Functions
                 if (jobControl.ImportFundedCsv)
                 {
                     _logger.LogInformation($"[{nameof(FundedQualificationsDataFunction)}] -> Importing Funded CSV");
-                    var approvedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(fundedUrlFilePath, qualificationCache, _logger);
+                    await using var approvedStream = await _blobStorageFileService.DownloadFileAsync(ImportContainerName, ApprovedBlobName);
+                    var approvedQualifications = await _csvReaderService.ReadCsvFileFromStreamAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(approvedStream, qualificationCache, _logger);
                     //Commented out method to read a file from disk, useful for testing
                     //var path = "D:\\Source\\Repos\\das-aodp-jobs\\src\\SFA.DAS.AODP.Jobs\\Data\\approved.csv";
                     //var approvedQualifications = _csvReaderService.ReadCSVFromFilePath<FundedQualificationDTO, FundedQualificationsImportClassMap>(path, qualifications, organisations, _logger);
@@ -111,7 +98,8 @@ namespace SFA.DAS.AODP.Functions
                 if (jobControl.ImportArchivedCsv)
                 {
                     _logger.LogInformation($"[{nameof(FundedQualificationsDataFunction)}] -> Importing Archived CSV");
-                    var archivedQualifications = await _csvReaderService.ReadCsvFileFromUrlAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(archivedUrlFilePath, qualificationCache, _logger);
+                    await using var archivedStream = await _blobStorageFileService.DownloadFileAsync(ImportContainerName, ArchivedBlobName);
+                    var archivedQualifications = await _csvReaderService.ReadCsvFileFromStreamAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(archivedStream, qualificationCache, _logger);
                     if (archivedQualifications.Any())
                     {
                         if (!tablesCleared)

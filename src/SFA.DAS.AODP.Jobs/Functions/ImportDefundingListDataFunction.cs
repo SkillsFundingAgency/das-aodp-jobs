@@ -17,19 +17,18 @@ namespace SFA.DAS.AODP.Jobs.Functions;
 public class ImportDefundingListDataFunction
 {
     private readonly ILogger<ImportDefundingListDataFunction> _logger;
-    private readonly AodpJobsConfiguration _config;
     private readonly IJobConfigurationService _jobConfigurationService;
     private readonly IImportRepository _repository;
     private readonly IBlobStorageFileService _blobStorageFileService;
+    private const string ImportContainerName = "importfilescontainer";
+    private const string ImportBlobName = "DefundingList/DefundingList.xlsx";
 
     public ImportDefundingListDataFunction(ILogger<ImportDefundingListDataFunction> logger,
-            AodpJobsConfiguration config,
             IJobConfigurationService jobConfigurationService,
             IImportRepository repository,
             IBlobStorageFileService blobStorageFileService)
     {
         _logger = logger;
-        _config = config;
         _jobConfigurationService = jobConfigurationService;
         _repository = repository;
         _blobStorageFileService = blobStorageFileService;
@@ -57,8 +56,7 @@ public class ImportDefundingListDataFunction
 
     private async Task<int> ImportDefundingList(CancellationToken cancellationToken)
     {
-        string? importFileUrl = _config.DefundingListImportUrl;
-        await using var ms = await _blobStorageFileService.DownloadFileAsync(importFileUrl!, cancellationToken);
+        await using var ms = await _blobStorageFileService.DownloadFileAsync(ImportContainerName, ImportBlobName, cancellationToken);
 
         ms.Position = 0;
 

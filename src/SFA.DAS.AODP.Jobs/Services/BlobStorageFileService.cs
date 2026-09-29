@@ -1,31 +1,23 @@
-﻿using SFA.DAS.AODP.Jobs.Interfaces;
+using Azure.Storage.Blobs;
+using SFA.DAS.AODP.Jobs.Interfaces;
 
 namespace SFA.DAS.AODP.Jobs.Services;
 
 public class BlobStorageFileService : IBlobStorageFileService
 {
-    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly BlobServiceClient _blobServiceClient;
 
-    public BlobStorageFileService(IHttpClientFactory httpClientFactory)
+    public BlobStorageFileService(BlobServiceClient blobServiceClient)
     {
-        _httpClientFactory = httpClientFactory;
+        _blobServiceClient = blobServiceClient;
     }
 
-    public async Task<Stream> DownloadFileAsync(string filename, CancellationToken cancellationToken = default)
+    public Task<Stream> DownloadFileAsync(string containerName, string blobName, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(filename))
-            throw new ArgumentException("Filename must be provided.", nameof(filename));
+        var blobClient = _blobServiceClient
+            .GetBlobContainerClient(containerName)
+            .GetBlobClient(blobName);
 
-        var response = await GetDataFromUrl(filename);
-        var approvedResponseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        return approvedResponseStream;
-    }
-
-    private async Task<HttpResponseMessage> GetDataFromUrl(string approvedUrlFilePath)
-    {
-        var _httpClient = _httpClientFactory.CreateClient("xlsx");
-        var response = await _httpClient.GetAsync(approvedUrlFilePath);
-        response.EnsureSuccessStatusCode();
-        return response;
+        return blobClient.OpenReadAsync(cancellationToken: cancellationToken);
     }
 }

@@ -1,9 +1,6 @@
-﻿using Azure.Storage.Blobs;
-using Microsoft.Extensions.Options;
+using Azure.Storage.Blobs;
 using Moq;
 using SFA.DAS.AODP.Jobs.Services;
-using SFA.DAS.AODP.Models.Config;
-using System.Net;
 using System.Text;
 
 namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Services;
@@ -11,103 +8,32 @@ namespace SFA.DAS.AODP.Jobs.UnitTests.Application.Services;
 public class BlobStorageFileServiceTests
 {
     [Fact]
-    public async Task DownloadFileAsync_ThrowsArgumentException_WhenFilenameIsNull()
+    public async Task DownloadFileAsync_ReturnsStream_FromBlobClient()
     {
         // Arrange
-        var httpFactoryMock = new Mock<IHttpClientFactory>();
-        var service = new BlobStorageFileService(httpFactoryMock.Object);
+        var expectedStream = new MemoryStream(Encoding.UTF8.GetBytes("hello world"));
 
-        // Act & Assert
-        var ex = await Assert.ThrowsAsync<ArgumentException>(() => service.DownloadFileAsync(null!));
-        Assert.Equal("filename", ex.ParamName);
-        Assert.Contains("Filename must be provided.", ex.Message);
-    }
+        var blobClientMock = new Mock<BlobClient>();
+        blobClientMock
+            .Setup(b => b.OpenReadAsync(0, default, default, default))
+            .ReturnsAsync(expectedStream);
 
-    [Fact]
-    public async Task DownloadFileAsync_ThrowsArgumentException_WhenFilenameIsWhitespace()
-    {
-        // Arrange
-        var httpFactoryMock = new Mock<IHttpClientFactory>();
-        var service = new BlobStorageFileService(httpFactoryMock.Object);
+        var blobContainerClientMock = new Mock<BlobContainerClient>();
+        blobContainerClientMock
+            .Setup(c => c.GetBlobClient("test.xlsx"))
+            .Returns(blobClientMock.Object);
 
-        // Act & Assert
-        var ex = await Assert.ThrowsAsync<ArgumentException>(() => service.DownloadFileAsync("   "));
-        Assert.Equal("filename", ex.ParamName);
-        Assert.Contains("Filename must be provided.", ex.Message);
-    }
+        var blobServiceClientMock = new Mock<BlobServiceClient>();
+        blobServiceClientMock
+            .Setup(s => s.GetBlobContainerClient("test-container"))
+            .Returns(blobContainerClientMock.Object);
 
-    [Fact]
-    public async Task DownloadFileAsync_ReturnsStream_WhenResponseIsSuccessful()
-    {
-        // Arrange
-        var expectedContent = Encoding.UTF8.GetBytes("hello world");
-        string? capturedRequestUri = null;
-
-        var handler = new FakeHttpMessageHandler((req, ct) =>
-        {
-            capturedRequestUri = req.RequestUri?.ToString();
-            var response = new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StreamContent(new MemoryStream(expectedContent))
-            };
-            return response;
-        });
-
-        var httpClient = new HttpClient(handler);
-
-        var httpFactoryMock = new Mock<IHttpClientFactory>();
-        httpFactoryMock.Setup(f => f.CreateClient("xlsx")).Returns(httpClient);
-
-        var service = new BlobStorageFileService(httpFactoryMock.Object);
-
-        var fileUrl = "https://example.test/files/test.xlsx";
+        var service = new BlobStorageFileService(blobServiceClientMock.Object);
 
         // Act
-        using var resultStream = await service.DownloadFileAsync(fileUrl);
-        using var ms = new MemoryStream();
-        await resultStream.CopyToAsync(ms);
-        var actual = ms.ToArray();
+        var result = await service.DownloadFileAsync("test-container", "test.xlsx");
 
         // Assert
-        Assert.Equal(expectedContent, actual);
-        Assert.Equal(fileUrl, capturedRequestUri);
-    }
-
-    [Fact]
-    public async Task DownloadFileAsync_ThrowsHttpRequestException_WhenResponseIsNotSuccessful()
-    {
-        // Arrange
-        var handler = new FakeHttpMessageHandler((req, ct) =>
-        {
-            return new HttpResponseMessage(HttpStatusCode.InternalServerError)
-            {
-                Content = new StringContent("failure")
-            };
-        });
-
-        var httpClient = new HttpClient(handler);
-
-        var httpFactoryMock = new Mock<IHttpClientFactory>();
-        httpFactoryMock.Setup(f => f.CreateClient("xlsx")).Returns(httpClient);
-
-        var service = new BlobStorageFileService(httpFactoryMock.Object);
-
-        var fileUrl = "https://example.test/files/test.xlsx";
-
-        // Act & Assert
-        await Assert.ThrowsAsync<HttpRequestException>(() => service.DownloadFileAsync(fileUrl));
-    }
-
-    private class FakeHttpMessageHandler : HttpMessageHandler
-    {
-        private readonly Func<HttpRequestMessage, CancellationToken, HttpResponseMessage> _responder;
-
-        public FakeHttpMessageHandler(Func<HttpRequestMessage, CancellationToken, HttpResponseMessage> responder)
-        {
-            _responder = responder ?? throw new ArgumentNullException(nameof(responder));
-        }
-
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-            => Task.FromResult(_responder(request, cancellationToken));
+        Assert.Same(expectedStream, result);
     }
 }
