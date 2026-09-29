@@ -99,6 +99,79 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         }
 
         [Fact]
+        public async Task FundedQualificationWriter_ShouldUpsertQaaFundingSeparately()
+        {
+            // Arrange
+            var fundingOfferId = Guid.NewGuid();
+            var qualification = RegulatedQaaQualification.Create(
+                DateTime.UtcNow,
+                "Z0000001",
+                "Access to HE Diploma",
+                "Test AVA",
+                new DateOnly(2024, 9, 1),
+                new DateOnly(2027, 8, 31),
+                SectorSubjectArea.Science,
+                null);
+            _dbContext.RegulatedQaaQualification.Add(qualification);
+            _dbContext.FundingOffers.Add(new FundingOffer
+            {
+                Id = fundingOfferId,
+                Name = "Age1619"
+            });
+            await _dbContext.SaveChangesAsync();
+
+            var initialEndDate = new DateTime(2026, 7, 31);
+            var importedQualification = new FundedQualificationDTO
+            {
+                Id = Guid.NewGuid(),
+                Qan = qualification.AimCode,
+                QualificationName = qualification.QualificationTitle,
+                AwardingOrganisationName = qualification.AwardingBody,
+                QualificationType = qualification.Type,
+                Status = "Approved",
+                Offers =
+                [
+                    new FundedQualificationOfferDTO
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = "Age1619",
+                        FundingAvailable = "Yes",
+                        FundingApprovalStartDate = new DateTime(2024, 8, 1),
+                        FundingApprovalEndDate = initialEndDate,
+                        Notes = "Initial funding"
+                    }
+                ]
+            };
+            var service = CreateImportServiceWithDb();
+
+            // Act
+            var created = await service.WriteQualifications([importedQualification]);
+            importedQualification.Status = "Archived";
+            importedQualification.Offers.Single().FundingApprovalEndDate =
+                new DateTime(2025, 7, 31);
+            importedQualification.Offers.Single().Notes = "Archived funding";
+            var updated = await service.WriteQualifications([importedQualification]);
+            importedQualification.Offers.Single().FundingAvailable = "No";
+            importedQualification.Offers.Single().FundingApprovalEndDate =
+                new DateTime(2024, 7, 31);
+            var unavailableOfferIgnored =
+                await service.WriteQualifications([importedQualification]);
+
+            // Assert
+            Assert.True(created);
+            Assert.True(updated);
+            Assert.True(unavailableOfferIgnored);
+            Assert.Empty(await _dbContext.FundedQualifications.ToListAsync());
+
+            var funding = Assert.Single(await _dbContext.QaaQualificationFundings.ToListAsync());
+            Assert.Equal(qualification.Id, funding.QaaQualificationId);
+            Assert.Equal(fundingOfferId, funding.FundingOfferId);
+            Assert.Equal(new DateOnly(2025, 7, 31), funding.EndDate);
+            Assert.Equal("Archived", funding.FundingStatus);
+            Assert.Equal("Archived funding", funding.Comments);
+        }
+
+        [Fact]
         public async Task FundedQualificationWriter_ShouldSeedFundings_WhenOnlyNewOffers()
         {
             //Arrange
@@ -484,5 +557,3 @@ namespace SFA.DAS.AODP.Jobs.Test.Application.Services
         public Guid VersionId;
     }
 }
-
-

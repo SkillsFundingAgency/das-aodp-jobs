@@ -16,7 +16,7 @@ public class RolloverCandidatesFunction(
     private const string SystemUser = "SYSTEM";
 
     [Function("RolloverCandidatesFunction")]
-    public async Task<IActionResult> Run([TimerTrigger("0 0 2 1 8 *")] TimerInfo timerInfo, FunctionContext functionContext)
+    public async Task<IActionResult> Run([TimerTrigger("0 0 2 * * *")] TimerInfo timerInfo, FunctionContext functionContext)
     {
         return await _jobFunctionRunner.RunAsync(
             FunctionName, 

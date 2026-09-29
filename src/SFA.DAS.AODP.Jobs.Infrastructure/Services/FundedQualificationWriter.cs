@@ -29,11 +29,21 @@ namespace SFA.DAS.AODP.Infrastructure.Services
                 
                 _logger.LogInformation("Writing funded qualifications to db");
 
+                var qaaQualificationsByAimCode =
+                    await GetQaaQualificationsByAimCodeAsync(qualifications);
+                await UpsertQaaFundingsAsync(qualifications, qaaQualificationsByAimCode);
+
                 _applicationDbContext.StartingBulkInsert();
 
-                for (var i = 0; i < qualifications.Count; i += _batchSize)
+                var ofqualQualifications = qualifications
+                    .Where(qualification =>
+                        string.IsNullOrWhiteSpace(qualification.Qan) ||
+                        !qaaQualificationsByAimCode.ContainsKey(qualification.Qan))
+                    .ToList();
+
+                for (var i = 0; i < ofqualQualifications.Count; i += _batchSize)
                 {
-                    var batch = qualifications
+                    var batch = ofqualQualifications
                         .Skip(i)
                         .Take(_batchSize)
                         .ToList();
@@ -66,18 +76,154 @@ namespace SFA.DAS.AODP.Infrastructure.Services
                     await _applicationDbContext.FundedQualifications.AddRangeAsync(entities);
                 }
 
-                await _applicationDbContext.SaveChangesAsync();
-
                 _applicationDbContext.FinishedBulkInsert();
+                await _applicationDbContext.SaveChangesAsync();
             }
             catch (Exception ex)
             {
+                _applicationDbContext.FinishedBulkInsert();
                 _logger.LogError(ex, $"Error while trying to save batch to db: {ex.Message}");
                 success = false;
             }
 
             return success;
         }
+
+        private async Task<Dictionary<string, RegulatedQaaQualification>>
+            GetQaaQualificationsByAimCodeAsync(
+                IReadOnlyCollection<FundedQualificationDTO> qualifications)
+        {
+            const int queryBatchSize = 1000;
+
+            var aimCodes = qualifications
+                .Select(qualification => qualification.Qan)
+                .Where(aimCode => !string.IsNullOrWhiteSpace(aimCode))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            var qaaQualifications = new List<RegulatedQaaQualification>();
+
+            for (var i = 0; i < aimCodes.Count; i += queryBatchSize)
+            {
+                var batch = aimCodes.Skip(i).Take(queryBatchSize).ToList();
+                qaaQualifications.AddRange(await _applicationDbContext.RegulatedQaaQualification
+                    .AsNoTracking()
+                    .Where(qualification => batch.Contains(qualification.AimCode))
+                    .ToListAsync());
+            }
+
+            return qaaQualifications.ToDictionary(
+                qualification => qualification.AimCode,
+                StringComparer.OrdinalIgnoreCase);
+        }
+
+        private async Task UpsertQaaFundingsAsync(
+            IReadOnlyCollection<FundedQualificationDTO> qualifications,
+            IReadOnlyDictionary<string, RegulatedQaaQualification> qaaQualificationsByAimCode)
+        {
+            if (qaaQualificationsByAimCode.Count == 0)
+            {
+                return;
+            }
+
+            var fundingOfferIdsByName = await _applicationDbContext.FundingOffers
+                .AsNoTracking()
+                .ToDictionaryAsync(
+                    offer => offer.Name,
+                    offer => offer.Id,
+                    StringComparer.OrdinalIgnoreCase);
+            var qaaQualificationIds = qaaQualificationsByAimCode.Values
+                .Select(qualification => qualification.Id)
+                .ToList();
+            var existingFundings = new List<QaaQualificationFunding>();
+            const int queryBatchSize = 1000;
+            for (var i = 0; i < qaaQualificationIds.Count; i += queryBatchSize)
+            {
+                var batch = qaaQualificationIds.Skip(i).Take(queryBatchSize).ToList();
+                existingFundings.AddRange(await _applicationDbContext.QaaQualificationFundings
+                    .Where(funding => batch.Contains(funding.QaaQualificationId))
+                    .ToListAsync());
+            }
+
+            var fundingsByKey = existingFundings.ToDictionary(
+                funding => (funding.QaaQualificationId, funding.FundingOfferId));
+            var now = DateTime.UtcNow;
+
+            foreach (var qualification in qualifications)
+            {
+                if (string.IsNullOrWhiteSpace(qualification.Qan) ||
+                    !qaaQualificationsByAimCode.TryGetValue(
+                        qualification.Qan,
+                        out var qaaQualification))
+                {
+                    continue;
+                }
+
+                UpsertQaaFundingOffersForQualification(
+                    qualification,
+                    qaaQualification,
+                    fundingOfferIdsByName,
+                    fundingsByKey,
+                    now);
+            }
+        }
+
+        private void UpsertQaaFundingOffersForQualification(
+            FundedQualificationDTO qualification,
+            RegulatedQaaQualification qaaQualification,
+            IReadOnlyDictionary<string, Guid> fundingOfferIdsByName,
+            Dictionary<(Guid, Guid), QaaQualificationFunding> fundingsByKey,
+            DateTime now)
+        {
+            foreach (var offer in qualification.Offers.Where(offer =>
+                         IsFundingAvailable(offer.FundingAvailable)))
+            {
+                if (offer.Name is null ||
+                    !fundingOfferIdsByName.TryGetValue(offer.Name, out var fundingOfferId))
+                {
+                    _logger.LogWarning(
+                        "Unable to map QAA funding offer {FundingOffer} for qualification {AimCode}",
+                        offer.Name,
+                        qualification.Qan);
+                    continue;
+                }
+
+                DateOnly? startDate = offer.FundingApprovalStartDate.HasValue
+                    ? DateOnly.FromDateTime(offer.FundingApprovalStartDate.Value)
+                    : null;
+                DateOnly? endDate = offer.FundingApprovalEndDate.HasValue
+                    ? DateOnly.FromDateTime(offer.FundingApprovalEndDate.Value)
+                    : null;
+                var key = (qaaQualification.Id, fundingOfferId);
+
+                if (fundingsByKey.TryGetValue(key, out var existingFunding))
+                {
+                    existingFunding.Update(
+                        startDate,
+                        endDate,
+                        qualification.Status,
+                        now,
+                        offer.Notes);
+                    continue;
+                }
+
+                var funding = QaaQualificationFunding.Create(
+                    qaaQualification.Id,
+                    fundingOfferId,
+                    startDate,
+                    endDate,
+                    qualification.Status,
+                    now,
+                    offer.Notes);
+                _applicationDbContext.QaaQualificationFundings.Add(funding);
+                fundingsByKey.Add(key, funding);
+            }
+        }
+
+        private static bool IsFundingAvailable(string? value) =>
+            value?.Trim() is { } normalized &&
+            (normalized.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+             normalized.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
+             normalized == "1");
 
         public async Task<bool> SeedFundingData()
         {
@@ -304,8 +450,10 @@ namespace SFA.DAS.AODP.Infrastructure.Services
                                         if (matchingUserOffer.StartDate.HasValue && matchingUserOffer.StartDate.Value != startDate
                                             || matchingUserOffer.EndDate.HasValue && matchingUserOffer.EndDate.Value != endDate)
                                         {
-                                            matchingUserOffer.StartDate = startDate;
-                                            matchingUserOffer.EndDate = endDate;
+                                            matchingUserOffer.UpdateFunding(
+                                                startDate,
+                                                endDate,
+                                                matchingUserOffer.Comments);
                                             matchingUserOffer.Comments = $"{matchingUserOffer.Comments}, updated by import on {importRun.ToShortDateString()}";
                                             updatedOffers.Add(matchingUserOffer);
                                             updated++;
@@ -388,4 +536,3 @@ namespace SFA.DAS.AODP.Infrastructure.Services
         }
     }
 }
-

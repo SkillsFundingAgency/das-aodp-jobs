@@ -1,4 +1,5 @@
 ﻿using CsvHelper;
+using Microsoft.EntityFrameworkCore;
 using SFA.DAS.AODP.Jobs.Models;
 using System.Globalization;
 using SFA.DAS.AODP.Data.Entities;
@@ -47,15 +48,13 @@ public class QaaQualificationSeedService(
 
         var qaaQualifications = seedRecords.Where(x => x.QualificationType == "Access to Higher Education").ToList();
 
+        var fundingOfferIdsByName = await dbContext.FundingOffers
+            .AsNoTracking()
+            .ToDictionaryAsync(offer => offer.Name, offer => offer.Id, cancellationToken);
+
         foreach (var fundedQualificationDto in qaaQualifications)
         {
             var row = qaaRecords.SingleOrDefault(o => o.AimCode == fundedQualificationDto.Qan);
-            var age1619Offer = fundedQualificationDto.Offers.Single(o => o.Name!.StartsWith("Age1619"))
-                .FundingApprovalEndDate!.Value;
-            var advancedLearnerLoansOffer = fundedQualificationDto.Offers.Single(o => o.Name!.StartsWith("Age1619"))
-                .FundingApprovalEndDate!.Value;
-            var legalEntitlementL2L3 = fundedQualificationDto.Offers.Single(o => o.Name!.StartsWith("LegalEntitlementL2L3"))
-                .FundingApprovalEndDate!.Value;
 
             if (row is null)
             {
@@ -67,18 +66,43 @@ public class QaaQualificationSeedService(
                 fundedQualificationDto.Qan,
                 fundedQualificationDto.QualificationName,
                 fundedQualificationDto.AwardingOrganisationName,
-                DateOnly.FromDateTime(fundedQualificationDto.Offers.Min(o => o.FundingApprovalStartDate).Value),
+                row.FullStartDateOfQualification,
                 row.FullLastDateForRegistration,
                 SectorSubjectArea.FromName(fundedQualificationDto.SectorSubjectArea),
-                row.DiscontinuedDate,
-                DateOnly.FromDateTime(age1619Offer), 
-                DateOnly.FromDateTime(advancedLearnerLoansOffer), 
-                DateOnly.FromDateTime(legalEntitlementL2L3)
-                );
+                row.DiscontinuedDate);
 
             dbContext.RegulatedQaaQualification.Add(qual);
+
+            foreach (var offer in fundedQualificationDto.Offers)
+            {
+                if (offer.Name is null ||
+                    !fundingOfferIdsByName.TryGetValue(offer.Name, out var fundingOfferId) ||
+                    !IsFundingAvailable(offer.FundingAvailable))
+                {
+                    continue;
+                }
+
+                dbContext.QaaQualificationFundings.Add(QaaQualificationFunding.Create(
+                    qual.Id,
+                    fundingOfferId,
+                    offer.FundingApprovalStartDate.HasValue
+                        ? DateOnly.FromDateTime(offer.FundingApprovalStartDate.Value)
+                        : null,
+                    offer.FundingApprovalEndDate.HasValue
+                        ? DateOnly.FromDateTime(offer.FundingApprovalEndDate.Value)
+                        : null,
+                    fundedQualificationDto.Status,
+                    DateTime.UtcNow,
+                    offer.Notes));
+            }
         }
 
         return await dbContext.SaveChangesAsync(cancellationToken);
     }
+
+    private static bool IsFundingAvailable(string? value) =>
+        value?.Trim() is { } normalized &&
+        (normalized.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+         normalized.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
+         normalized == "1");
 }
