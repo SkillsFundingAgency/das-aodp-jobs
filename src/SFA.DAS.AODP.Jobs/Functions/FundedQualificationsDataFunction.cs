@@ -1,4 +1,5 @@
 using Microsoft.Azure.Functions.Worker.Http;
+using SFA.DAS.AODP.Data.Entities.Files;
 using SFA.DAS.AODP.Models.Qualification;
 
 namespace SFA.DAS.AODP.Functions
@@ -7,30 +8,27 @@ namespace SFA.DAS.AODP.Functions
     {
         private readonly ILogger<FundedQualificationsDataFunction> _logger;
         private readonly ICsvReaderService _csvReaderService;
-        private readonly IBlobStorageFileService _blobStorageFileService;
         private readonly IJobConfigurationService _jobConfigurationService;
         private readonly IFundedQualificationWriter _fundedQualificationWriter;
         private readonly IQualificationsRepository _qualificationsRepository;
         private readonly IQualificationVersionRepository _qualificationVersionRepository;
-        private const string ImportContainerName = "funded-qualifications-import";
-        private const string ApprovedBlobName = "approved.csv";
-        private const string ArchivedBlobName = "archived.csv";
+        private readonly IFileProcessingService _fileProcessingService;
 
         public FundedQualificationsDataFunction(ILogger<FundedQualificationsDataFunction> logger,
             ICsvReaderService csvReaderService,
-            IBlobStorageFileService blobStorageFileService,
             IJobConfigurationService jobConfigurationService,
             IFundedQualificationWriter fundedQualificationWriter,
             IQualificationsRepository qualificationsRepository,
-            IQualificationVersionRepository qualificationVersionRepository)
+            IQualificationVersionRepository qualificationVersionRepository,
+            IFileProcessingService fileProcessingService)
         {
             _logger = logger;
             _csvReaderService = csvReaderService;
-            _blobStorageFileService = blobStorageFileService;
             _jobConfigurationService = jobConfigurationService;
             _fundedQualificationWriter = fundedQualificationWriter;
             _qualificationsRepository = qualificationsRepository;
             _qualificationVersionRepository = qualificationVersionRepository;
+            _fileProcessingService = fileProcessingService;
         }
 
         [Function("ApprovedQualificationsDataFunction")]
@@ -73,8 +71,25 @@ namespace SFA.DAS.AODP.Functions
                 if (jobControl.ImportFundedCsv)
                 {
                     _logger.LogInformation($"[{nameof(FundedQualificationsDataFunction)}] -> Importing Funded CSV");
-                    await using var approvedStream = await _blobStorageFileService.DownloadFileAsync(ImportContainerName, ApprovedBlobName);
-                    var approvedQualifications = await _csvReaderService.ReadCsvFileFromStreamAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(approvedStream, qualificationCache, _logger);
+
+                    var fundedFileResult = await _fileProcessingService.GetReadyFileAsync(
+                        FileCategory.ApprovedFunding,
+                        username,
+                        jobControl.JobId,
+                        jobControl.JobRunId,
+                        lastJobRun.StartTime,
+                        req.FunctionContext.CancellationToken);
+
+                    if (!fundedFileResult.IsReady)
+                    {
+                        return new OkObjectResult("File not ready — retrying");
+                    }
+
+
+                    await using var fundedStream = fundedFileResult.Stream!;
+
+
+                    var approvedQualifications = await _csvReaderService.ReadCsvFromStreamAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(fundedStream, qualificationCache, _logger);
                     //Commented out method to read a file from disk, useful for testing
                     //var path = "D:\\Source\\Repos\\das-aodp-jobs\\src\\SFA.DAS.AODP.Jobs\\Data\\approved.csv";
                     //var approvedQualifications = _csvReaderService.ReadCSVFromFilePath<FundedQualificationDTO, FundedQualificationsImportClassMap>(path, qualifications, organisations, _logger);
@@ -83,11 +98,11 @@ namespace SFA.DAS.AODP.Functions
                     {
                         await _qualificationsRepository.TruncateFundingTables();
                         tablesCleared = true;
-                        await _fundedQualificationWriter.WriteQualifications(approvedQualifications);                        
+                        await _fundedQualificationWriter.WriteQualifications(approvedQualifications);
                     }
                     else
                     {
-                        var warningMsg = "No data found found in approved qualifications csv";
+                        var warningMsg = "No data found in approved qualifications csv";
                         _logger.LogWarning(warningMsg);
                         await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, 0, JobStatus.Error);
                         return new NotFoundObjectResult($"[{nameof(FundedQualificationsDataFunction)}] -> {warningMsg}");
@@ -98,8 +113,25 @@ namespace SFA.DAS.AODP.Functions
                 if (jobControl.ImportArchivedCsv)
                 {
                     _logger.LogInformation($"[{nameof(FundedQualificationsDataFunction)}] -> Importing Archived CSV");
-                    await using var archivedStream = await _blobStorageFileService.DownloadFileAsync(ImportContainerName, ArchivedBlobName);
-                    var archivedQualifications = await _csvReaderService.ReadCsvFileFromStreamAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(archivedStream, qualificationCache, _logger);
+
+
+                    var archivedFileResult = await _fileProcessingService.GetReadyFileAsync(
+                        FileCategory.ArchivedFunding,
+                        username,
+                        jobControl.JobId,
+                        jobControl.JobRunId,
+                        lastJobRun.StartTime,
+                        req.FunctionContext.CancellationToken);
+
+                    if (!archivedFileResult.IsReady)
+                    {
+                        return new OkObjectResult("File not ready — retrying");
+                    }
+
+
+                    await using var archivedStream = archivedFileResult.Stream!;
+
+                    var archivedQualifications = await _csvReaderService.ReadCsvFromStreamAsync<FundedQualificationDTO, FundedQualificationsImportClassMap>(archivedStream, qualificationCache, _logger);
                     if (archivedQualifications.Any())
                     {
                         if (!tablesCleared)
@@ -119,7 +151,7 @@ namespace SFA.DAS.AODP.Functions
                     totalArchivedRecords = archivedQualifications.Count();
                     _logger.LogInformation($"{totalArchivedRecords} records imported");
                 }
-                
+
                 var totalProcessedRecords = totalRecords + totalArchivedRecords;
                 if ((totalProcessedRecords) > 0)
                 {
@@ -145,6 +177,9 @@ namespace SFA.DAS.AODP.Functions
                 await _jobConfigurationService.UpdateJobRun(username, jobControl.JobId, jobControl.JobRunId, 0, JobStatus.Error);
                 return new StatusCodeResult(500);
             }
+
+
         }
     }
 }
+

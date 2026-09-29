@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SFA.DAS.AODP.Data.Entities;
+using SFA.DAS.AODP.Data.Entities.Files;
 using SFA.DAS.AODP.Data.Entities.Rollover;
 using SFA.DAS.AODP.Infrastructure.Interfaces.Rollover;
 
@@ -61,11 +62,14 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         
         public virtual DbSet<RegulatedQaaQualification> RegulatedQaaQualification { get; set; }
 
+        public virtual DbSet<FileRecord> FileRecords { get; set; }
+
         public virtual DbSet<RegulatedQaaQualificationHistory> RegulatedQaaQualificationHistory { get; set; }
 
         public virtual DbSet<QaaQualificationFunding> QaaQualificationFundings { get; set; }
 
         
+
         public virtual DbSet<RolloverCandidate> RolloverCandidates { get; set; }
 
         public virtual DbSet<RolloverWorkflowCandidate> RolloverWorkflowCandidates { get; set; }
@@ -160,6 +164,13 @@ namespace SFA.DAS.AODP.Infrastructure.Context
                 b.Property(x => x.InvalidationReason)
                     .HasMaxLength(255);
             });
+            modelBuilder.Entity<FileRecord>()
+               .Property(e => e.FileCategory)
+               .HasConversion<string>();
+
+            modelBuilder.Entity<FileRecord>()
+                .Property(e => e.ScanResult)
+                .HasConversion<string>();
 
         }
 

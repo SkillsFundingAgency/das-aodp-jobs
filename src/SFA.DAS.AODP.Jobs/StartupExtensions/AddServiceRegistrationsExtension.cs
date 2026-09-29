@@ -1,4 +1,5 @@
-﻿using SFA.DAS.AODP.Jobs.Functions.Abstractions;
+﻿using Azure.Storage.Blobs;
+using SFA.DAS.AODP.Jobs.Functions.Abstractions;
 using SFA.DAS.AODP.Infrastructure.Interfaces.Rollover;
 using SFA.DAS.AODP.Infrastructure.Repositories.Rollover;
 using SFA.DAS.AODP.Jobs.Interfaces.Rollover;
@@ -35,8 +36,10 @@ public static class AddServiceRegistrationsExtension
         services.AddTransient<IOfqualImportService, OfqualImportService>();
         services.AddTransient<IReferenceDataService, ReferenceDataService>();
         services.AddTransient<IFundingEligibilityService, FundingEligibilityService>();
+        services.AddScoped<IFileProcessingService, FileProcessingService>();
         services.AddScoped<ICsvReaderService, CsvReaderService>();
         services.AddScoped<ISystemClockService, SystemClockService>();
+        services.AddScoped<IDelayService, DelayService>();
         services.AddScoped<IGuidProvider, GuidProvider>();
         services.AddScoped<IJobConfigurationService, JobConfigurationService>();
         services.AddScoped<IChangeDetectionService, ChangeDetectionService>();
@@ -45,6 +48,7 @@ public static class AddServiceRegistrationsExtension
         services.AddScoped<IQualificationsRepository, QualificationsRepository>();
         services.AddScoped<IQualificationVersionRepository, QualificationVersionRepository>();
         services.AddScoped<IImportRepository, ImportRepository>();
+        services.AddScoped<IFileRecordRepository, FileRecordRepository>();
         services.AddScoped<IQualificationProcessor, QualificationProcessor>();
         services.AddScoped<IQaaSeedCsvBlobReader, QaaSeedCsvBlobReader>();
         services.AddScoped<IQaaQualificationSeedService, QaaQualificationSeedService>();
