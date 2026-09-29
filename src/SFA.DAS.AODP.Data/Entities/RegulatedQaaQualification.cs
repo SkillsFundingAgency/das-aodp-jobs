@@ -93,6 +93,11 @@ public class RegulatedQaaQualification
     public DateOnly? DiscontinuedDate { get; private set; }
 
     /// <summary>
+    /// The last date by which certifications must be claimed for learners registered on this qualification, as supplied by QAA.
+    /// </summary>
+    public DateOnly? LastDateForCertifications { get; private set; }
+
+    /// <summary>
     /// The latest material QAA history row for the current imported state.
     /// </summary>
     public Guid? LatestQaaQualificationHistoryId { get; private set; }
@@ -120,7 +125,8 @@ public class RegulatedQaaQualification
         DateOnly registrationClosesOn,
         SectorSubjectArea sectorSubjectArea,
         DateOnly? discontinuedDate,
-        DateTime? changedAt = null)
+        DateTime? changedAt = null,
+        DateOnly? lastDateForCertifications = null)
     {
         var isDiscontinued = discontinuedDate.HasValue;
 
@@ -140,6 +146,7 @@ public class RegulatedQaaQualification
             LastDateForRegistration = registrationClosesOn,
             IsDiscontinued = isDiscontinued,
             DiscontinuedDate = discontinuedDate,
+            LastDateForCertifications = lastDateForCertifications,
             SectorSubjectArea = sectorSubjectArea,
             LatestImportComparisonOutcome = QaaImportComparisonOutcome.New,
             LastDateForRegistrationChangeType = QaaLastDateForRegistrationChangeType.NotChanged
@@ -159,7 +166,8 @@ public class RegulatedQaaQualification
         DateOnly registrationClosesOn,
         SectorSubjectArea sectorSubjectArea,
         DateOnly? discontinuedDate,
-        DateTime? changedAt = null)
+        DateTime? changedAt = null,
+        DateOnly? lastDateForCertifications = null)
     {
         var isDiscontinued = discontinuedDate.HasValue;
 
@@ -179,6 +187,7 @@ public class RegulatedQaaQualification
             LastDateForRegistration = registrationClosesOn,
             IsDiscontinued = isDiscontinued,
             DiscontinuedDate = discontinuedDate,
+            LastDateForCertifications = lastDateForCertifications,
             SectorSubjectArea = sectorSubjectArea,
             LatestImportComparisonOutcome = QaaImportComparisonOutcome.NotChanged,
             LastDateForRegistrationChangeType = QaaLastDateForRegistrationChangeType.NotChanged
@@ -207,7 +216,8 @@ public class RegulatedQaaQualification
         DateOnly registrationClosesOn,
         DateOnly? discontinuedDate,
         SectorSubjectArea sectorSubjectArea,
-        DateTime changedAt)
+        DateTime changedAt,
+        DateOnly? lastDateForCertifications = null)
     {
         var wasDiscontinued = IsDiscontinued;
         var qaaHasDiscontinuedQualification = discontinuedDate.HasValue;
@@ -216,14 +226,15 @@ public class RegulatedQaaQualification
             ? QaaImportComparisonOutcome.Discontinued
             : changed ? QaaImportComparisonOutcome.LastDateForRegistrationChanged : QaaImportComparisonOutcome.NotChanged;
 
-        RememberLatestQaaDetails(
+        RememberLatestQaaDetails(new LatestQaaSnapshot(
             snapshotTakenAt,
             latestQualificationTitle,
             latestAwardingBody,
             registrationOpenedOn,
             registrationClosesOn,
             discontinuedDate,
-            sectorSubjectArea);
+            sectorSubjectArea,
+            lastDateForCertifications));
 
         LatestImportComparisonOutcome = latestImportComparisonOutcome;
 
@@ -258,23 +269,27 @@ public class RegulatedQaaQualification
         LatestQaaQualificationHistoryId = historyId;
     }
 
-    private void RememberLatestQaaDetails(
-        DateTime snapshotTakenAt,
-        string latestQualificationTitle,
-        string latestAwardingBody,
-        DateOnly registrationOpenedOn,
-        DateOnly registrationClosesOn,
-        DateOnly? discontinuedDate,
-        SectorSubjectArea sectorSubjectArea)
+    private readonly record struct LatestQaaSnapshot(
+        DateTime SnapshotTakenAt,
+        string QualificationTitle,
+        string AwardingBody,
+        DateOnly RegistrationOpenedOn,
+        DateOnly RegistrationClosesOn,
+        DateOnly? DiscontinuedDate,
+        SectorSubjectArea SectorSubjectArea,
+        DateOnly? LastDateForCertifications = null);
+
+    private void RememberLatestQaaDetails(LatestQaaSnapshot snapshot)
     {
-        DateOfDataSnapshot = snapshotTakenAt;
-        QualificationTitle = latestQualificationTitle;
-        AwardingBody = latestAwardingBody;
-        StartDate = registrationOpenedOn;
-        LastDateForRegistration = registrationClosesOn;
-        IsDiscontinued = discontinuedDate.HasValue;
-        DiscontinuedDate = discontinuedDate;
-        SectorSubjectArea = sectorSubjectArea;
+        DateOfDataSnapshot = snapshot.SnapshotTakenAt;
+        QualificationTitle = snapshot.QualificationTitle;
+        AwardingBody = snapshot.AwardingBody;
+        StartDate = snapshot.RegistrationOpenedOn;
+        LastDateForRegistration = snapshot.RegistrationClosesOn;
+        IsDiscontinued = snapshot.DiscontinuedDate.HasValue;
+        DiscontinuedDate = snapshot.DiscontinuedDate;
+        LastDateForCertifications = snapshot.LastDateForCertifications;
+        SectorSubjectArea = snapshot.SectorSubjectArea;
     }
 
     private void RecordMaterialQaaChange(
