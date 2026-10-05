@@ -102,10 +102,15 @@ public class FileRecordSyncFunctionTests
         var blobClient = new Mock<BlobClient>();
         blobClient.Setup(b => b.ExistsAsync(default)).ReturnsAsync(Response.FromValue(true, Mock.Of<Response>()));
         blobClient.Setup(b => b.Uri).Returns(blobUri);
+        blobClient.Setup(b => b.BlobContainerName).Returns("funded-qualifications-import");
+        blobClient.Setup(b => b.Name).Returns("approved.csv");
         blobClient
             .Setup(b => b.GetPropertiesAsync(null, default))
             .ReturnsAsync(Response.FromValue(
-                BlobsModelFactory.BlobProperties(contentType: "text/csv"), Mock.Of<Response>()));
+                BlobsModelFactory.BlobProperties(
+                    contentType: "text/csv",
+                    metadata: new Dictionary<string, string>()),
+                Mock.Of<Response>()));
 
         var containerClient = new Mock<BlobContainerClient>();
         containerClient.Setup(c => c.GetBlobClient("approved.csv")).Returns(blobClient.Object);
@@ -116,9 +121,16 @@ public class FileRecordSyncFunctionTests
 
         var request = CreateRequestWithRescan("ApprovedFunding", triggerRescan: true);
 
-        await _function.Run(request);
+        var result = await _function.Run(request);
 
-        blobClient.Verify(b => b.StartCopyFromUriAsync(blobUri, null, null, null, null, default), Times.Once);
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.DoesNotContain("FAILED", ok.Value?.ToString());
+
+        blobClient.Verify(b => b.StartCopyFromUriAsync(
+                blobUri,
+                It.Is<BlobCopyFromUriOptions>(o => o.Metadata.ContainsKey("rescanRequestedAt")),
+                default),
+            Times.Once);
     }
 
     [Fact]
