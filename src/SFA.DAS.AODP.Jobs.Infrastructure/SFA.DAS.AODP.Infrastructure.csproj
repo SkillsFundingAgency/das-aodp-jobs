@@ -19,4 +19,8 @@
     <ProjectReference Include="..\SFA.DAS.AODP.Jobs.Common\SFA.DAS.AODP.Common.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="SFA.DAS.AODP.Jobs.UnitTests" />
+  </ItemGroup>
+
 </Project>

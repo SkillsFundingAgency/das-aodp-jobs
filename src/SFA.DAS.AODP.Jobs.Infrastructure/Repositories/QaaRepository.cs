@@ -47,7 +47,8 @@ public class QaaRepository(IDbContextFactory<ApplicationDbContext> dbContextFact
             qualification.StartDateOfQualification,
             qualification.LastDateForRegistrations,
             qualification.DiscontinuedDate,
-            SectorSubjectArea.FromTiers(qualification.SsaTier1, qualification.SsaTier2));
+            SectorSubjectArea.FromTiers(qualification.SsaTier1, qualification.SsaTier2),
+            qualification.LastDateForCertifications);
     }
 
     private static async Task CreateOrUpdateQaaQualificationAsync(
@@ -97,7 +98,8 @@ public class QaaRepository(IDbContextFactory<ApplicationDbContext> dbContextFact
             proposedQaaQualification.RegistrationClosesOn,
             proposedQaaQualification.SectorSubjectArea,
             proposedQaaQualification.DiscontinuedDate,
-            snapshotTakenAt);
+            snapshotTakenAt,
+            proposedQaaQualification.LastDateForCertifications);
     }
 
     private static void UpdateQaaQualification(
@@ -116,7 +118,8 @@ public class QaaRepository(IDbContextFactory<ApplicationDbContext> dbContextFact
             proposedQaaQualification.RegistrationClosesOn,
             proposedQaaQualification.DiscontinuedDate,
             proposedQaaQualification.SectorSubjectArea,
-            snapshotTakenAt);
+            snapshotTakenAt,
+            proposedQaaQualification.LastDateForCertifications);
 
         if (changed)
         {
@@ -154,7 +157,8 @@ public class QaaRepository(IDbContextFactory<ApplicationDbContext> dbContextFact
         DateOnly RegistrationOpenedOn,
         DateOnly RegistrationClosesOn,
         DateOnly? DiscontinuedDate,
-        SectorSubjectArea SectorSubjectArea)
+        SectorSubjectArea SectorSubjectArea,
+        DateOnly? LastDateForCertifications = null)
     {
         public bool HasBeenDiscontinuedByQaa => DiscontinuedDate.HasValue;
     }

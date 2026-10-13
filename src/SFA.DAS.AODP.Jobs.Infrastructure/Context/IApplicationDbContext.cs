@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using SFA.DAS.AODP.Data.Entities;
+using SFA.DAS.AODP.Data.Entities.Files;
 using SFA.DAS.AODP.Data.Entities.Rollover;
 
 namespace SFA.DAS.AODP.Infrastructure.Context
@@ -28,8 +29,11 @@ namespace SFA.DAS.AODP.Infrastructure.Context
         DbSet<Pldns> Pldns { get; set; }
         DbSet<DefundingList> DefundingLists { get; set; }
         DbSet<RegulatedQaaQualification> RegulatedQaaQualification { get; set; }
+        DbSet<FileRecord> FileRecords { get; set; }
         DbSet<RegulatedQaaQualificationHistory> RegulatedQaaQualificationHistory { get; set; }
+        DbSet<QaaQualificationFunding> QaaQualificationFundings { get; set; }
         DbSet<RolloverCandidate> RolloverCandidates { get; set; }
+        DbSet<RolloverWorkflowCandidate> RolloverWorkflowCandidates { get; set; }
 
         void StartingBulkInsert();
 
