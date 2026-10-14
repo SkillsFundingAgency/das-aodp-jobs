@@ -13,6 +13,11 @@
     </PackageReference>
   </ItemGroup>
 
+	<!-- Transitive references - do not remove without checking `dotnet nuget why` and the vulnerability warnings. -->
+	<ItemGroup Label="Transitive security pins">
+		<PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
+	</ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\SAF.DAS.AODP.Jobs.Models\SFA.DAS.AODP.Models.csproj" />
     <ProjectReference Include="..\SFA.DAS.AODP.Data\SFA.DAS.AODP.Data.csproj" />
