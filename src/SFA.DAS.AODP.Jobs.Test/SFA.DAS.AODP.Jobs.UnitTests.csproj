@@ -38,6 +38,11 @@
     <PackageReference Include="Z.EntityFramework.Extensions.EFCore" Version="10.105.2.2" />
   </ItemGroup>
 
+	<!-- Transitive references - do not remove without checking `dotnet nuget why` and the vulnerability warnings. -->
+	<ItemGroup Label="Transitive security pins">
+		<PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
+	</ItemGroup>
+
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
